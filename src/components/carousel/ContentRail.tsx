@@ -1,0 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRef, type ReactNode } from 'react'
+import './rail.css'
+export function ContentRail({title,children}:{title:string;children:ReactNode}){const ref=useRef<HTMLDivElement>(null);const move=(amount:number)=>ref.current?.scrollBy({left:amount,behavior:'smooth'});return <section className="rail"><header><h2>{title}</h2><a href="#all">View all →</a></header><div className="rail__wrap"><button className="rail__button rail__button--left" onClick={()=>move(-500)} aria-label={`Previous ${title}`}><ChevronLeft/></button><div className="rail__items" ref={ref}>{children}</div><button className="rail__button rail__button--right" onClick={()=>move(500)} aria-label={`Next ${title}`}><ChevronRight/></button></div></section>}
