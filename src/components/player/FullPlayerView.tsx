@@ -196,7 +196,7 @@ export function FullPlayerView({
                   <select
                     value={speed}
                     onChange={e => setSpeed(e.target.value)}
-                    style={{ background: 'rgba(20,26,38,0.8)', color: '#fff', border: '1px solid var(--color-glass-border)', borderRadius: 'var(--radius-sm)', padding: '2px 6px', fontSize: '0.8rem' }}
+                    className="cinema-player__select"
                     aria-label="Playback speed"
                   >
                     <option value="0.75x">0.75x</option>
@@ -209,7 +209,7 @@ export function FullPlayerView({
                   <select
                     value={quality}
                     onChange={e => setQuality(e.target.value)}
-                    style={{ background: 'rgba(20,26,38,0.8)', color: '#fff', border: '1px solid var(--color-glass-border)', borderRadius: 'var(--radius-sm)', padding: '2px 6px', fontSize: '0.8rem' }}
+                    className="cinema-player__select"
                     aria-label="Video quality"
                   >
                     <option value="1080p HD">1080p HD</option>

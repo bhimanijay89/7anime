@@ -1,1 +1,143 @@
-.desktop-nav{position:sticky;z-index:10;top:1rem;margin:1rem auto 0;width:min(calc(100% - 2rem),88rem);min-height:4.25rem;border-radius:var(--radius-xl);padding:.6rem .75rem .6rem 1.1rem;display:flex;align-items:center;gap:var(--space-6)}.brand{color:var(--color-text-primary);font-weight:850;text-decoration:none;font-size:1.3rem;letter-spacing:-.07em}.brand span{display:inline-grid;place-items:center;width:1.35rem;height:1.35rem;margin-right:.05rem;border-radius:.42rem;background:var(--color-accent);color:#071019;font-size:1rem}.desktop-nav nav{display:flex;gap:1.15rem;flex:1;justify-content:center}.desktop-nav nav a,.mobile-nav a{color:var(--color-text-secondary);text-decoration:none;font-size:.83rem;white-space:nowrap}.desktop-nav nav a.active,.desktop-nav nav a:hover,.mobile-nav a.active{color:var(--color-accent)}.desktop-nav__actions{display:flex;align-items:center;gap:.45rem}.profile-chip{border:1px solid var(--color-glass-border);background:rgba(255,255,255,.06);color:var(--color-text-primary);border-radius:99px;padding:.62rem .85rem;display:flex;align-items:center;gap:.4rem}.mobile-nav{display:none}@media(max-width:900px){.desktop-nav nav{display:none}.desktop-nav{justify-content:space-between}.desktop-nav__actions .icon-button,.profile-chip{display:none}.mobile-nav{position:fixed;display:flex;z-index:10;left:.75rem;right:.75rem;bottom:calc(.75rem + env(safe-area-inset-bottom));height:4.3rem;border-radius:1.35rem;justify-content:space-around;padding:.45rem}.mobile-nav a{font-size:.64rem;min-width:3.6rem;display:grid;place-items:center;gap:.15rem}.mobile-nav a.active{background:rgba(85,216,255,.1);border-radius:1rem}.desktop-nav{top:.65rem;margin-top:.65rem}}
+/* ─── Desktop Navigation ─── */
+.desktop-nav {
+  position: sticky;
+  z-index: 10;
+  top: 1rem;
+  margin: 1rem auto 0;
+  width: min(calc(100% - 2rem), 88rem);
+  min-height: 4.25rem;
+  border-radius: var(--radius-xl);
+  padding: 0.6rem 0.75rem 0.6rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* ─── Brand ─── */
+.brand {
+  color: var(--color-text-primary);
+  font-weight: 850;
+  text-decoration: none;
+  font-size: 1.3rem;
+  letter-spacing: -0.07em;
+}
+
+.brand span {
+  display: inline-grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.05rem;
+  border-radius: 0.42rem;
+  background: var(--color-accent);
+  color: #071019;
+  font-size: 1rem;
+}
+
+/* ─── Desktop Nav Links ─── */
+.desktop-nav nav {
+  display: flex;
+  gap: 1.15rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.desktop-nav nav a,
+.mobile-nav a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.83rem;
+  white-space: nowrap;
+  transition: color var(--duration-fast);
+}
+
+.desktop-nav nav a.active,
+.desktop-nav nav a:hover {
+  color: var(--color-accent);
+}
+
+.mobile-nav a.active {
+  color: var(--color-accent);
+}
+
+/* ─── Desktop Actions ─── */
+.desktop-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.profile-chip {
+  border: 1px solid var(--color-glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary);
+  border-radius: 99px;
+  padding: 0.62rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background var(--duration-fast);
+}
+
+.profile-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Mobile Navigation ─── */
+.mobile-nav {
+  display: none;
+}
+
+/* ─── Player Mode: Hide Desktop Nav ─── */
+.desktop-nav--hidden {
+  display: none;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .desktop-nav nav {
+    display: none;
+  }
+
+  .desktop-nav {
+    justify-content: space-between;
+  }
+
+  .desktop-nav__actions .icon-button,
+  .profile-chip {
+    display: none;
+  }
+
+  .mobile-nav {
+    position: fixed;
+    display: flex;
+    z-index: 10;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    height: 4.3rem;
+    border-radius: 1.35rem;
+    justify-content: space-around;
+    padding: 0.45rem;
+  }
+
+  .mobile-nav a {
+    font-size: 0.64rem;
+    min-width: 3.6rem;
+    min-height: 3rem;
+    display: grid;
+    place-items: center;
+    gap: 0.15rem;
+    border-radius: 1rem;
+    transition: background var(--duration-fast);
+  }
+
+  .mobile-nav a.active {
+    background: rgba(85, 216, 255, 0.1);
+  }
+
+  .desktop-nav {
+    top: 0.65rem;
+    margin-top: 0.65rem;
+  }
+}

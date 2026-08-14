@@ -6,20 +6,25 @@ import './anime.css'
 export function AnimeCard({
   anime,
   variant = 'poster',
+  rank,
   onSelect
 }: {
   anime: Anime
   variant?: 'poster' | 'compact' | 'landscape' | 'continue' | 'ranked'
+  rank?: number
   onSelect?: (anime: Anime) => void
 }) {
   return (
     <article
       className={`anime-card anime-card--${variant}`}
       onClick={() => onSelect?.(anime)}
+      tabIndex={onSelect ? 0 : undefined}
+      role={onSelect ? 'button' : undefined}
+      onKeyDown={onSelect ? e => e.key === 'Enter' && onSelect(anime) : undefined}
       style={{ cursor: onSelect ? 'pointer' : undefined }}
     >
       <div className="anime-card__art">
-        <img src={anime.poster} alt="" loading="lazy" />
+        <img src={anime.poster} alt={`${anime.title} poster`} loading="lazy" />
         <div className="anime-card__actions">
           <button
             aria-label={`Save ${anime.title}`}
@@ -38,7 +43,11 @@ export function AnimeCard({
             <Share2 size={16} />
           </button>
         </div>
-        {variant === 'ranked' && <strong className="rank">01</strong>}
+        {variant === 'ranked' && (
+          <strong className="rank">
+            {rank !== undefined ? String(rank).padStart(2, '0') : '01'}
+          </strong>
+        )}
         {anime.progress !== undefined && (
           <div className="anime-card__progress">
             <Progress value={anime.progress} />
@@ -66,4 +75,3 @@ export function AnimeCard({
     </article>
   )
 }
-

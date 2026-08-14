@@ -1,5 +1,0 @@
-import { ChevronLeft, ChevronRight, Maximize, Pause, Settings, Subtitles, Volume2 } from 'lucide-react'
-import { IconButton } from '../ui/Button'
-import { Progress } from '../ui/Progress'
-import './player.css'
-export function PlayerChrome(){return <section className="player" aria-label="Player preview"><div className="player__center"><button aria-label="Play preview"><Pause fill="currentColor"/></button></div><button className="skip">Skip intro</button><div className="player__controls glass"><Progress value={38} label="Episode progress"/><div><IconButton label="Previous episode"><ChevronLeft/></IconButton><IconButton label="Pause"><Pause/></IconButton><IconButton label="Next episode"><ChevronRight/></IconButton><span>08:43 / 22:10</span><div className="player__right"><IconButton label="Volume"><Volume2/></IconButton><IconButton label="Subtitles"><Subtitles/></IconButton><IconButton label="Settings"><Settings/></IconButton><IconButton label="Fullscreen"><Maximize/></IconButton></div></div></div></section>}

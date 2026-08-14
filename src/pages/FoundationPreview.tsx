@@ -1,5 +1,5 @@
 import { ArrowLeft, Play, Plus, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Anime, Episode } from '../types/domain'
 import { AnimeCard } from '../components/anime/AnimeCard'
 import { AnimeDetailHero } from '../components/anime/AnimeDetailHero'
@@ -32,6 +32,17 @@ function Home() {
   const [search, setSearch] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const { notify } = useToast()
+
+  useEffect(() => {
+    const titles: Record<ViewMode, string> = {
+      home: '7anime — Premium Anime Streaming',
+      detail: `${selectedAnime.title} — 7anime`,
+      player: `Playing ${selectedAnime.title} — 7anime`,
+      library: 'My Library — 7anime',
+      profile: 'My Space — 7anime'
+    }
+    document.title = titles[currentView] || '7anime'
+  }, [currentView, selectedAnime.title])
 
   const navigateTo = (view: ViewMode) => {
     setCurrentView(view)
@@ -119,7 +130,7 @@ function Home() {
           </section>
           <ContentRail title="Top rated">
             {[...previewAnime].reverse().map((anime, index) => (
-              <AnimeCard anime={anime} variant="ranked" key={`${anime.id}-${index}`} onSelect={openDetail} />
+              <AnimeCard anime={anime} variant="ranked" rank={index + 1} key={`${anime.id}-${index}`} onSelect={openDetail} />
             ))}
           </ContentRail>
           <DiscoveryCatalog anime={trendingAnime} />

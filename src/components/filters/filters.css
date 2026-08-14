@@ -1,1 +1,75 @@
-.filter-panel{border-radius:var(--radius-lg);padding:var(--space-5);margin-top:var(--space-8)}.filter-panel header{display:flex;align-items:center;gap:.5rem}.filter-panel header button{margin-left:auto;border:0;background:transparent;color:var(--color-accent);font-size:.8rem}.filter-groups{display:flex;gap:var(--space-5);margin-top:var(--space-4);overflow:auto}.filter-groups>div{display:grid;gap:.5rem;flex:0 0 auto}.filter-groups span{font-size:.7rem;color:var(--color-text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}.filter-groups>div>div{display:flex;gap:.35rem}.filter-groups button{border:1px solid var(--color-glass-border);border-radius:99px;background:rgba(255,255,255,.04);color:var(--color-text-secondary);padding:.4rem .65rem;font-size:.78rem}.filter-groups button.selected{background:rgba(85,216,255,.13);border-color:rgba(85,216,255,.4);color:var(--color-accent)}.filter-panel__active{display:flex;gap:.3rem;margin-top:var(--space-4)}
+/* ─── Filter Panel ─── */
+.filter-panel {
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-top: var(--space-8);
+}
+
+.filter-panel header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-panel header button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+}
+
+/* ─── Filter Groups ─── */
+.filter-groups {
+  display: flex;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.filter-groups::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-groups > div {
+  display: grid;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.filter-groups span {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.filter-groups > div > div {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.filter-groups button {
+  border: 1px solid var(--color-glass-border);
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  padding: 0.4rem 0.65rem;
+  font-size: 0.78rem;
+  transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.filter-groups button.selected {
+  background: rgba(85, 216, 255, 0.13);
+  border-color: rgba(85, 216, 255, 0.4);
+  color: var(--color-accent);
+}
+
+/* ─── Active Filters ─── */
+.filter-panel__active {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: var(--space-4);
+}

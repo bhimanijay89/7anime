@@ -1,1 +1,158 @@
-.anime-card{width:10.75rem;flex:0 0 auto}.anime-card__art{position:relative;aspect-ratio:2/3;overflow:hidden;border-radius:var(--radius-md);background:var(--color-surface-elevated);box-shadow:var(--shadow-1)}.anime-card__art img{width:100%;height:100%;object-fit:cover;transition:transform var(--duration-base) var(--ease-out)}.anime-card:hover img{transform:scale(1.045)}.anime-card__actions{opacity:0;transition:opacity var(--duration-fast);position:absolute;top:.5rem;right:.5rem;display:grid;gap:.3rem}.anime-card:hover .anime-card__actions{opacity:1}.anime-card__actions button{display:grid;place-items:center;width:2rem;height:2rem;border:1px solid var(--color-glass-border);border-radius:50%;background:var(--color-glass-strong);color:var(--color-text-primary)}.anime-card__details h3{font-size:.9rem;margin:.65rem 0 .3rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.anime-card__meta{display:flex;justify-content:space-between;color:var(--color-text-muted);font-size:.72rem}.anime-card__meta span:last-child{display:flex;gap:.2rem;align-items:center;color:#ffd77e}.anime-card__badges{display:flex;gap:.25rem;margin-top:.4rem;flex-wrap:wrap}.anime-card__progress{position:absolute;left:.5rem;right:.5rem;bottom:.5rem}.anime-card--compact{width:8rem}.anime-card--compact .anime-card__badges{display:none}.anime-card--landscape{width:18rem}.anime-card--landscape .anime-card__art{aspect-ratio:16/9}.anime-card--continue{width:16rem}.anime-card--continue .anime-card__art{aspect-ratio:16/10}.rank{position:absolute;bottom:-.2rem;left:.5rem;font-size:3.25rem;line-height:1;color:white;text-shadow:0 3px 7px #000}@media(max-width:600px){.anime-card{width:8.7rem}.anime-card__details h3{font-size:.82rem}.anime-card__actions{opacity:1}.anime-card__actions button:last-child{display:none}}
+/* ─── Anime Card ─── */
+.anime-card {
+  width: 10.75rem;
+  flex: 0 0 auto;
+}
+
+.anime-card__art {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-1);
+}
+
+.anime-card__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.anime-card:hover img {
+  transform: scale(1.045);
+}
+
+/* ─── Card Actions ─── */
+.anime-card__actions {
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.anime-card:hover .anime-card__actions {
+  opacity: 1;
+}
+
+.anime-card__actions button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--color-glass-border);
+  border-radius: 50%;
+  background: var(--color-glass-strong);
+  color: var(--color-text-primary);
+  transition: background var(--duration-fast);
+}
+
+.anime-card__actions button:hover {
+  background: var(--color-glass-interactive);
+}
+
+/* ─── Card Details ─── */
+.anime-card__details {
+  min-height: 4.5rem;
+}
+
+.anime-card__details h3 {
+  font-size: 0.9rem;
+  margin: 0.65rem 0 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anime-card__meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+}
+
+.anime-card__meta span:last-child {
+  display: flex;
+  gap: 0.2rem;
+  align-items: center;
+  color: #ffd77e;
+}
+
+.anime-card__badges {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.anime-card__progress {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 0.5rem;
+}
+
+/* ─── Variants ─── */
+.anime-card--compact {
+  width: 8rem;
+}
+
+.anime-card--compact .anime-card__badges {
+  display: none;
+}
+
+.anime-card--landscape {
+  width: 18rem;
+}
+
+.anime-card--landscape .anime-card__art {
+  aspect-ratio: 16 / 9;
+}
+
+.anime-card--continue {
+  width: 16rem;
+}
+
+.anime-card--continue .anime-card__art {
+  aspect-ratio: 16 / 10;
+}
+
+/* ─── Ranked ─── */
+.rank {
+  position: absolute;
+  bottom: -0.2rem;
+  left: 0.5rem;
+  font-size: 3.25rem;
+  line-height: 1;
+  color: white;
+  text-shadow: 0 3px 7px #000;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .anime-card {
+    width: 8.7rem;
+  }
+
+  .anime-card__details h3 {
+    font-size: 0.82rem;
+  }
+
+  .anime-card__actions {
+    opacity: 1;
+  }
+
+  .anime-card__actions button:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .anime-card {
+    width: 7.5rem;
+  }
+}

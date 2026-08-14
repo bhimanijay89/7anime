@@ -363,6 +363,20 @@
   color: var(--color-text-muted);
 }
 
+/* ─── Player Select Controls ─── */
+.cinema-player__select {
+  background: rgba(20, 26, 38, 0.8);
+  color: #fff;
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 0.8rem;
+}
+
+.cinema-player__select option {
+  background: var(--color-surface);
+}
+
 /* Responsive */
 @media (max-width: 960px) {
   .cinema-player__layout {

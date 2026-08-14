@@ -33,12 +33,13 @@ export function DesktopNavbar({
   currentView?: ViewMode
 }) {
   return (
-    <header className="desktop-nav glass">
+    <header className={`desktop-nav glass ${currentView === 'player' ? 'desktop-nav--hidden' : ''}`}>
       <Brand onClick={() => onNavigate?.('home')} />
       <nav aria-label="Main navigation">
         <a
           className={currentView === 'home' ? 'active' : ''}
           href="#home"
+          aria-current={currentView === 'home' ? 'page' : undefined}
           onClick={e => { e.preventDefault(); onNavigate?.('home') }}
         >
           Home
@@ -46,6 +47,7 @@ export function DesktopNavbar({
         <a
           className={currentView === 'library' ? 'active' : ''}
           href="#library"
+          aria-current={currentView === 'library' ? 'page' : undefined}
           onClick={e => { e.preventDefault(); onNavigate?.('library') }}
         >
           Library
@@ -53,6 +55,7 @@ export function DesktopNavbar({
         <a
           className={currentView === 'profile' ? 'active' : ''}
           href="#profile"
+          aria-current={currentView === 'profile' ? 'page' : undefined}
           onClick={e => { e.preventDefault(); onNavigate?.('profile') }}
         >
           My Space
@@ -83,6 +86,8 @@ export function MobileNavigation({
   onNavigate?: (view: ViewMode) => void
   currentView?: ViewMode
 }) {
+  if (currentView === 'player') return null
+
   const items = [
     ['Home', House, 'home'],
     ['Explore', Compass, 'home'],
@@ -94,12 +99,23 @@ export function MobileNavigation({
     <nav className="mobile-nav glass" aria-label="Mobile navigation">
       {items.map(([name, Icon, targetView]) => (
         <a
-          className={currentView === targetView ? 'active' : ''}
+          className={name === 'Explore'
+            ? ''
+            : currentView === targetView ? 'active' : ''
+          }
           href={`#${targetView}`}
           key={name}
+          aria-current={name !== 'Explore' && currentView === targetView ? 'page' : undefined}
           onClick={e => {
             e.preventDefault()
-            onNavigate?.(targetView as ViewMode)
+            if (name === 'Explore') {
+              onNavigate?.('home')
+              setTimeout(() => {
+                document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' })
+              }, 100)
+            } else {
+              onNavigate?.(targetView as ViewMode)
+            }
           }}
         >
           <Icon size={20} />
@@ -117,4 +133,3 @@ export function MenuTrigger({ onClick }: { onClick: () => void }) {
     </IconButton>
   )
 }
-
