@@ -38,7 +38,16 @@ export function EpisodeList({
             aria-label={`Play episode ${ep.number}: ${ep.title}`}
           >
             <div className="episode-card__thumb">
-              {ep.thumbnail && <img src={ep.thumbnail} alt="" loading="lazy" />}
+              {ep.thumbnail && (
+                <img
+                  src={ep.thumbnail}
+                  alt=""
+                  loading="lazy"
+                  onError={e => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              )}
               <div className="episode-card__play">
                 <Play size={24} fill="#ffffff" color="#ffffff" />
               </div>

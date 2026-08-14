@@ -26,7 +26,7 @@ COMPLETE
 - **Player UI**: Extracted inline `style` attributes from `FullPlayerView` playback speed and quality selector dropdowns into clean `.cinema-player__select` CSS classes in `player.css`; deleted orphan unused `PlayerChrome.tsx` component.
 - **Library View**: Fixed `.library-space__grid` layout by overriding card width so cards fill grid columns responsively.
 - **User Profile Space**: Added complete missing CSS classes for `ProfileSummary` (avatar, level badge, XP bar, coins), `StreakCard` (12-day activity calendar), and `AchievementCard` (unlocked/locked states).
-- **SEO & Fonts**: Updated `index.html` with meta description tag, Google Fonts preconnect, and Inter font stylesheet link.
+- **UI Inspection & Bug Fixes**: Launched browser subagent to perform full interactive inspection across all views. Identified and fixed broken remote Unsplash image URLs (`photo-1519608487953-e999c86e7454`) causing missing artwork on `Skyline Requiem` and `EP 4: Sub-Level Protocol`. Added defensive `onError` handlers across `AnimeCard`, `EpisodeList`, and `EpisodeSidebar` to gracefully handle image loading failures. Styled `.library-card-remove` to full width for seamless card grid integration.
 
 ## Files Created
 

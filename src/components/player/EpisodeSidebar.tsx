@@ -48,7 +48,16 @@ export function EpisodeSidebar({
               onKeyDown={e => e.key === 'Enter' && onSelectEpisode(ep)}
             >
               <div className="player-sidebar__thumb">
-                {ep.thumbnail && <img src={ep.thumbnail} alt="" loading="lazy" />}
+                {ep.thumbnail && (
+                  <img
+                    src={ep.thumbnail}
+                    alt=""
+                    loading="lazy"
+                    onError={e => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                )}
                 <div className="player-sidebar__play-icon">
                   <Play size={16} fill="currentColor" />
                 </div>

@@ -24,7 +24,14 @@ export function AnimeCard({
       style={{ cursor: onSelect ? 'pointer' : undefined }}
     >
       <div className="anime-card__art">
-        <img src={anime.poster} alt={`${anime.title} poster`} loading="lazy" />
+        <img
+          src={anime.poster}
+          alt={`${anime.title} poster`}
+          loading="lazy"
+          onError={e => {
+            e.currentTarget.style.display = 'none'
+          }}
+        />
         <div className="anime-card__actions">
           <button
             aria-label={`Save ${anime.title}`}

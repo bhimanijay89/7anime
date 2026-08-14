@@ -22,7 +22,7 @@ export const previewAnime: Anime[] = [
       { id: 'e1', number: 1, title: 'Rain & Chrome', duration: 24, watched: true, thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=400&q=80' },
       { id: 'e2', number: 2, title: 'Ghosts in the Signal', duration: 23, watched: true, thumbnail: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80' },
       { id: 'e3', number: 3, title: 'Katanas at Midnight', duration: 24, watched: true, thumbnail: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=400&q=80' },
-      { id: 'e4', number: 4, title: 'Sub-Level Protocol', duration: 24, watched: false, thumbnail: 'https://images.unsplash.com/photo-1519608487953-e999c86e7454?auto=format&fit=crop&w=400&q=80' },
+      { id: 'e4', number: 4, title: 'Sub-Level Protocol', duration: 24, watched: false, thumbnail: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80' },
       { id: 'e5', number: 5, title: 'Overdrive Heartbeat', duration: 25, watched: false, thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=400&q=80' }
     ],
     characters: [
@@ -55,7 +55,7 @@ export const previewAnime: Anime[] = [
       { id: 'c201', name: 'Astraea', role: 'Main', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80', voiceActor: { name: 'Aoi Yuuki', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80' } }
     ]
   },
-  { id: '3', title: 'Skyline Requiem', poster: 'https://images.unsplash.com/photo-1519608487953-e999c86e7454?auto=format&fit=crop&w=600&q=80', episode: 'EP 8', status: 'Airing', rating: 8.4, sub: 8, dub: 6, genres: ['Romance', 'Drama'], type: 'TV', year: 2026, studio: 'CloverWorks', synopsis: 'Two musicians meet on a rooftop overlooking a foggy coastal metropolis. As their melodies align, secret burdens come to light.' },
+  { id: '3', title: 'Skyline Requiem', poster: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80', episode: 'EP 8', status: 'Airing', rating: 8.4, sub: 8, dub: 6, genres: ['Romance', 'Drama'], type: 'TV', year: 2026, studio: 'CloverWorks', synopsis: 'Two musicians meet on a rooftop overlooking a foggy coastal metropolis. As their melodies align, secret burdens come to light.' },
   { id: '4', title: 'The Ninth Bloom', poster: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80', episode: 'Soon', status: 'Upcoming', rating: 8.2, genres: ['Fantasy'], type: 'Movie', year: 2026, studio: 'Studio Ghibli Core', synopsis: 'A mythical garden blooms once every century, granting a single wish to whoever finds its hidden gate.' }
 ]
 export const trendingAnime: Anime[] = [
