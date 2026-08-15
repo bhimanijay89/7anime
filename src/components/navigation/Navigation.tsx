@@ -33,7 +33,7 @@ export function DesktopNavbar({
   currentView?: ViewMode
 }) {
   return (
-    <header className={`desktop-nav glass ${currentView === 'player' ? 'desktop-nav--hidden' : ''}`}>
+    <header className={`desktop-nav glass-elevated ${currentView === 'player' ? 'desktop-nav--hidden' : ''}`}>
       <Brand onClick={() => onNavigate?.('home')} />
       <nav aria-label="Main navigation">
         <a
@@ -69,10 +69,14 @@ export function DesktopNavbar({
           <Bell size={18} />
         </IconButton>
         <button
-          className="profile-chip"
+          className={`profile-chip ${currentView === 'profile' ? 'profile-chip--active' : ''}`}
           onClick={() => onNavigate ? onNavigate('profile') : onMenu()}
+          aria-label="View user profile"
         >
-          <UserRound size={16} /> Yuki
+          <span className="profile-chip__avatar" aria-hidden="true">
+            <UserRound size={15} />
+          </span>
+          <span className="profile-chip__name">Yuki</span>
         </button>
       </div>
     </header>

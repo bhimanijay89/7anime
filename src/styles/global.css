@@ -50,12 +50,81 @@ select:focus-visible,
   color: var(--color-text-primary);
 }
 
-/* ─── Glass Utility ─── */
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 99px;
+  border: 2px solid var(--color-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(85, 216, 255, 0.4);
+}
+
+/* ─── Glass Utility Hierarchy ─── */
 .glass {
   background: var(--color-glass);
   border: 1px solid var(--color-glass-border);
   backdrop-filter: blur(18px) saturate(130%);
-  box-shadow: var(--shadow-1), inset 0 1px rgba(255, 255, 255, 0.07);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  box-shadow: var(--shadow-1), var(--color-glass-highlight);
+  transition:
+    background var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.glass-elevated {
+  background: var(--color-glass-elevated);
+  border: 1px solid var(--color-glass-border);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--shadow-2), var(--color-glass-highlight);
+}
+
+.glass-interactive {
+  background: var(--color-glass-interactive);
+  border: 1px solid var(--color-glass-border);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  box-shadow: var(--shadow-1), var(--color-glass-highlight);
+}
+
+.glass-interactive:hover {
+  border-color: var(--color-glass-border-hover);
+}
+
+.glass-modal {
+  background: var(--color-glass-modal);
+  border: 1px solid var(--color-glass-border);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: var(--shadow-modal), var(--color-glass-highlight);
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background: rgba(14, 19, 31, 0.95);
+  }
+  .glass-elevated {
+    background: rgba(18, 24, 38, 0.96);
+  }
+  .glass-interactive {
+    background: rgba(24, 32, 50, 0.96);
+  }
+  .glass-modal {
+    background: rgba(12, 16, 26, 0.98);
+  }
 }
 
 /* ─── Screen Reader Only ─── */

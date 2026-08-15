@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Master UI Reconciliation & Baseline Stabilization Phase
+Phase 7A — Global Design System & Navigation Premium Polish
 
 ## Overall Status
 
-Master UI Reconciliation & Baseline Stabilization is COMPLETE and verified. The Web UI foundation across all initial 6 phases has been audited, reconciled, and formatted into a production-quality, responsive, and accessible baseline.
+Phase 7A is COMPLETE and verified. The global design system (Liquid Glass surface hierarchy, typography scale, line heights, spacing, button/badge primitives, floating desktop navigation, restrained active indicators, profile chip avatar, and floating bottom mobile navigation) has been fully unified and polished.
 
 ## Completed Phases
 
@@ -17,23 +17,26 @@ Master UI Reconciliation & Baseline Stabilization is COMPLETE and verified. The 
 - [x] Phase 5 — Player and Episode UI
 - [x] Phase 6 — Watch Progress, Library & User Profiles
 - [x] Master UI Reconciliation & Baseline Stabilization Phase
+- [x] Phase 7A — Global Design System + Navigation Premium Polish
 
-## Current Phase Details (Master UI Reconciliation)
+## Current Phase Details (Phase 7A)
 
-- [x] Added root `.gitignore` and removed `dist/`, `node_modules/`, and build artifacts from Git tracking.
-- [x] Expanded design token system (`tokens.css`) with glass hierarchy and typographic scales.
-- [x] Standardized all single-line minified CSS files into clean, readable multi-line code.
-- [x] Added missing CSS classes for profile summary, streak calendar, achievements, search overlay, and share dialog.
-- [x] Added dynamic `rank` index prop to `AnimeCard` (replacing hardcoded '01').
-- [x] Implemented dynamic page document title updates per active view mode.
-- [x] Fixed mobile navigation target differentiation for "Explore" and hidden nav state in cinema mode.
-- [x] Removed orphan unused `PlayerChrome.tsx` component and extracted inline styles in `FullPlayerView.tsx`.
-- [x] Verified full responsive layout across breakpoints from 1440px down to 320px.
-- [x] Verified zero-error ESLint and Vite production build (`npm run build`).
+- [x] Defined complete Liquid Glass tokens (`--color-glass`, `--color-glass-elevated`, `--color-glass-interactive`, `--color-glass-active`, `--color-glass-modal`, `--color-glass-border`, `--color-glass-border-hover`, `--color-glass-highlight`).
+- [x] Standardized typography tokens (`--font-size-xs` to `--font-size-3xl`), font weights (`400`, `500`, `600`, `700`, `850`), and line height scale (`1.15`, `1.5`, `1.65`).
+- [x] Added global glass utility classes (`.glass`, `.glass-elevated`, `.glass-interactive`, `.glass-modal`), `@supports not (backdrop-filter: blur(1px))` fallbacks, custom dark scrollbar styling, and high-contrast outline focus rings.
+- [x] Polished button primitives with hover translation (`-1px`), active scale (`0.98`), glowing accent state, and 44px+ minimum touch targets for icon buttons.
+- [x] Refined badge/chip typography and subtle tone border rings.
+- [x] Upgraded Modal and Drawer overlays with modal glass depth (`backdrop-filter: blur(24px)`), smooth scale-in animations, ESC key listeners, and body scroll locking.
+- [x] Refined floating desktop navbar with restrained active indicator (glass pill highlight + accent text + soft bottom glowing indicator line).
+- [x] Enhanced profile chip presentation with avatar circle icon (`UserRound`), username typography ("Yuki"), hover translation, and active glow border.
+- [x] Refined floating mobile bottom navigation (`24px` backdrop blur, 44px+ tap targets, active icon drop shadow).
+- [x] Standardized page layout rhythm (`preview.css`) for 1440px down to 320px without horizontal scrollbar overflow.
+- [x] Verified zero-error ESLint (`npm run lint`) and production build (`npm run build`).
 
 ## Upcoming Phases
 
-- [ ] Future UI / Feature Overhaul (Profile 2.0, Authentication UI, Schedule, Top 10 Redesign, etc.)
+- [ ] Phase 7B — Home + Top 10 + Poster System
+- [ ] Future UI / Feature Overhauls (Profile 2.0, Authentication UI, Schedule, etc.)
 
 ## Current Blockers
 
@@ -45,8 +48,9 @@ Master UI Reconciliation & Baseline Stabilization is COMPLETE and verified. The 
 
 ## Last Updated
 
-2026-08-14
+2026-08-15
 
 ## Next Exact Action
 
-Master UI Reconciliation phase complete. Await next phase assignment.
+Phase 7A complete. Await user instruction for Phase 7B — Home + Top 10 + Poster System.
+
