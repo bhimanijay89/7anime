@@ -1,5 +1,5 @@
 export interface Character { id: string; name: string; role: 'Main' | 'Supporting'; avatar: string; voiceActor?: { name: string; avatar: string } }
-export interface Anime { id: string; title: string; poster: string; cover?: string; episode?: string; status: 'Airing' | 'Completed' | 'Upcoming'; rating?: number; sub?: number; dub?: number; progress?: number; genres?: string[]; type?: 'TV' | 'Movie'; year?: number; synopsis?: string; studio?: string; source?: string; duration?: string; episodesList?: Episode[]; seasons?: Season[]; characters?: Character[] }
+export interface Anime { id: string; title: string; poster: string; cover?: string; banner?: string; episode?: string; nextEpisode?: string; status: 'Airing' | 'Completed' | 'Upcoming'; rating?: number; sub?: number; dub?: number; progress?: number; genres?: string[]; type?: 'TV' | 'Movie'; year?: number; synopsis?: string; studio?: string; source?: string; duration?: string; episodesList?: Episode[]; seasons?: Season[]; characters?: Character[] }
 export interface Episode { id: string; number: number; title: string; duration?: number; watched?: boolean; thumbnail?: string }
 export interface Season { id: string; title: string; year: number; episodes: Episode[] }
 export interface WatchProgress { animeId: string; episodeId: string; percentage: number; updatedAt: string }

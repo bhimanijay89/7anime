@@ -1,6 +1,6 @@
 /* ─── Anime Card ─── */
 .anime-card {
-  width: 10.75rem;
+  width: 11rem;
   flex: 0 0 auto;
 }
 
@@ -96,9 +96,27 @@
   bottom: 0.5rem;
 }
 
+/* ─── Episode Info (Continue variant) ─── */
+.anime-card__episode-info {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 99px;
+  background: var(--color-glass-strong);
+  backdrop-filter: blur(10px);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-glass-border);
+}
+
 /* ─── Variants ─── */
 .anime-card--compact {
-  width: 8rem;
+  width: 8.5rem;
 }
 
 .anime-card--compact .anime-card__badges {
@@ -114,7 +132,7 @@
 }
 
 .anime-card--continue {
-  width: 16rem;
+  width: 17rem;
 }
 
 .anime-card--continue .anime-card__art {
@@ -122,20 +140,35 @@
 }
 
 /* ─── Ranked ─── */
+.anime-card--ranked {
+  width: 11.5rem;
+}
+
 .rank {
   position: absolute;
-  bottom: -0.2rem;
+  bottom: -0.15rem;
   left: 0.5rem;
-  font-size: 3.25rem;
+  font-size: 3.5rem;
+  font-style: italic;
   line-height: 1;
-  color: white;
-  text-shadow: 0 3px 7px #000;
+  font-weight: var(--font-weight-heavy);
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.7);
+  -webkit-text-stroke: 1px rgba(85, 216, 255, 0.2);
 }
 
 /* ─── Responsive ─── */
 @media (max-width: 600px) {
   .anime-card {
-    width: 8.7rem;
+    width: 9rem;
+  }
+
+  .anime-card--continue {
+    width: 14rem;
+  }
+
+  .anime-card--ranked {
+    width: 9.25rem;
   }
 
   .anime-card__details h3 {
@@ -149,10 +182,26 @@
   .anime-card__actions button:last-child {
     display: none;
   }
+
+  .rank {
+    font-size: 2.75rem;
+  }
 }
 
 @media (max-width: 320px) {
   .anime-card {
     width: 7.5rem;
+  }
+
+  .anime-card--continue {
+    width: 11.5rem;
+  }
+
+  .anime-card--ranked {
+    width: 7.75rem;
+  }
+
+  .rank {
+    font-size: 2.25rem;
   }
 }

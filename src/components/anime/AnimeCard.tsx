@@ -1,8 +1,9 @@
-import { Bookmark, Share2, Star } from 'lucide-react'
+import { Bookmark, Play, Share2, Star } from 'lucide-react'
 import type { Anime } from '../../types/domain'
 import { Badge } from '../ui/Badge'
 import { Progress } from '../ui/Progress'
 import './anime.css'
+
 export function AnimeCard({
   anime,
   variant = 'poster',
@@ -55,7 +56,18 @@ export function AnimeCard({
             {rank !== undefined ? String(rank).padStart(2, '0') : '01'}
           </strong>
         )}
-        {anime.progress !== undefined && (
+        {variant === 'continue' && anime.progress !== undefined && (
+          <>
+            <div className="anime-card__episode-info">
+              <Play size={12} fill="currentColor" />
+              <span>{anime.episode} · {anime.progress}%</span>
+            </div>
+            <div className="anime-card__progress">
+              <Progress value={anime.progress} />
+            </div>
+          </>
+        )}
+        {variant !== 'continue' && anime.progress !== undefined && (
           <div className="anime-card__progress">
             <Progress value={anime.progress} />
           </div>

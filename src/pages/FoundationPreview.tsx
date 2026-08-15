@@ -1,4 +1,4 @@
-import { ArrowLeft, Play, Plus, Sparkles } from 'lucide-react'
+import { ArrowLeft, Calendar, Play, Plus, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Anime, Episode } from '../types/domain'
 import { AnimeCard } from '../components/anime/AnimeCard'
@@ -6,23 +6,19 @@ import { AnimeDetailHero } from '../components/anime/AnimeDetailHero'
 import { AnimeMetadataTabs } from '../components/anime/AnimeMetadataTabs'
 import { DiscoveryCatalog } from '../components/anime/DiscoveryCatalog'
 import { EpisodeList } from '../components/anime/EpisodeList'
-import { CinematicCarousel } from '../components/carousel/CinematicCarousel'
+import { Top10Hero } from '../components/carousel/CinematicCarousel'
 import { ContentRail } from '../components/carousel/ContentRail'
 import { DesktopNavbar, MobileNavigation, type ViewMode } from '../components/navigation/Navigation'
 import { FullPlayerView } from '../components/player/FullPlayerView'
 import { LibraryView } from '../components/profile/LibraryView'
 import { ProfileFullView } from '../components/profile/ProfileFullView'
 import { SearchOverlay } from '../components/search/SearchOverlay'
+import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Drawer } from '../components/ui/Overlay'
 import { ToastProvider, useToast } from '../components/ui/Toast'
-import { continueWatching, previewAnime, previewUser, trendingAnime } from '../data/anime'
+import { continueWatching, previewAnime, previewUser, top10Anime, trendingAnime } from '../data/anime'
 import './preview.css'
-
-const slides = [
-  { title: 'Neon Ronin', eyebrow: 'TOP 10 · #01 THIS WEEK', description: 'A rogue blade runner crosses a rain-soaked megacity to find the memory that was stolen from her.', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=85' },
-  { title: 'Ashes of Astra', eyebrow: 'TOP 10 · #02 THIS WEEK', description: 'In the aftermath of a dying star, a crew of young explorers must chart an impossible way home.', image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=85' },
-]
 
 function Home() {
   const [currentView, setCurrentView] = useState<ViewMode>('home')
@@ -66,6 +62,18 @@ function Home() {
     notify('Title removed from your library.', 'info')
   }
 
+  const handleAddToList = (anime: Anime) => {
+    if (!savedLibrary.find(item => item.id === anime.id)) {
+      setSavedLibrary(prev => [...prev, anime])
+      notify(`${anime.title} added to your library!`, 'success')
+    } else {
+      notify(`${anime.title} is already in your library.`, 'info')
+    }
+  }
+
+  // Upcoming anime from mock data
+  const upcomingAnime = previewAnime.filter(a => a.status === 'Upcoming')
+
   return <>
     <DesktopNavbar
       onSearch={() => setSearch(true)}
@@ -90,7 +98,14 @@ function Home() {
         <ProfileFullView user={previewUser} />
       ) : currentView === 'home' ? (
         <>
-          <CinematicCarousel slides={slides} />
+          {/* ─── 1. Top 10 Hero ─── */}
+          <Top10Hero
+            anime={top10Anime}
+            onSelect={openDetail}
+            onAddToList={handleAddToList}
+          />
+
+          {/* ─── 2. Quick Actions ─── */}
           <section className="home-quick glass" aria-label="Quick discovery">
             <span><Sparkles size={17} />Curated for your evening</span>
             <div>
@@ -102,11 +117,15 @@ function Home() {
               </Button>
             </div>
           </section>
+
+          {/* ─── 3. Continue Watching ─── */}
           <ContentRail title="Continue watching">
             {continueWatching.map(anime => (
               <AnimeCard anime={anime} variant="continue" key={anime.id} onSelect={openDetail} />
             ))}
           </ContentRail>
+
+          {/* ─── 4. Trending Now ─── */}
           <section className="home-section-head">
             <div>
               <p className="eyebrow">Handpicked today</p>
@@ -119,20 +138,46 @@ function Home() {
               <AnimeCard anime={anime} key={anime.id} onSelect={openDetail} />
             ))}
           </ContentRail>
-          <section className="home-feature glass">
-            <div>
-              <p className="eyebrow">Just announced</p>
+
+          {/* ─── 5. Upcoming Section ─── */}
+          <section className="home-upcoming glass" aria-label="Upcoming anime">
+            <div className="home-upcoming__content">
+              <p className="eyebrow"><Calendar size={13} /> Coming soon</p>
               <h2>Fresh worlds are almost here.</h2>
               <p>Keep an eye on the next wave of original stories, seasonal favorites, and films.</p>
+              <div className="home-upcoming__cards">
+                {upcomingAnime.length > 0 ? (
+                  upcomingAnime.map(anime => (
+                    <article key={anime.id} className="home-upcoming__card glass-interactive" onClick={() => openDetail(anime)}>
+                      <img src={anime.poster} alt={anime.title} loading="lazy" />
+                      <div>
+                        <h3>{anime.title}</h3>
+                        <div className="home-upcoming__card-meta">
+                          {anime.type && <Badge tone="neutral">{anime.type}</Badge>}
+                          {anime.year && <Badge tone="neutral">{anime.year}</Badge>}
+                          <Badge tone="warning">Upcoming</Badge>
+                        </div>
+                        {anime.synopsis && <p>{anime.synopsis}</p>}
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p style={{ color: 'var(--color-text-muted)' }}>No upcoming titles at the moment.</p>
+                )}
+              </div>
               <Button variant="glass" onClick={() => openDetail(previewAnime[3])}>Browse upcoming</Button>
             </div>
-            <div className="home-feature__art" aria-hidden="true" />
+            <div className="home-upcoming__art" aria-hidden="true" />
           </section>
+
+          {/* ─── 6. Top Rated ─── */}
           <ContentRail title="Top rated">
-            {[...previewAnime].reverse().map((anime, index) => (
+            {[...previewAnime].sort((a, b) => (b.rating || 0) - (a.rating || 0)).map((anime, index) => (
               <AnimeCard anime={anime} variant="ranked" rank={index + 1} key={`${anime.id}-${index}`} onSelect={openDetail} />
             ))}
           </ContentRail>
+
+          {/* ─── 7. Discovery ─── */}
           <DiscoveryCatalog anime={trendingAnime} />
         </>
       ) : (
@@ -174,4 +219,3 @@ function Home() {
 }
 
 export function FoundationPreview() { return <ToastProvider><Home /></ToastProvider> }
-
