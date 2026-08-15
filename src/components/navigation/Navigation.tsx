@@ -1,9 +1,32 @@
-import { Bell, Compass, House, Library, Menu, Search, UserRound } from 'lucide-react'
+import {
+  Bell,
+  CalendarDays,
+  House,
+  Library,
+  Menu,
+  Search,
+  UserRound,
+} from 'lucide-react'
 import { IconButton } from '../ui/Button'
 import './navigation.css'
-export type ViewMode = 'home' | 'detail' | 'player' | 'library' | 'profile'
 
-export function Brand({ onClick }: { onClick?: () => void }) {
+export type ViewMode =
+  | 'home'
+  | 'detail'
+  | 'player'
+  | 'library'
+  | 'profile'
+  | 'schedule'
+
+/* ─────────────────────────────────────────
+   Brand
+   ───────────────────────────────────────── */
+
+export function Brand({
+  onClick,
+}: {
+  onClick?: () => void
+}) {
   return (
     <a
       className="brand"
@@ -21,11 +44,15 @@ export function Brand({ onClick }: { onClick?: () => void }) {
   )
 }
 
+/* ─────────────────────────────────────────
+   Desktop Navigation
+   ───────────────────────────────────────── */
+
 export function DesktopNavbar({
   onMenu,
   onSearch,
   onNavigate,
-  currentView = 'home'
+  currentView = 'home',
 }: {
   onMenu: () => void
   onSearch: () => void
@@ -33,106 +60,240 @@ export function DesktopNavbar({
   currentView?: ViewMode
 }) {
   return (
-    <header className={`desktop-nav glass-elevated ${currentView === 'player' ? 'desktop-nav--hidden' : ''}`}>
-      <Brand onClick={() => onNavigate?.('home')} />
+    <header
+      className={`desktop-nav glass-elevated ${currentView === 'player'
+          ? 'desktop-nav--hidden'
+          : ''
+        }`}
+    >
+      {/* Brand */}
+      <Brand
+        onClick={() =>
+          onNavigate?.('home')
+        }
+      />
+
+      {/* Main Navigation */}
       <nav aria-label="Main navigation">
+
+        {/* Home */}
         <a
-          className={currentView === 'home' ? 'active' : ''}
+          className={
+            currentView === 'home'
+              ? 'active'
+              : ''
+          }
           href="#home"
-          aria-current={currentView === 'home' ? 'page' : undefined}
-          onClick={e => { e.preventDefault(); onNavigate?.('home') }}
+          aria-current={
+            currentView === 'home'
+              ? 'page'
+              : undefined
+          }
+          onClick={e => {
+            e.preventDefault()
+            onNavigate?.('home')
+          }}
         >
-          Home
+          <House
+            size={16}
+            aria-hidden="true"
+          />
+          <span>Home</span>
         </a>
+
+        {/* Library */}
         <a
-          className={currentView === 'library' ? 'active' : ''}
+          className={
+            currentView === 'library'
+              ? 'active'
+              : ''
+          }
           href="#library"
-          aria-current={currentView === 'library' ? 'page' : undefined}
-          onClick={e => { e.preventDefault(); onNavigate?.('library') }}
+          aria-current={
+            currentView === 'library'
+              ? 'page'
+              : undefined
+          }
+          onClick={e => {
+            e.preventDefault()
+            onNavigate?.('library')
+          }}
         >
-          Library
+          <Library
+            size={16}
+            aria-hidden="true"
+          />
+          <span>Library</span>
         </a>
+
+        {/* Schedule */}
         <a
-          className={currentView === 'profile' ? 'active' : ''}
-          href="#profile"
-          aria-current={currentView === 'profile' ? 'page' : undefined}
-          onClick={e => { e.preventDefault(); onNavigate?.('profile') }}
+          className={
+            currentView === 'schedule'
+              ? 'active'
+              : ''
+          }
+          href="#schedule"
+          aria-current={
+            currentView === 'schedule'
+              ? 'page'
+              : undefined
+          }
+          onClick={e => {
+            e.preventDefault()
+            onNavigate?.('schedule')
+          }}
         >
-          My Space
+          <CalendarDays
+            size={16}
+            aria-hidden="true"
+          />
+          <span>Schedule</span>
         </a>
       </nav>
+
+      {/* Right-side Actions */}
       <div className="desktop-nav__actions">
-        <IconButton label="Search" onClick={onSearch}>
+
+        {/* Search */}
+        <IconButton
+          label="Search"
+          onClick={onSearch}
+        >
           <Search size={18} />
         </IconButton>
+
+        {/* Notifications */}
         <IconButton label="Notifications">
           <Bell size={18} />
         </IconButton>
+
+        {/* Profile */}
         <button
-          className={`profile-chip ${currentView === 'profile' ? 'profile-chip--active' : ''}`}
-          onClick={() => onNavigate ? onNavigate('profile') : onMenu()}
+          className={`profile-chip ${currentView === 'profile'
+              ? 'profile-chip--active'
+              : ''
+            }`}
+          onClick={() =>
+            onNavigate
+              ? onNavigate('profile')
+              : onMenu()
+          }
           aria-label="View user profile"
         >
-          <span className="profile-chip__avatar" aria-hidden="true">
+          <span
+            className="profile-chip__avatar"
+            aria-hidden="true"
+          >
             <UserRound size={15} />
           </span>
-          <span className="profile-chip__name">Yuki</span>
+
+          <span className="profile-chip__name">
+            Yuki
+          </span>
         </button>
       </div>
     </header>
   )
 }
 
+/* ─────────────────────────────────────────
+   Mobile Navigation
+   Home / Search / Library / Profile
+   ───────────────────────────────────────── */
+
 export function MobileNavigation({
   onNavigate,
-  currentView = 'home'
+  onSearch,
+  currentView = 'home',
 }: {
   onNavigate?: (view: ViewMode) => void
+  onSearch?: () => void
   currentView?: ViewMode
 }) {
   if (currentView === 'player') return null
 
   const items = [
     ['Home', House, 'home'],
-    ['Explore', Compass, 'home'],
+    ['Search', Search, 'search'],
     ['Library', Library, 'library'],
-    ['Profile', UserRound, 'profile']
+    ['Profile', UserRound, 'profile'],
   ] as const
 
   return (
-    <nav className="mobile-nav glass" aria-label="Mobile navigation">
-      {items.map(([name, Icon, targetView]) => (
-        <a
-          className={name === 'Explore'
-            ? ''
-            : currentView === targetView ? 'active' : ''
-          }
-          href={`#${targetView}`}
-          key={name}
-          aria-current={name !== 'Explore' && currentView === targetView ? 'page' : undefined}
-          onClick={e => {
-            e.preventDefault()
-            if (name === 'Explore') {
-              onNavigate?.('home')
-              setTimeout(() => {
-                document.getElementById('anime')?.scrollIntoView({ behavior: 'smooth' })
-              }, 100)
-            } else {
-              onNavigate?.(targetView as ViewMode)
-            }
-          }}
-        >
-          <Icon size={20} />
-          <span>{name}</span>
-        </a>
-      ))}
+    <nav
+      className="mobile-nav glass"
+      aria-label="Mobile navigation"
+    >
+      {items.map(
+        ([name, Icon, targetView]) => {
+
+          const isActive =
+            targetView !== 'search' &&
+            currentView === targetView
+
+          return (
+            <a
+              className={
+                isActive
+                  ? 'active'
+                  : ''
+              }
+              href={
+                targetView === 'search'
+                  ? '#search'
+                  : `#${targetView}`
+              }
+              key={name}
+              aria-current={
+                isActive
+                  ? 'page'
+                  : undefined
+              }
+              onClick={e => {
+                e.preventDefault()
+
+                /* Search */
+                if (
+                  targetView === 'search'
+                ) {
+                  onSearch?.()
+                  return
+                }
+
+                /* Normal navigation */
+                onNavigate?.(
+                  targetView as ViewMode,
+                )
+              }}
+            >
+              <Icon size={20} />
+
+              <span>
+                {name}
+              </span>
+            </a>
+          )
+        },
+      )}
     </nav>
   )
 }
 
-export function MenuTrigger({ onClick }: { onClick: () => void }) {
+/* ─────────────────────────────────────────
+   Menu Trigger
+   ───────────────────────────────────────── */
+
+export function MenuTrigger({
+  onClick,
+}: {
+  onClick: () => void
+}) {
   return (
-    <IconButton label="Open menu" onClick={onClick}>
+    <IconButton
+      label="Open menu"
+      onClick={onClick}
+    >
       <Menu size={18} />
     </IconButton>
   )

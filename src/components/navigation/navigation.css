@@ -1,28 +1,71 @@
-/* ─── Desktop Navigation ─── */
+/* ============================================================
+   7ANIME — NAVIGATION SYSTEM
+   Floating Liquid Glass Capsule Navigation
+   ============================================================ */
+
+
+/* ============================================================
+   DESKTOP NAVIGATION
+   ============================================================ */
+
 .desktop-nav {
   position: sticky;
   z-index: 40;
   top: 0.85rem;
-  margin: 0.85rem auto 0;
-  width: min(calc(100% - 2rem), 88rem);
+
+  /* Compact floating capsule */
+  width: fit-content;
+  max-width: calc(100% - 2rem);
   min-height: 4.25rem;
-  border-radius: var(--radius-xl);
-  padding: 0.6rem 0.85rem 0.6rem 1.25rem;
+
+  margin: 0.85rem auto 0;
+  padding: 0.55rem 0.65rem 0.55rem 1.15rem;
+
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: 1rem;
+
+  /* Fully rounded capsule */
+  border-radius: 999px;
+
+  /* Liquid Glass */
+  background: var(--color-glass-elevated);
+  border: 1px solid var(--color-glass-border);
+
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+
+  box-shadow:
+    var(--shadow-modal),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
-/* ─── Brand ─── */
+
+/* ============================================================
+   BRAND
+   ============================================================ */
+
 .brand {
+  flex-shrink: 0;
+
   color: var(--color-text-primary);
   font-weight: var(--font-weight-heavy);
   text-decoration: none;
+
   font-size: 1.35rem;
   letter-spacing: -0.07em;
+
   display: inline-flex;
   align-items: center;
-  transition: transform var(--duration-fast) var(--ease-out);
+
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
 }
 
 .brand:hover {
@@ -32,85 +75,169 @@
 .brand span {
   display: inline-grid;
   place-items: center;
+
   width: 1.45rem;
   height: 1.45rem;
+
   margin-right: 0.15rem;
-  border-radius: 0.45rem;
-  background: linear-gradient(135deg, var(--color-accent), #458fff);
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(135deg,
+      var(--color-accent),
+      #458fff);
+
   color: #071019;
+
   font-size: 1.05rem;
   font-weight: var(--font-weight-heavy);
-  box-shadow: 0 0 12px rgba(85, 216, 255, 0.3);
+
+  box-shadow:
+    0 0 12px rgba(85, 216, 255, 0.3);
 }
 
-/* ─── Desktop Nav Links ─── */
+
+/* ============================================================
+   DESKTOP MAIN NAVIGATION
+   ============================================================ */
+
 .desktop-nav nav {
   display: flex;
-  gap: 0.5rem;
-  flex: 1;
-  justify-content: center;
+  align-items: center;
+
+  gap: 0.25rem;
+
+  flex-shrink: 0;
 }
+
+
+/* Individual navigation links */
 
 .desktop-nav nav a {
   position: relative;
+
   color: var(--color-text-secondary);
   text-decoration: none;
+
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  padding: 0.55rem 1.05rem;
-  border-radius: var(--radius-md);
+
+  padding: 0.55rem 0.9rem;
+
+  border-radius: 999px;
+
   white-space: nowrap;
+
   border: 1px solid transparent;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   transition:
     color var(--duration-fast) var(--ease-out),
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
 }
+
+
+/* Hover */
 
 .desktop-nav nav a:hover {
   color: var(--color-text-primary);
+
   background: rgba(255, 255, 255, 0.05);
+
+  transform: translateY(-1px);
 }
+
+
+/* Active */
 
 .desktop-nav nav a.active {
   color: var(--color-accent);
+
   font-weight: var(--font-weight-semibold);
+
   background: var(--color-glass-active);
+
   border-color: rgba(85, 216, 255, 0.22);
-  box-shadow: 0 0 16px rgba(85, 216, 255, 0.12);
+
+  box-shadow:
+    0 0 16px rgba(85, 216, 255, 0.12);
 }
+
+
+/* Active indicator */
 
 .desktop-nav nav a.active::after {
   content: '';
+
   position: absolute;
-  bottom: 0.25rem;
+
+  bottom: 0.18rem;
   left: 50%;
+
   transform: translateX(-50%);
-  width: 0.75rem;
+
+  width: 0.7rem;
   height: 2px;
-  border-radius: 99px;
+
+  border-radius: 999px;
+
   background: var(--color-accent);
-  box-shadow: 0 0 8px var(--color-accent);
+
+  box-shadow:
+    0 0 8px var(--color-accent);
 }
 
-/* ─── Desktop Actions ─── */
+
+/* ============================================================
+   DESKTOP UTILITY ACTIONS
+   Search / Notification / Profile
+   ============================================================ */
+
 .desktop-nav__actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+
+  gap: 0.25rem;
+
+  flex-shrink: 0;
+
+  padding-left: 0.35rem;
+
+  border-left: 1px solid rgba(220, 240, 255, 0.1);
 }
+
+
+/* ============================================================
+   PROFILE CHIP
+   ============================================================ */
 
 .profile-chip {
   border: 1px solid var(--color-glass-border);
+
   background: rgba(255, 255, 255, 0.05);
+
   color: var(--color-text-primary);
-  border-radius: 99px;
-  padding: 0.42rem 0.9rem 0.42rem 0.45rem;
+
+  border-radius: 999px;
+
+  padding: 0.38rem 0.85rem 0.38rem 0.42rem;
+
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+
+  gap: 0.45rem;
+
   cursor: pointer;
+
+  white-space: nowrap;
+
   transition:
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
@@ -121,51 +248,93 @@
 .profile-chip__avatar {
   width: 1.85rem;
   height: 1.85rem;
+
+  flex-shrink: 0;
+
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-secondary));
+
+  background:
+    linear-gradient(135deg,
+      var(--color-accent),
+      var(--color-accent-secondary));
+
   color: #071019;
+
   display: grid;
   place-items: center;
 }
 
 .profile-chip__name {
   font-size: var(--font-size-sm);
+
   font-weight: var(--font-weight-semibold);
+
   letter-spacing: -0.01em;
 }
 
 .profile-chip:hover {
   background: var(--color-glass-interactive);
+
   border-color: var(--color-glass-border-hover);
+
   transform: translateY(-1px);
+
+  box-shadow:
+    0 0 14px rgba(85, 216, 255, 0.1);
 }
 
 .profile-chip--active {
   border-color: rgba(85, 216, 255, 0.35);
+
   background: rgba(85, 216, 255, 0.12);
-  box-shadow: 0 0 16px rgba(85, 216, 255, 0.15);
+
+  box-shadow:
+    0 0 16px rgba(85, 216, 255, 0.15);
 }
 
-/* ─── Mobile Navigation ─── */
+
+/* ============================================================
+   MOBILE NAVIGATION
+   ============================================================ */
+
 .mobile-nav {
   display: none;
 }
 
-/* ─── Player Mode: Hide Desktop Nav ─── */
+
+/* ============================================================
+   PLAYER MODE
+   ============================================================ */
+
 .desktop-nav--hidden {
   display: none;
 }
 
-/* ─── Responsive ─── */
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
 @media (max-width: 900px) {
+
+  /* Hide desktop navigation links */
   .desktop-nav nav {
     display: none;
   }
 
+  /* Compact desktop/mobile top bar */
   .desktop-nav {
+    width: calc(100% - 1.5rem);
+
+    max-width: none;
+
     justify-content: space-between;
+
     top: 0.65rem;
+
     margin-top: 0.65rem;
+
+    border-radius: 999px;
   }
 
   .desktop-nav__actions .icon-button,
@@ -173,39 +342,102 @@
     display: none;
   }
 
+
+  /* ==========================================================
+     MOBILE BOTTOM NAV
+     ========================================================== */
+
   .mobile-nav {
     position: fixed;
+
     display: flex;
+
     z-index: 45;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    bottom:
+      calc(0.75rem + env(safe-area-inset-bottom));
+
+    /*
+     * Compact floating capsule.
+     */
+    width: min(calc(100% - 1.5rem),
+        24rem);
+
     height: 4.35rem;
-    border-radius: 1.35rem;
-    justify-content: space-around;
-    align-items: center;
+
     padding: 0.45rem;
+
+    align-items: center;
+    justify-content: space-around;
+
+    /*
+     * FULL CAPSULE SHAPE
+     */
+    border-radius: 999px;
+
+    /*
+     * Liquid Glass
+     */
     background: var(--color-glass-modal);
+
     border: 1px solid var(--color-glass-border);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
-    box-shadow: var(--shadow-modal);
+
+    backdrop-filter:
+      blur(24px) saturate(150%);
+
+    -webkit-backdrop-filter:
+      blur(24px) saturate(150%);
+
+    box-shadow:
+      var(--shadow-modal),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
+
+  /* ==========================================================
+     MOBILE NAV ITEMS
+     ========================================================== */
+
   .mobile-nav a {
+    position: relative;
+
     color: var(--color-text-muted);
+
     text-decoration: none;
+
     font-size: 0.68rem;
+
     font-weight: var(--font-weight-medium);
+
+    /*
+     * 44px+ touch target
+     */
     min-width: 3.8rem;
     min-height: 2.85rem;
+
+    padding: 0.25rem 0.5rem;
+
     display: flex;
+
     flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
+
     gap: 0.2rem;
-    border-radius: 0.95rem;
+
+    /*
+     * Inner items are also rounded.
+     */
+    border-radius: 999px;
+
     border: 1px solid transparent;
+
     transition:
       color var(--duration-fast) var(--ease-out),
       background var(--duration-fast) var(--ease-out),
@@ -213,20 +445,72 @@
       transform var(--duration-fast) var(--ease-out);
   }
 
+
   .mobile-nav a:hover {
     color: var(--color-text-primary);
+
+    transform: translateY(-1px);
   }
+
+
+  /* Active mobile item */
 
   .mobile-nav a.active {
     color: var(--color-accent);
+
     font-weight: var(--font-weight-semibold);
+
     background: var(--color-glass-active);
-    border-color: rgba(85, 216, 255, 0.22);
-    box-shadow: 0 0 14px rgba(85, 216, 255, 0.12);
+
+    border-color:
+      rgba(85, 216, 255, 0.22);
+
+    box-shadow:
+      0 0 14px rgba(85, 216, 255, 0.12);
   }
 
+
   .mobile-nav a.active svg {
-    filter: drop-shadow(0 0 6px rgba(85, 216, 255, 0.4));
+    filter:
+      drop-shadow(0 0 6px rgba(85, 216, 255, 0.4));
   }
 }
 
+
+/* ============================================================
+   VERY SMALL DEVICES
+   ============================================================ */
+
+@media (max-width: 380px) {
+
+  .mobile-nav {
+    width: calc(100% - 1rem);
+
+    height: 4.15rem;
+
+    padding: 0.35rem;
+  }
+
+  .mobile-nav a {
+    min-width: 3.45rem;
+
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .desktop-nav,
+  .desktop-nav nav a,
+  .profile-chip,
+  .mobile-nav,
+  .mobile-nav a {
+    transition: none;
+  }
+}
