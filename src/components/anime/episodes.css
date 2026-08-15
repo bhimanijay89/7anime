@@ -1,0 +1,817 @@
+/* =========================================================
+   7ANIME EPISODE BROWSER
+========================================================= */
+
+.episode-section {
+    position: relative;
+    margin-top: var(--space-6);
+    padding: clamp(1.25rem, 2vw, 2rem);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-xl);
+    background:
+        radial-gradient(circle at top right,
+            rgba(44, 198, 255, 0.06),
+            transparent 35%),
+        var(--color-surface, #0d121c);
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.episode-section__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.episode-section__eyebrow {
+    display: block;
+    margin-bottom: 0.35rem;
+
+    color: #42d5ff;
+
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.episode-section__header h2 {
+    margin: 0;
+
+    color: #f7f9ff;
+
+    font-size: clamp(1.35rem,
+            2vw,
+            1.7rem);
+
+    font-weight: 800;
+}
+
+.episode-section__header p {
+    margin: 0.35rem 0 0;
+
+    color: #78849a;
+
+    font-size: 0.82rem;
+}
+
+.episode-section__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+
+/* =========================================================
+   LATEST BUTTON
+========================================================= */
+
+.episode-latest-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    min-height: 34px;
+    padding: 0.45rem 0.75rem;
+
+    border: 1px solid rgba(66,
+            213,
+            255,
+            0.25);
+
+    border-radius: 9px;
+
+    background: rgba(66,
+            213,
+            255,
+            0.07);
+
+    color: #62dcff;
+
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease;
+}
+
+.episode-latest-button:hover {
+    background: rgba(66,
+            213,
+            255,
+            0.14);
+
+    border-color: rgba(66,
+            213,
+            255,
+            0.45);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   CONTROLS
+========================================================= */
+
+.episode-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 1rem;
+
+    margin-bottom: 1.25rem;
+}
+
+.episode-search {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    width: min(420px,
+            100%);
+
+    min-height: 44px;
+
+    padding: 0 0.85rem;
+
+    border: 1px solid rgba(255,
+            255,
+            255,
+            0.08);
+
+    border-radius: 12px;
+
+    background: rgba(255,
+            255,
+            255,
+            0.035);
+
+    color: #738197;
+
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        background 160ms ease;
+}
+
+.episode-search:focus-within {
+    border-color: rgba(66,
+            213,
+            255,
+            0.55);
+
+    background: rgba(66,
+            213,
+            255,
+            0.045);
+
+    box-shadow:
+        0 0 0 3px rgba(66,
+            213,
+            255,
+            0.08);
+}
+
+.episode-search input {
+    width: 100%;
+
+    margin-left: 0.65rem;
+
+    border: 0;
+    outline: 0;
+
+    background: transparent;
+
+    color: #eef3ff;
+
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.episode-search input::placeholder {
+    color: #667287;
+}
+
+.episode-search__clear {
+    display: grid;
+    place-items: center;
+
+    width: 28px;
+    height: 28px;
+
+    flex: 0 0 auto;
+
+    border: 0;
+    border-radius: 50%;
+
+    background: rgba(255,
+            255,
+            255,
+            0.08);
+
+    color: #aab5c7;
+
+    cursor: pointer;
+}
+
+.episode-count {
+    color: #6f7b90;
+
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.episode-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(5,
+            minmax(0, 1fr));
+
+    gap: 1rem;
+}
+
+
+/* =========================================================
+   CARD
+========================================================= */
+
+.episode-card {
+    position: relative;
+
+    overflow: hidden;
+
+    min-width: 0;
+
+    border: 1px solid rgba(255,
+            255,
+            255,
+            0.07);
+
+    border-radius: 15px;
+
+    background: #121824;
+
+    cursor: pointer;
+
+    outline: none;
+
+    transition:
+        transform 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        background 180ms ease;
+}
+
+.episode-card:hover {
+    transform: translateY(-3px);
+
+    border-color: rgba(66,
+            213,
+            255,
+            0.35);
+
+    background: #151d2b;
+
+    box-shadow:
+        0 14px 30px rgba(0,
+            0,
+            0,
+            0.24);
+}
+
+.episode-card:focus-visible {
+    border-color: #42d5ff;
+
+    box-shadow:
+        0 0 0 3px rgba(66,
+            213,
+            255,
+            0.18);
+}
+
+
+/* =========================================================
+   THUMBNAIL
+========================================================= */
+
+.episode-card__thumb {
+    position: relative;
+
+    aspect-ratio: 16 / 9;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(135deg,
+            #172031,
+            #0d121c);
+}
+
+.episode-card__thumb img {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    transition:
+        transform 250ms ease,
+        filter 250ms ease;
+}
+
+.episode-card:hover .episode-card__thumb img {
+    transform: scale(1.045);
+
+    filter: brightness(0.72);
+}
+
+.episode-card__placeholder {
+    display: grid;
+    place-items: center;
+
+    width: 100%;
+    height: 100%;
+
+    color: #718096;
+}
+
+
+/* =========================================================
+   PLAY OVERLAY
+========================================================= */
+
+.episode-card__overlay {
+    position: absolute;
+
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    background: rgba(2,
+            7,
+            14,
+            0.42);
+
+    opacity: 0;
+
+    transition:
+        opacity 180ms ease;
+}
+
+.episode-card:hover .episode-card__overlay,
+.episode-card:focus-visible .episode-card__overlay {
+    opacity: 1;
+}
+
+.episode-card__play {
+    display: grid;
+    place-items: center;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: 50%;
+
+    background: #42d5ff;
+
+    color: #06101a;
+
+    box-shadow:
+        0 8px 24px rgba(0,
+            0,
+            0,
+            0.35);
+}
+
+
+/* =========================================================
+   BADGES
+========================================================= */
+
+.episode-card__badge {
+    position: absolute;
+
+    top: 0.55rem;
+    right: 0.55rem;
+}
+
+.episode-card__filler,
+.episode-card__recap {
+    position: absolute;
+
+    bottom: 0.55rem;
+
+    padding: 0.25rem 0.45rem;
+
+    border-radius: 6px;
+
+    background: rgba(5,
+            9,
+            16,
+            0.82);
+
+    color: #c3ccda;
+
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.episode-card__filler {
+    left: 0.55rem;
+}
+
+.episode-card__recap {
+    left: 0.55rem;
+}
+
+
+/* =========================================================
+   CARD INFO
+========================================================= */
+
+.episode-card__info {
+    min-height: 96px;
+
+    padding: 0.75rem 0.8rem;
+}
+
+.episode-card__number {
+    margin-bottom: 0.2rem;
+
+    color: #43d6ff;
+
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.episode-card__title {
+    display: -webkit-box;
+
+    overflow: hidden;
+
+    margin: 0;
+
+    color: #eef2fa;
+
+    font-size: 0.88rem;
+    line-height: 1.35;
+    font-weight: 700;
+
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.episode-card__meta {
+    display: block;
+
+    margin-top: 0.45rem;
+
+    color: #748197;
+
+    font-size: 0.72rem;
+}
+
+
+/* =========================================================
+   PAGINATION
+========================================================= */
+
+.episode-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 0.55rem;
+
+    margin-top: 1.5rem;
+}
+
+.episode-page-list {
+    display: flex;
+    align-items: center;
+
+    gap: 0.35rem;
+}
+
+.episode-page-button,
+.episode-page-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 38px;
+    height: 38px;
+
+    padding: 0 0.65rem;
+
+    border: 1px solid rgba(255,
+            255,
+            255,
+            0.08);
+
+    border-radius: 9px;
+
+    background: rgba(255,
+            255,
+            255,
+            0.035);
+
+    color: #aeb8c9;
+
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 160ms ease,
+        color 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease;
+}
+
+.episode-page-button:hover,
+.episode-page-arrow:hover:not(:disabled) {
+    border-color: rgba(66,
+            213,
+            255,
+            0.35);
+
+    background: rgba(66,
+            213,
+            255,
+            0.08);
+
+    color: #eafaff;
+}
+
+.episode-page-button.is-active {
+    border-color: #42d5ff;
+
+    background: #42d5ff;
+
+    color: #06101a;
+
+    box-shadow:
+        0 5px 18px rgba(66,
+            213,
+            255,
+            0.18);
+}
+
+.episode-page-arrow {
+    gap: 0.35rem;
+}
+
+.episode-page-arrow:disabled {
+    opacity: 0.35;
+
+    cursor: not-allowed;
+}
+
+.episode-page-ellipsis {
+    display: grid;
+    place-items: center;
+
+    width: 28px;
+
+    color: #59657a;
+}
+
+.episode-pagination-summary {
+    margin-top: 0.75rem;
+
+    text-align: center;
+
+    color: #667287;
+
+    font-size: 0.72rem;
+}
+
+.episode-pagination-summary strong {
+    color: #aeb9cb;
+}
+
+
+/* =========================================================
+   SEARCH EMPTY
+========================================================= */
+
+.episode-search-empty,
+.episode-empty {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    min-height: 220px;
+
+    padding: 2rem;
+
+    text-align: center;
+
+    color: #69758a;
+}
+
+.episode-search-empty svg,
+.episode-empty__icon {
+    margin-bottom: 0.8rem;
+
+    color: #42d5ff;
+}
+
+.episode-empty__icon {
+    display: grid;
+    place-items: center;
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: 50%;
+
+    background: rgba(66,
+            213,
+            255,
+            0.08);
+}
+
+.episode-search-empty h3,
+.episode-empty h2 {
+    margin: 0;
+
+    color: #eaf0fa;
+
+    font-size: 1rem;
+}
+
+.episode-search-empty p,
+.episode-empty p {
+    margin: 0.45rem 0 1rem;
+
+    max-width: 420px;
+
+    color: #6e7a8e;
+
+    font-size: 0.82rem;
+}
+
+.episode-search-empty button {
+    padding: 0.5rem 0.8rem;
+
+    border: 1px solid rgba(66,
+            213,
+            255,
+            0.25);
+
+    border-radius: 8px;
+
+    background: rgba(66,
+            213,
+            255,
+            0.07);
+
+    color: #42d5ff;
+
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+    .episode-grid {
+        grid-template-columns:
+            repeat(4,
+                minmax(0, 1fr));
+    }
+}
+
+
+@media (max-width: 900px) {
+    .episode-grid {
+        grid-template-columns:
+            repeat(3,
+                minmax(0, 1fr));
+    }
+
+    .episode-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .episode-search {
+        width: 100%;
+    }
+
+    .episode-count {
+        align-self: flex-start;
+    }
+}
+
+
+@media (max-width: 640px) {
+    .episode-section {
+        padding: 1rem;
+    }
+
+    .episode-section__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .episode-section__header-actions {
+        width: 100%;
+
+        justify-content: space-between;
+    }
+
+    .episode-grid {
+        grid-template-columns:
+            repeat(2,
+                minmax(0, 1fr));
+
+        gap: 0.7rem;
+    }
+
+    .episode-card__info {
+        min-height: 84px;
+
+        padding: 0.6rem;
+    }
+
+    .episode-card__title {
+        font-size: 0.78rem;
+    }
+
+    .episode-card__meta {
+        font-size: 0.65rem;
+    }
+
+    .episode-pagination {
+        gap: 0.25rem;
+    }
+
+    .episode-page-arrow span {
+        display: none;
+    }
+
+    .episode-page-arrow {
+        min-width: 38px;
+        padding: 0;
+    }
+
+    .episode-page-button {
+        min-width: 34px;
+        height: 34px;
+
+        padding: 0 0.4rem;
+
+        font-size: 0.72rem;
+    }
+
+    .episode-page-list {
+        gap: 0.2rem;
+    }
+}
+
+
+@media (max-width: 400px) {
+    .episode-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+    .episode-page-button:nth-child(4) {
+        display: none;
+    }
+}

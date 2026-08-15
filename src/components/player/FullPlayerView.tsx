@@ -3,241 +3,450 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize,
-  Pause,
-  Play,
-  RotateCcw,
-  RotateCw,
-  Volume2,
-  VolumeX
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Anime, Episode } from '../../types/domain'
 import { ShareButton } from '../share/ShareButton'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
 import { EpisodeSidebar } from './EpisodeSidebar'
 import './player.css'
-import { ServerSelector } from './ServerSelector'
 
-const defaultEpisodes: Episode[] = [
-  { id: 'e1', number: 1, title: 'Rain & Chrome', duration: 24, watched: true, thumbnail: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=400&q=80' },
-  { id: 'e2', number: 2, title: 'Ghosts in the Signal', duration: 23, watched: true, thumbnail: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80' },
-  { id: 'e3', number: 3, title: 'Katanas at Midnight', duration: 24, watched: true, thumbnail: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=400&q=80' },
-  { id: 'e4', number: 4, title: 'Sub-Level Protocol', duration: 24, watched: false, thumbnail: 'https://images.unsplash.com/photo-1519608487953-e999c86e7454?auto=format&fit=crop&w=400&q=80' },
-]
+type Language = 'sub' | 'dub'
 
 export function FullPlayerView({
   anime,
   initialEpisode,
-  onBack
+  onBack,
 }: {
   anime: Anime
   initialEpisode?: Episode
   onBack: () => void
 }) {
-  const episodesList = anime.episodesList || defaultEpisodes
-  const [currentEpisode, setCurrentEpisode] = useState<Episode>(initialEpisode || episodesList[0])
-  const [isPlaying, setIsPlaying] = useState(true)
-  const [muted, setMuted] = useState(false)
-  const [progress, setProgress] = useState(38)
-  const [speed, setSpeed] = useState('1.0x')
-  const [quality, setQuality] = useState('1080p HD')
+  const episodesList = anime.episodesList ?? []
 
-  // Keyboard shortcut handlers
+  const firstEpisode =
+    initialEpisode ??
+    episodesList[0]
+
+  const [currentEpisode, setCurrentEpisode] =
+    useState<Episode | undefined>(firstEpisode)
+
+  const [language, setLanguage] =
+    useState<Language>('sub')
+
+  /*
+   * Keep the selected episode synchronized
+   * when the parent changes it.
+   */
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return
-      if (e.code === 'Space') {
-        e.preventDefault()
-        setIsPlaying(p => !p)
-      } else if (e.code === 'ArrowRight') {
-        e.preventDefault()
-        setProgress(p => Math.min(100, p + 5))
-      } else if (e.code === 'ArrowLeft') {
-        e.preventDefault()
-        setProgress(p => Math.max(0, p - 5))
-      } else if (e.key.toLowerCase() === 'm') {
-        setMuted(m => !m)
-      }
+    if (initialEpisode) {
+      setCurrentEpisode(initialEpisode)
+    }
+  }, [initialEpisode])
+
+  /*
+   * MegaPlay embed URL.
+   *
+   * IMPORTANT:
+   * anime.id = AniList ID
+   * currentEpisode.number = episode number
+   *
+   * Nothing is hardcoded to Naruto, One Piece,
+   * Bleach, etc.
+   */
+  const megaPlayUrl = useMemo(() => {
+    if (!currentEpisode) {
+      return ''
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+    const animeId = encodeURIComponent(
+      String(anime.id),
+    )
 
-  const handleNextEpisode = () => {
-    const idx = episodesList.findIndex(ep => ep.id === currentEpisode.id)
-    if (idx !== -1 && idx < episodesList.length - 1) {
-      setCurrentEpisode(episodesList[idx + 1])
-      setProgress(0)
+    const episodeNumber = encodeURIComponent(
+      String(currentEpisode.number),
+    )
+
+    return `https://megaplay.buzz/stream/ani/${animeId}/${episodeNumber}/${language}`
+  }, [
+    anime.id,
+    currentEpisode?.number,
+    language,
+  ])
+
+  /*
+   * Find current episode index.
+   */
+  const currentIndex =
+    currentEpisode
+      ? episodesList.findIndex(
+        episode =>
+          episode.id ===
+          currentEpisode.id,
+      )
+      : -1
+
+  const canGoPrevious =
+    currentIndex > 0
+
+  const canGoNext =
+    currentIndex >= 0 &&
+    currentIndex <
+    episodesList.length - 1
+
+  const handlePreviousEpisode = () => {
+    if (!canGoPrevious) {
+      return
     }
+
+    const previousEpisode =
+      episodesList[currentIndex - 1]
+
+    setCurrentEpisode(
+      previousEpisode,
+    )
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
   }
 
-  const handlePrevEpisode = () => {
-    const idx = episodesList.findIndex(ep => ep.id === currentEpisode.id)
-    if (idx > 0) {
-      setCurrentEpisode(episodesList[idx - 1])
-      setProgress(0)
+  const handleNextEpisode = () => {
+    if (!canGoNext) {
+      return
     }
+
+    const nextEpisode =
+      episodesList[currentIndex + 1]
+
+    setCurrentEpisode(
+      nextEpisode,
+    )
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  const handleSelectEpisode = (
+    episode: Episode,
+  ) => {
+    setCurrentEpisode(episode)
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  /*
+   * No episode available.
+   *
+   * We intentionally do NOT create fake/default
+   * episodes here. The player must only show
+   * real episodes supplied by the application.
+   */
+  if (!currentEpisode) {
+    return (
+      <section
+        className="cinema-player"
+        aria-label="Cinema mode video player"
+      >
+        <div className="cinema-player__topbar glass">
+          <div className="cinema-player__title-group">
+            <Button
+              variant="glass"
+              onClick={onBack}
+            >
+              <ArrowLeft size={16} />
+              Back to Details
+            </Button>
+
+            <div>
+              <h2>{anime.title}</h2>
+              <p>Episodes unavailable</p>
+            </div>
+          </div>
+
+          <ShareButton
+            data={{
+              title: anime.title,
+              url:
+                typeof window !== 'undefined'
+                  ? window.location.href
+                  : 'https://7anime.app',
+              description:
+                `Watch ${anime.title} on 7anime`,
+            }}
+          />
+        </div>
+
+        <div className="cinema-player__layout">
+          <div className="cinema-player__stage-container">
+            <div className="cinema-player__stage">
+              <div className="cinema-player__ambient" />
+
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  textAlign: 'center',
+                  padding: '24px',
+                }}
+              >
+                <h3>
+                  Episodes unavailable
+                </h3>
+
+                <p
+                  style={{
+                    color:
+                      'var(--color-text-muted)',
+                  }}
+                >
+                  Episode information could not
+                  be loaded for this anime yet.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
   }
 
   return (
-    <section className="cinema-player" aria-label="Cinema mode video player">
+    <section
+      className="cinema-player"
+      aria-label="Cinema mode video player"
+    >
+      {/* =====================================================
+          PLAYER TOP BAR
+      ====================================================== */}
+
       <div className="cinema-player__topbar glass">
         <div className="cinema-player__title-group">
-          <Button variant="glass" onClick={onBack}>
-            <ArrowLeft size={16} /> Back to Details
+          <Button
+            variant="glass"
+            onClick={onBack}
+          >
+            <ArrowLeft size={16} />
+            Back to Details
           </Button>
+
           <div>
             <h2>{anime.title}</h2>
-            <p>EP {currentEpisode.number}: {currentEpisode.title}</p>
+
+            <p>
+              EP {currentEpisode.number}
+              {currentEpisode.title
+                ? `: ${currentEpisode.title}`
+                : ''}
+            </p>
           </div>
         </div>
+
         <ShareButton
           data={{
-            title: `${anime.title} - EP ${currentEpisode.number}`,
-            url: typeof window !== 'undefined' ? window.location.href : 'https://7anime.app',
-            description: `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`
+            title:
+              `${anime.title} - EP ${currentEpisode.number}`,
+            url:
+              typeof window !== 'undefined'
+                ? window.location.href
+                : 'https://7anime.app',
+            description:
+              `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`,
           }}
         />
       </div>
 
+
+      {/* =====================================================
+          PLAYER + EPISODE SIDEBAR
+      ====================================================== */}
+
       <div className="cinema-player__layout">
+
+        {/* ===================================================
+            VIDEO PLAYER
+        ==================================================== */}
+
         <div className="cinema-player__stage-container">
+
           <div className="cinema-player__stage">
-            <div className="cinema-player__ambient" />
-            <img
-              src={currentEpisode.thumbnail || anime.cover || anime.poster}
-              alt=""
-              className="stage-bg"
+
+            {/*
+             * REAL MEGAPLAY PLAYER
+             *
+             * Dynamic:
+             *   anime.id
+             *   episode.number
+             *   language
+             *
+             * Example:
+             *   /stream/ani/20/1/sub
+             *
+             * But this component never hardcodes
+             * any anime ID.
+             */}
+
+            <iframe
+              key={megaPlayUrl}
+              src={megaPlayUrl}
+              title={`${anime.title} Episode ${currentEpisode.number}`}
+              className="cinema-player__iframe"
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              scrolling="no"
+              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="origin"
             />
 
-            <div className="cinema-player__center-controls">
-              <button
-                className="cinema-player__seek-btn"
-                onClick={() => setProgress(p => Math.max(0, p - 10))}
-                aria-label="Rewind 10 seconds"
-              >
-                <RotateCcw size={18} />
-              </button>
-              <button
-                className="cinema-player__big-btn"
-                onClick={() => setIsPlaying(p => !p)}
-                aria-label={isPlaying ? 'Pause video' : 'Play video'}
-              >
-                {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" />}
-              </button>
-              <button
-                className="cinema-player__seek-btn"
-                onClick={() => setProgress(p => Math.min(100, p + 10))}
-                aria-label="Fast forward 10 seconds"
-              >
-                <RotateCw size={18} />
-              </button>
-            </div>
-
-            <button
-              className="cinema-player__skip"
-              onClick={() => setProgress(85)}
-            >
-              Skip Intro (+85s)
-            </button>
-
-            <div className="cinema-player__controls">
-              <div
-                className="cinema-player__scrub"
-                onClick={e => {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const pct = Math.round(((e.clientX - rect.left) / rect.width) * 100)
-                  setProgress(Math.max(0, Math.min(100, pct)))
-                }}
-              >
-                <div
-                  className="cinema-player__scrub-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-
-              <div className="cinema-player__toolbar">
-                <div className="cinema-player__toolbar-left">
-                  <IconButton
-                    label="Previous episode"
-                    onClick={handlePrevEpisode}
-                  >
-                    <ChevronLeft size={16} />
-                  </IconButton>
-                  <IconButton
-                    label={isPlaying ? 'Pause' : 'Play'}
-                    onClick={() => setIsPlaying(p => !p)}
-                  >
-                    {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                  </IconButton>
-                  <IconButton
-                    label="Next episode"
-                    onClick={handleNextEpisode}
-                  >
-                    <ChevronRight size={16} />
-                  </IconButton>
-
-                  <span>
-                    {Math.floor((progress * 24 * 60) / 100 / 60)}:
-                    {String(Math.floor(((progress * 24 * 60) / 100) % 60)).padStart(2, '0')} / 24:00
-                  </span>
-                </div>
-
-                <div className="cinema-player__toolbar-right">
-                  <IconButton
-                    label={muted ? 'Unmute' : 'Mute'}
-                    onClick={() => setMuted(m => !m)}
-                  >
-                    {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                  </IconButton>
-
-                  <select
-                    value={speed}
-                    onChange={e => setSpeed(e.target.value)}
-                    className="cinema-player__select"
-                    aria-label="Playback speed"
-                  >
-                    <option value="0.75x">0.75x</option>
-                    <option value="1.0x">1.0x</option>
-                    <option value="1.25x">1.25x</option>
-                    <option value="1.5x">1.5x</option>
-                    <option value="2.0x">2.0x</option>
-                  </select>
-
-                  <select
-                    value={quality}
-                    onChange={e => setQuality(e.target.value)}
-                    className="cinema-player__select"
-                    aria-label="Video quality"
-                  >
-                    <option value="1080p HD">1080p HD</option>
-                    <option value="720p">720p</option>
-                    <option value="480p">480p</option>
-                  </select>
-
-                  <Badge tone="accent">SUB</Badge>
-
-                  <IconButton label="Fullscreen">
-                    <Maximize size={16} />
-                  </IconButton>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <ServerSelector />
+
+          {/* =================================================
+              PLAYER NAVIGATION / LANGUAGE
+          ================================================== */}
+
+          <div className="cinema-player__meta glass">
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <IconButton
+                label="Previous episode"
+                onClick={
+                  handlePreviousEpisode
+                }
+                disabled={
+                  !canGoPrevious
+                }
+              >
+                <ChevronLeft size={17} />
+              </IconButton>
+
+              <IconButton
+                label="Next episode"
+                onClick={
+                  handleNextEpisode
+                }
+                disabled={
+                  !canGoNext
+                }
+              >
+                <ChevronRight size={17} />
+              </IconButton>
+
+              <Badge tone="accent">
+                EP {currentEpisode.number}
+              </Badge>
+
+              {currentEpisode.title && (
+                <span
+                  style={{
+                    color:
+                      'var(--color-text-muted)',
+                  }}
+                >
+                  {currentEpisode.title}
+                </span>
+              )}
+            </div>
+
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '0.8rem',
+                  color:
+                    'var(--color-text-muted)',
+                }}
+              >
+                Language
+              </span>
+
+              <select
+                value={language}
+                onChange={event =>
+                  setLanguage(
+                    event.target.value as Language,
+                  )
+                }
+                className="cinema-player__select"
+                aria-label="Audio language"
+              >
+                <option value="sub">
+                  SUB
+                </option>
+
+                <option value="dub">
+                  DUB
+                </option>
+              </select>
+
+              <IconButton
+                label="Fullscreen"
+                onClick={() => {
+                  const iframe =
+                    document.querySelector(
+                      '.cinema-player__iframe',
+                    )
+
+                  if (
+                    iframe instanceof
+                    HTMLIFrameElement
+                  ) {
+                    iframe.requestFullscreen?.()
+                  }
+                }}
+              >
+                <Maximize size={16} />
+              </IconButton>
+            </div>
+
+          </div>
+
         </div>
 
-        <EpisodeSidebar
-          episodes={episodesList}
-          currentEpisodeId={currentEpisode.id}
-          onSelectEpisode={ep => {
-            setCurrentEpisode(ep)
-            setProgress(0)
-          }}
-        />
+
+        {/* ===================================================
+            EPISODE SIDEBAR
+        ==================================================== */}
+
+        {episodesList.length > 0 && (
+          <EpisodeSidebar
+            episodes={episodesList}
+            currentEpisodeId={
+              currentEpisode.id
+            }
+            onSelectEpisode={
+              handleSelectEpisode
+            }
+          />
+        )}
+
       </div>
     </section>
   )
