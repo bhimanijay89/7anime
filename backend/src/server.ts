@@ -24,13 +24,17 @@ import {
 
 const app = express()
 
+// Render provides PORT automatically.
+// Locally, it falls back to 3001.
 const PORT = Number(
     process.env.PORT || 3001,
 )
 
+// Render requires the server to listen on 0.0.0.0.
+// You can still override it with HOST if needed.
 const HOST =
     process.env.HOST ||
-    'localhost'
+    '0.0.0.0'
 
 /*
  * =========================================================
@@ -109,18 +113,26 @@ app.get(
         res,
     ) => {
         let dbStatus = 'disconnected'
+
         try {
             await prisma.$queryRaw`SELECT 1`
             dbStatus = 'connected'
         } catch (error) {
-            console.error('[7anime-api] Database health check failed:', error)
+            console.error(
+                '[7anime-api] Database health check failed:',
+                error,
+            )
         }
 
-        const redisStatus = await getRedisStatus()
+        const redisStatus =
+            await getRedisStatus()
 
         return sendSuccess(res, {
             service: '7anime-api',
-            status: dbStatus === 'connected' ? 'healthy' : 'degraded',
+            status:
+                dbStatus === 'connected'
+                    ? 'healthy'
+                    : 'degraded',
             database: dbStatus,
             redis: redisStatus,
         })
@@ -142,7 +154,8 @@ app.get(
         return sendSuccess(res, {
             service: '7anime-api',
             version: '0.1.0',
-            message: '7anime backend is running.',
+            message:
+                '7anime backend is running.',
         })
     },
 )
@@ -188,7 +201,8 @@ app.get(
     ) => {
         return sendSuccess(res, {
             route: '/api/anime-test',
-            message: 'Anime route namespace is working.',
+            message:
+                'Anime route namespace is working.',
         })
     },
 )
@@ -227,14 +241,13 @@ const errorHandler:
         _next,
     ) => {
         void _next
+
         console.error(
             '[7anime-api] Unhandled error:',
             error,
         )
 
-        if (
-            res.headersSent
-        ) {
+        if (res.headersSent) {
             return
         }
 
@@ -259,9 +272,13 @@ const errorHandler:
         )
     }
 
-app.use(
-    errorHandler,
-)
+app.use(errorHandler)
+
+/*
+ * =========================================================
+ * Server
+ * =========================================================
+ */
 
 app.listen(
     PORT,
