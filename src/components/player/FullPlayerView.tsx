@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -120,7 +121,9 @@ export function FullPlayerView({
   const [
     inList,
     setInList,
-  ] = useState(isSaved || false)
+  ] = useState(
+    isSaved || false,
+  )
 
   const [
     language,
@@ -144,20 +147,32 @@ export function FullPlayerView({
       HTMLIFrameElement
     >(null)
 
-  /* Sync inList with prop if changed */
+  /* =======================================================
+     SYNC WATCHLIST
+  ======================================================== */
+
   useEffect(() => {
-    if (isSaved !== undefined) {
+    if (
+      isSaved !== undefined
+    ) {
       setInList(isSaved)
     }
   }, [isSaved])
 
-  /* Reset loading state when episode changes */
+  /* =======================================================
+     RESET IFRAME LOADING
+  ======================================================== */
+
   useEffect(() => {
     setIsIframeLoading(true)
-  }, [currentEpisode?.id, language, server])
+  }, [
+    currentEpisode?.id,
+    language,
+    server,
+  ])
 
   /* =======================================================
-     INITIAL EPISODE & WATCH PROGRESS REPORTING
+     INITIAL EPISODE
   ======================================================== */
 
   useEffect(() => {
@@ -170,14 +185,462 @@ export function FullPlayerView({
     initialEpisode,
   ])
 
+  /* =======================================================
+     WATCH PROGRESS
+     
+     IMPORTANT:
+     We do NOT fake 50% progress anymore.
+     
+     MegaPlay is loaded inside a cross-origin iframe.
+     Therefore the parent page cannot directly access
+     iframe.currentTime.
+     
+     We listen for player progress through postMessage.
+  ======================================================== */
+
+  const progressRef = useRef({
+    episodeNumber:
+      currentEpisode?.number ?? 0,
+
+    progressSeconds: 0,
+
+    durationSeconds:
+      currentEpisode?.duration
+        ? currentEpisode.duration *
+        60
+        : 0,
+  })
+
+  const lastSavedRef = useRef({
+    progressSeconds: -1,
+    durationSeconds: -1,
+    completed: false,
+    savedAt: 0,
+  })
+
+  /* =======================================================
+     SAVE PROGRESS
+  ======================================================== */
+
+  const saveProgress =
+    useCallback(
+      (
+        episodeNumber: number,
+        progressSeconds: number,
+        durationSeconds: number,
+        completed = false,
+        force = false,
+      ) => {
+        if (
+          !anime.id ||
+          episodeNumber <= 0
+        ) {
+          return
+        }
+
+        const safeDuration =
+          Math.max(
+            0,
+            Math.floor(
+              Number.isFinite(
+                durationSeconds,
+              )
+                ? durationSeconds
+                : 0,
+            ),
+          )
+
+        const safeProgress =
+          Math.max(
+            0,
+            Math.floor(
+              Number.isFinite(
+                progressSeconds,
+              )
+                ? progressSeconds
+                : 0,
+            ),
+          )
+
+        const clampedProgress =
+          safeDuration > 0
+            ? Math.min(
+              safeProgress,
+              safeDuration,
+            )
+            : safeProgress
+
+        const shouldComplete =
+          completed ||
+          (
+            safeDuration > 0 &&
+            clampedProgress >=
+            Math.floor(
+              safeDuration * 0.9,
+            )
+          )
+
+        const now =
+          Date.now()
+
+        const last =
+          lastSavedRef.current
+
+        /*
+         * Avoid sending too many requests.
+         * Normal progress:
+         * minimum 5 seconds between meaningful saves.
+         */
+        if (
+          !force &&
+          now - last.savedAt < 5000 &&
+          Math.abs(
+            clampedProgress -
+            last.progressSeconds,
+          ) < 5 &&
+          safeDuration ===
+          last.durationSeconds &&
+          shouldComplete ===
+          last.completed
+        ) {
+          return
+        }
+
+        lastSavedRef.current = {
+          progressSeconds:
+            clampedProgress,
+
+          durationSeconds:
+            safeDuration,
+
+          completed:
+            shouldComplete,
+
+          savedAt: now,
+        }
+
+        onProgressUpdate?.(
+          anime.id,
+          episodeNumber,
+          clampedProgress,
+          safeDuration,
+          shouldComplete,
+        )
+      },
+      [
+        anime.id,
+        onProgressUpdate,
+      ],
+    )
+
+  /* =======================================================
+     EXTRACT PLAYER PROGRESS
+  ======================================================== */
+
+  const extractProgressFromMessage =
+    useCallback(
+      (
+        event: MessageEvent,
+      ) => {
+        let data: unknown =
+          event.data
+
+        /*
+         * Some players send JSON strings.
+         */
+        if (
+          typeof data ===
+          'string'
+        ) {
+          try {
+            data =
+              JSON.parse(data)
+          } catch {
+            return null
+          }
+        }
+
+        if (
+          !data ||
+          typeof data !==
+          'object'
+        ) {
+          return null
+        }
+
+        const root =
+          data as Record<
+            string,
+            unknown
+          >
+
+        /*
+         * Different player implementations
+         * can wrap their payload differently.
+         */
+        const candidates:
+          Record<
+            string,
+            unknown
+          >[] = [root]
+
+        for (
+          const key of [
+            'data',
+            'detail',
+            'payload',
+            'progress',
+          ]
+        ) {
+          const nested =
+            root[key]
+
+          if (
+            nested &&
+            typeof nested ===
+            'object'
+          ) {
+            candidates.push(
+              nested as Record<
+                string,
+                unknown
+              >,
+            )
+          }
+        }
+
+        for (
+          const candidate of
+          candidates
+        ) {
+          const currentRaw =
+            candidate.currentTime ??
+            candidate.currentTimeSeconds ??
+            candidate.progressSeconds ??
+            candidate.progress ??
+            candidate.position
+
+          const durationRaw =
+            candidate.duration ??
+            candidate.durationSeconds ??
+            candidate.totalDuration
+
+          const current =
+            typeof currentRaw ===
+              'number'
+              ? currentRaw
+              : typeof currentRaw ===
+                'string'
+                ? Number(
+                  currentRaw,
+                )
+                : NaN
+
+          const duration =
+            typeof durationRaw ===
+              'number'
+              ? durationRaw
+              : typeof durationRaw ===
+                'string'
+                ? Number(
+                  durationRaw,
+                )
+                : NaN
+
+          if (
+            Number.isFinite(
+              current,
+            ) &&
+            current >= 0
+          ) {
+            return {
+              progressSeconds:
+                current,
+
+              durationSeconds:
+                Number.isFinite(
+                  duration,
+                ) &&
+                  duration >= 0
+                  ? duration
+                  : progressRef
+                    .current
+                    .durationSeconds,
+
+              completed:
+                candidate.completed ===
+                true ||
+                candidate.ended ===
+                true ||
+                candidate.event ===
+                'ended' ||
+                candidate.type ===
+                'ended',
+            }
+          }
+        }
+
+        return null
+      },
+      [],
+    )
+
+  /* =======================================================
+     WATCH PROGRESS LISTENER
+  ======================================================== */
+
   useEffect(() => {
-    if (currentEpisode && anime.id) {
-      const epNum = currentEpisode.number
-      const durationSec = currentEpisode.duration ? currentEpisode.duration * 60 : 1440
-      const progressSec = Math.floor(durationSec * 0.5)
-      onProgressUpdate?.(anime.id, epNum, progressSec, durationSec, false)
+    if (!currentEpisode) {
+      return
     }
-  }, [anime.id, currentEpisode, onProgressUpdate])
+
+    /*
+     * Reset progress state for the new episode.
+     */
+    progressRef.current = {
+      episodeNumber:
+        currentEpisode.number,
+
+      progressSeconds: 0,
+
+      durationSeconds:
+        currentEpisode.duration
+          ? currentEpisode.duration *
+          60
+          : 0,
+    }
+
+    lastSavedRef.current = {
+      progressSeconds: -1,
+      durationSeconds: -1,
+      completed: false,
+      savedAt: 0,
+    }
+
+    /*
+     * Register the episode at 0 seconds.
+     *
+     * This is intentionally NOT 50%.
+     */
+    saveProgress(
+      currentEpisode.number,
+      0,
+      progressRef.current
+        .durationSeconds,
+      false,
+      true,
+    )
+
+    /* =====================================================
+       RECEIVE PLAYER postMessage
+    ===================================================== */
+
+    const handleMessage = (
+      event: MessageEvent,
+    ) => {
+      /*
+       * Only accept messages from
+       * our currently loaded iframe.
+       */
+      if (
+        iframeRef.current
+          ?.contentWindow &&
+        event.source &&
+        event.source !==
+        iframeRef.current
+          .contentWindow
+      ) {
+        return
+      }
+
+      const progress =
+        extractProgressFromMessage(
+          event,
+        )
+
+      if (!progress) {
+        return
+      }
+
+      progressRef.current.progressSeconds =
+        progress.progressSeconds
+
+      if (
+        progress.durationSeconds >
+        0
+      ) {
+        progressRef.current.durationSeconds =
+          progress.durationSeconds
+      }
+
+      saveProgress(
+        progressRef.current
+          .episodeNumber,
+
+        progressRef.current
+          .progressSeconds,
+
+        progressRef.current
+          .durationSeconds,
+
+        progress.completed,
+      )
+    }
+
+    /* =====================================================
+       SAVE WHEN PAGE IS LEAVING
+    ===================================================== */
+
+    const saveCurrentProgress =
+      () => {
+        saveProgress(
+          progressRef.current
+            .episodeNumber,
+
+          progressRef.current
+            .progressSeconds,
+
+          progressRef.current
+            .durationSeconds,
+
+          false,
+          true,
+        )
+      }
+
+    window.addEventListener(
+      'message',
+      handleMessage,
+    )
+
+    window.addEventListener(
+      'pagehide',
+      saveCurrentProgress,
+    )
+
+    return () => {
+      /*
+       * Save latest known position
+       * before changing episode/unmounting.
+       */
+      saveCurrentProgress()
+
+      window.removeEventListener(
+        'message',
+        handleMessage,
+      )
+
+      window.removeEventListener(
+        'pagehide',
+        saveCurrentProgress,
+      )
+    }
+  }, [
+    currentEpisode?.number,
+    currentEpisode?.duration,
+    extractProgressFromMessage,
+    saveProgress,
+  ])
 
   /* =======================================================
      CURRENT EPISODE INDEX
@@ -185,7 +648,9 @@ export function FullPlayerView({
 
   const currentIndex =
     useMemo(() => {
-      if (!currentEpisode) {
+      if (
+        !currentEpisode
+      ) {
         return -1
       }
 
@@ -216,81 +681,89 @@ export function FullPlayerView({
      PREVIOUS EPISODE
   ======================================================== */
 
-  const goPrevious = () => {
-    if (
-      currentIndex > 0
-    ) {
-      setCurrentEpisode(
-        episodes[
-        currentIndex - 1
-        ],
-      )
-    }
-  }
+  const goPrevious =
+    useCallback(() => {
+      if (
+        currentIndex > 0
+      ) {
+        setCurrentEpisode(
+          episodes[
+          currentIndex - 1
+          ],
+        )
+      }
+    }, [
+      currentIndex,
+      episodes,
+    ])
 
   /* =======================================================
      NEXT EPISODE
   ======================================================== */
 
-  const goNext = () => {
-    if (
-      currentIndex >= 0 &&
-      currentIndex <
-      episodes.length -
-      1
-    ) {
-      setCurrentEpisode(
-        episodes[
-        currentIndex + 1
-        ],
-      )
-    }
-  }
+  const goNext =
+    useCallback(() => {
+      if (
+        currentIndex >= 0 &&
+        currentIndex <
+        episodes.length - 1
+      ) {
+        setCurrentEpisode(
+          episodes[
+          currentIndex + 1
+          ],
+        )
+      }
+    }, [
+      currentIndex,
+      episodes,
+    ])
 
   /* =======================================================
      KEYBOARD CONTROLS
   ======================================================== */
 
   useEffect(() => {
-    const handleKeyDown = (
-      event: KeyboardEvent,
-    ) => {
-      if (
-        event.target instanceof
-        HTMLInputElement ||
-        event.target instanceof
-        HTMLSelectElement ||
-        event.target instanceof
-        HTMLTextAreaElement
-      ) {
-        return
-      }
+    const handleKeyDown =
+      (
+        event: KeyboardEvent,
+      ) => {
+        if (
+          event.target instanceof
+          HTMLInputElement ||
+          event.target instanceof
+          HTMLSelectElement ||
+          event.target instanceof
+          HTMLTextAreaElement
+        ) {
+          return
+        }
 
-      if (
-        event.code ===
-        'ArrowLeft'
-      ) {
-        event.preventDefault()
-        goPrevious()
-      }
+        if (
+          event.code ===
+          'ArrowLeft'
+        ) {
+          event.preventDefault()
+          goPrevious()
+        }
 
-      if (
-        event.code ===
-        'ArrowRight'
-      ) {
-        event.preventDefault()
-        goNext()
-      }
+        if (
+          event.code ===
+          'ArrowRight'
+        ) {
+          event.preventDefault()
+          goNext()
+        }
 
-      if (
-        event.key.toLowerCase() ===
-        'm'
-      ) {
-        setMuted(
-          value => !value,
-        )
+        if (
+          event.key.toLowerCase() ===
+          'm'
+        ) {
+          setMuted(
+            value => !value,
+          )
+        }
       }
-    }
 
     window.addEventListener(
       'keydown',
@@ -304,8 +777,8 @@ export function FullPlayerView({
       )
     }
   }, [
-    currentIndex,
-    episodes,
+    goPrevious,
+    goNext,
   ])
 
   /* =======================================================
@@ -317,7 +790,9 @@ export function FullPlayerView({
       try {
         await iframeRef.current?.requestFullscreen()
       } catch {
-        /* Browser blocked fullscreen */
+        /*
+         * Browser blocked fullscreen.
+         */
       }
     }
 
@@ -341,7 +816,9 @@ export function FullPlayerView({
               size={16}
             />
 
-            <span>Back to Details</span>
+            <span>
+              Back to Details
+            </span>
           </button>
         </div>
 
@@ -349,12 +826,26 @@ export function FullPlayerView({
           className="cinema-player__stage cinema-player__stage--empty"
         >
           <div className="cinema-player__empty-notice">
-            <Radio size={36} className="cinema-player__empty-icon" />
-            <h2>Episodes Unavailable</h2>
+            <Radio
+              size={36}
+              className="cinema-player__empty-icon"
+            />
+
+            <h2>
+              Episodes Unavailable
+            </h2>
+
             <p>
-              No episodes were found for this anime. Please return to details or check back later.
+              No episodes were found
+              for this anime. Please
+              return to details or
+              check back later.
             </p>
-            <Button variant="glass" onClick={onBack}>
+
+            <Button
+              variant="glass"
+              onClick={onBack}
+            >
               Return to Anime Details
             </Button>
           </div>
@@ -387,7 +878,10 @@ export function FullPlayerView({
             <ArrowLeft
               size={16}
             />
-            <span>Back</span>
+
+            <span>
+              Back
+            </span>
           </button>
 
           <div className="cinema-player__title-meta">
@@ -397,8 +891,10 @@ export function FullPlayerView({
 
             <div className="cinema-player__ep-badge">
               <span className="cinema-player__ep-tag">
-                EP {currentEpisode.number}
+                EP{" "}
+                {currentEpisode.number}
               </span>
+
               <span className="cinema-player__ep-title">
                 {currentEpisode.title}
               </span>
@@ -414,10 +910,19 @@ export function FullPlayerView({
                 : 'glass'
             }
             onClick={() => {
-              setInList(val => !val)
-              onToggleSave?.(anime)
+              setInList(
+                value => !value,
+              )
+
+              onToggleSave?.(
+                anime,
+              )
             }}
-            aria-label={inList ? 'In Watchlist' : 'Add to Watchlist'}
+            aria-label={
+              inList
+                ? 'In Watchlist'
+                : 'Add to Watchlist'
+            }
           >
             {inList ? (
               <Check
@@ -439,26 +944,29 @@ export function FullPlayerView({
           <ShareButton
             data={{
               title: `${anime.title} - EP ${currentEpisode.number}`,
+
               url:
                 typeof window !==
                   'undefined'
-                  ? window.location
-                    .href
+                  ? window.location.href
                   : 'https://7anime.app',
-              description: `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`,
+
+              description:
+                `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`,
             }}
           />
         </div>
       </header>
 
       {/* =================================================
-          PLAYER LAYOUT (GRID: STAGE + SIDEBAR)
+          PLAYER LAYOUT
       ================================================== */}
 
       <div className="cinema-player__layout">
         <div className="cinema-player__stage-container">
+
           {/* ===============================================
-              SERVERS & AUDIO SELECTOR BAR
+              SERVERS & AUDIO
           ================================================ */}
 
           <div className="cinema-player__servers glass">
@@ -469,27 +977,51 @@ export function FullPlayerView({
 
               <button
                 type="button"
-                className={`cinema-player__server-chip ${server === 'megaplay' ? 'active' : ''}`}
-                onClick={() => setServer('megaplay')}
+                className={`cinema-player__server-chip ${server ===
+                    'megaplay'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setServer(
+                    'megaplay',
+                  )
+                }
               >
                 <Sparkles
                   size={13}
                 />
-                <span>Server 1 (MegaPlay HD)</span>
+
+                <span>
+                  Server 1 (MegaPlay HD)
+                </span>
               </button>
 
               <button
                 type="button"
-                className={`cinema-player__server-chip ${server === 'server2' ? 'active' : ''}`}
-                onClick={() => setServer('server2')}
+                className={`cinema-player__server-chip ${server ===
+                    'server2'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setServer(
+                    'server2',
+                  )
+                }
               >
-                <Radio size={13} />
-                <span>Server 2</span>
+                <Radio
+                  size={13}
+                />
+
+                <span>
+                  Server 2
+                </span>
               </button>
             </div>
 
             {/* =============================================
-                AUDIO SELECTOR (SUB / DUB)
+                AUDIO SELECTOR
             ============================================== */}
 
             <div className="cinema-player__audio-group">
@@ -499,16 +1031,32 @@ export function FullPlayerView({
 
               <button
                 type="button"
-                className={`cinema-player__lang-chip ${language === 'sub' ? 'active' : ''}`}
-                onClick={() => setLanguage('sub')}
+                className={`cinema-player__lang-chip ${language ===
+                    'sub'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setLanguage(
+                    'sub',
+                  )
+                }
               >
                 SUB
               </button>
 
               <button
                 type="button"
-                className={`cinema-player__lang-chip ${language === 'dub' ? 'active' : ''}`}
-                onClick={() => setLanguage('dub')}
+                className={`cinema-player__lang-chip ${language ===
+                    'dub'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setLanguage(
+                    'dub',
+                  )
+                }
               >
                 DUB
               </button>
@@ -526,9 +1074,15 @@ export function FullPlayerView({
             />
 
             {isIframeLoading && (
-              <div className="cinema-player__loader" aria-live="polite">
+              <div
+                className="cinema-player__loader"
+                aria-live="polite"
+              >
                 <div className="cinema-player__spinner" />
-                <span>Preparing your episode...</span>
+
+                <span>
+                  Preparing your episode...
+                </span>
               </div>
             )}
 
@@ -540,7 +1094,11 @@ export function FullPlayerView({
               className="cinema-player__iframe"
               allowFullScreen
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              onLoad={() => setIsIframeLoading(false)}
+              onLoad={() =>
+                setIsIframeLoading(
+                  false,
+                )
+              }
             />
           </div>
 
@@ -550,57 +1108,96 @@ export function FullPlayerView({
 
           <div className="cinema-player__toolbar glass">
             <div className="cinema-player__toolbar-left">
+
               <button
                 type="button"
                 className="cinema-player__control-btn"
-                onClick={goPrevious}
-                disabled={currentIndex <= 0}
+                onClick={
+                  goPrevious
+                }
+                disabled={
+                  currentIndex <=
+                  0
+                }
                 aria-label="Previous episode"
                 title="Previous Episode (←)"
               >
                 <ChevronLeft
                   size={16}
                 />
-                <span>Prev</span>
+
+                <span>
+                  Prev
+                </span>
               </button>
 
               <div className="cinema-player__ep-select-wrap">
                 <select
-                  value={currentEpisode.id}
+                  value={
+                    currentEpisode.id
+                  }
                   onChange={event => {
-                    const episode = episodes.find(
-                      item => item.id === event.target.value,
-                    )
+                    const episode =
+                      episodes.find(
+                        item =>
+                          item.id ===
+                          event.target
+                            .value,
+                      )
+
                     if (episode) {
-                      setCurrentEpisode(episode)
+                      setCurrentEpisode(
+                        episode,
+                      )
                     }
                   }}
                   className="cinema-player__select"
                   aria-label="Jump to Episode"
                 >
-                  {episodes.map(episode => (
-                    <option
-                      key={episode.id}
-                      value={episode.id}
-                    >
-                      EP {episode.number}: {episode.title}
-                    </option>
-                  ))}
+                  {episodes.map(
+                    episode => (
+                      <option
+                        key={
+                          episode.id
+                        }
+                        value={
+                          episode.id
+                        }
+                      >
+                        EP{" "}
+                        {
+                          episode.number
+                        }
+                        :{" "}
+                        {
+                          episode.title
+                        }
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
 
               <button
                 type="button"
                 className="cinema-player__control-btn"
-                onClick={goNext}
+                onClick={
+                  goNext
+                }
                 disabled={
-                  currentIndex < 0 ||
-                  currentIndex >= episodes.length - 1
+                  currentIndex <
+                  0 ||
+                  currentIndex >=
+                  episodes.length -
+                  1
                 }
                 aria-label="Next episode"
                 title="Next Episode (→)"
               >
-                <span>Next</span>
+                <span>
+                  Next
+                </span>
+
                 <ChevronRight
                   size={16}
                 />
@@ -608,34 +1205,87 @@ export function FullPlayerView({
             </div>
 
             <div className="cinema-player__toolbar-right">
-              <label className="cinema-player__autonext" title="Automatically start next episode">
+
+              <label
+                className="cinema-player__autonext"
+                title="Automatically start next episode"
+              >
                 <input
                   type="checkbox"
-                  checked={autoNext}
-                  onChange={event => setAutoNext(event.target.checked)}
+                  checked={
+                    autoNext
+                  }
+                  onChange={event =>
+                    setAutoNext(
+                      event.target
+                        .checked,
+                    )
+                  }
                 />
-                <span>Auto Next</span>
+
+                <span>
+                  Auto Next
+                </span>
               </label>
 
               <button
                 type="button"
-                className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
+                className={`cinema-player__control-btn icon-only ${inList
+                    ? 'active'
+                    : ''
+                  }`}
                 onClick={() => {
-                  setInList(val => !val)
-                  onToggleSave?.(anime)
+                  setInList(
+                    value => !value,
+                  )
+
+                  onToggleSave?.(
+                    anime,
+                  )
                 }}
-                aria-label={inList ? 'Remove from List' : 'Add to List'}
-                title={inList ? 'In My List' : 'Add to List'}
+                aria-label={
+                  inList
+                    ? 'Remove from List'
+                    : 'Add to List'
+                }
+                title={
+                  inList
+                    ? 'In My List'
+                    : 'Add to List'
+                }
               >
-                {inList ? <Check size={16} /> : <Bookmark size={16} />}
+                {inList ? (
+                  <Check
+                    size={16}
+                  />
+                ) : (
+                  <Bookmark
+                    size={16}
+                  />
+                )}
               </button>
 
               <button
                 type="button"
-                className={`cinema-player__control-btn icon-only ${muted ? 'active' : ''}`}
-                onClick={() => setMuted(val => !val)}
-                aria-label={muted ? 'Unmute' : 'Mute'}
-                title={muted ? 'Unmute (M)' : 'Mute (M)'}
+                className={`cinema-player__control-btn icon-only ${muted
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setMuted(
+                    value => !value,
+                  )
+                }
+                aria-label={
+                  muted
+                    ? 'Unmute'
+                    : 'Mute'
+                }
+                title={
+                  muted
+                    ? 'Unmute (M)'
+                    : 'Mute (M)'
+                }
               >
                 {muted ? (
                   <VolumeX
@@ -651,7 +1301,9 @@ export function FullPlayerView({
               <button
                 type="button"
                 className="cinema-player__control-btn icon-only"
-                onClick={requestFullscreen}
+                onClick={
+                  requestFullscreen
+                }
                 aria-label="Fullscreen player"
                 title="Fullscreen"
               >
@@ -663,81 +1315,127 @@ export function FullPlayerView({
           </div>
 
           {/* ===============================================
-              ANIME INFORMATION CARD (ENLARGED ON DESKTOP)
+              ANIME INFORMATION CARD
           ============================================== */}
 
           <article className="cinema-player__info-card glass">
             <div className="cinema-player__info-poster">
               <img
-                src={anime.poster}
-                alt={anime.title}
+                src={
+                  anime.poster
+                }
+                alt={
+                  anime.title
+                }
                 loading="lazy"
               />
+
               <div className="cinema-player__poster-overlay" />
             </div>
 
             <div className="cinema-player__info-body">
               <div className="cinema-player__info-header">
-                <h3>{anime.title}</h3>
+                <h3>
+                  {anime.title}
+                </h3>
               </div>
 
               <div className="cinema-player__info-meta">
+
                 {anime.rating && (
-                  <span className="cinema-player__rating" title="Rating">
+                  <span
+                    className="cinema-player__rating"
+                    title="Rating"
+                  >
                     <Star
                       size={14}
                       fill="currentColor"
                     />
-                    <span>{anime.rating}</span>
+
+                    <span>
+                      {
+                        anime.rating
+                      }
+                    </span>
                   </span>
                 )}
 
                 {anime.type && (
-                  <Badge tone="neutral">
-                    {anime.type}
+                  <Badge
+                    tone="neutral"
+                  >
+                    {
+                      anime.type
+                    }
                   </Badge>
                 )}
 
                 {anime.status && (
                   <Badge
                     tone={
-                      anime.status === 'Airing'
+                      anime.status ===
+                        'Airing'
                         ? 'success'
                         : 'neutral'
                     }
                   >
-                    {anime.status}
+                    {
+                      anime.status
+                    }
                   </Badge>
                 )}
 
-                {anime.totalEpisodes && anime.totalEpisodes > 0 && (
-                  <span className="cinema-player__meta-pill">
-                    {anime.totalEpisodes} Episodes
-                  </span>
-                )}
+                {anime.totalEpisodes &&
+                  anime.totalEpisodes >
+                  0 && (
+                    <span className="cinema-player__meta-pill">
+                      {
+                        anime.totalEpisodes
+                      }{" "}
+                      Episodes
+                    </span>
+                  )}
 
                 {anime.studio && (
                   <span className="cinema-player__studio-tag">
-                    Studio: <strong>{anime.studio}</strong>
+                    Studio:{' '}
+                    <strong>
+                      {
+                        anime.studio
+                      }
+                    </strong>
                   </span>
                 )}
               </div>
 
               {anime.synopsis && (
                 <p className="cinema-player__synopsis">
-                  {anime.synopsis}
+                  {
+                    anime.synopsis
+                  }
                 </p>
               )}
 
-              {anime.genres && anime.genres.length > 0 && (
-                <div className="cinema-player__genres">
-                  {anime.genres.map(genre => (
-                    <span key={genre} className="cinema-player__genre-chip">
-                      {genre}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {anime.genres &&
+                anime.genres.length >
+                0 && (
+                  <div className="cinema-player__genres">
+                    {anime.genres.map(
+                      genre => (
+                        <span
+                          key={
+                            genre
+                          }
+                          className="cinema-player__genre-chip"
+                        >
+                          {
+                            genre
+                          }
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
             </div>
           </article>
         </div>
@@ -747,9 +1445,18 @@ export function FullPlayerView({
         ================================================== */}
 
         <EpisodeSidebar
-          episodes={episodes}
-          currentEpisodeId={currentEpisode.id}
-          onSelectEpisode={episode => setCurrentEpisode(episode)}
+          episodes={
+            episodes
+          }
+          currentEpisodeId={
+            currentEpisode.id
+          }
+          onSelectEpisode={
+            episode =>
+              setCurrentEpisode(
+                episode,
+              )
+          }
         />
       </div>
     </section>
