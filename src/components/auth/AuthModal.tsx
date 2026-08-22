@@ -24,7 +24,9 @@ export interface AuthModalProps {
 
 type AuthMode = 'login' | 'register' | 'forgot-email' | 'forgot-otp' | 'forgot-reset'
 
-const BACKEND_URL = 'http://localhost:3001'
+const BACKEND_URL =
+  import.meta.env.VITE_API_URL ||
+  'https://sevenanime-vodw.onrender.com'
 
 export function AuthModal({
   open,
@@ -172,7 +174,7 @@ export function AuthModal({
           setResetEmail(targetEmail)
           setSuccess(
             data.data?.message ||
-              'If an account exists for this email, a verification code has been sent.',
+            'If an account exists for this email, a verification code has been sent.',
           )
           setMode('forgot-otp')
         } else {
