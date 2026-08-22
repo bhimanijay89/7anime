@@ -129,12 +129,13 @@
 
   .discovery__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 500px) {
   .discovery__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 }

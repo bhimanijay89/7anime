@@ -1,17 +1,30 @@
 import {
+    ChevronRight,
     Clock3,
+    LoaderCircle,
     Search,
     Sparkles,
     Star,
     X,
 } from 'lucide-react'
+
 import {
     useEffect,
     useState,
 } from 'react'
-import type { Anime } from '../../types/domain'
-import { searchAnime } from '../../services/anilist'
-import { Modal } from '../ui/Overlay'
+
+import type {
+    Anime,
+} from '../../types/domain'
+
+import {
+    searchAnime,
+} from '../../services/anilist'
+
+import {
+    Modal,
+} from '../ui/Overlay'
+
 import './search.css'
 
 type SearchOverlayProps = {
@@ -33,15 +46,14 @@ export function SearchOverlay({
     onSelectAnime,
 }: SearchOverlayProps) {
     const [query, setQuery] = useState('')
-    const [results, setResults] =
-        useState<Anime[]>([])
-    const [loading, setLoading] =
-        useState(false)
-    const [error, setError] =
-        useState<string | null>(null)
+    const [results, setResults] = useState<Anime[]>([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     /*
+     * =========================================================
      * Reset search whenever the overlay closes.
+     * =========================================================
      */
     useEffect(() => {
         if (!open) {
@@ -49,13 +61,21 @@ export function SearchOverlay({
             setResults([])
             setLoading(false)
             setError(null)
+        } else {
+            const timer = setTimeout(() => {
+                document.getElementById('anime-search-input')?.focus()
+            }, 60)
+            return () => clearTimeout(timer)
         }
     }, [open])
 
     /*
+     * =========================================================
      * Keyboard shortcuts:
+     *
      * Escape = close
-     * / = focus search input
+     * /      = focus search input
+     * =========================================================
      */
     useEffect(() => {
         if (!open) return
@@ -70,15 +90,12 @@ export function SearchOverlay({
 
             if (
                 event.key === '/' &&
-                document.activeElement?.tagName !==
-                'INPUT'
+                document.activeElement?.tagName !== 'INPUT'
             ) {
                 event.preventDefault()
 
                 document
-                    .getElementById(
-                        'anime-search-input',
-                    )
+                    .getElementById('anime-search-input')
                     ?.focus()
             }
         }
@@ -97,14 +114,15 @@ export function SearchOverlay({
     }, [open, onClose])
 
     /*
+     * =========================================================
      * Real AniList search.
      *
-     * Debounce prevents an API request for
-     * every single character typed.
+     * Debounce prevents an API request for every single
+     * character typed.
+     * =========================================================
      */
     useEffect(() => {
-        const normalizedQuery =
-            query.trim()
+        const normalizedQuery = query.trim()
 
         if (!normalizedQuery) {
             setResults([])
@@ -121,12 +139,11 @@ export function SearchOverlay({
                 setError(null)
 
                 try {
-                    const anime =
-                        await searchAnime(
-                            normalizedQuery,
-                            1,
-                            12,
-                        )
+                    const anime = await searchAnime(
+                        normalizedQuery,
+                        1,
+                        12,
+                    )
 
                     if (cancelled) return
 
@@ -181,8 +198,8 @@ export function SearchOverlay({
             <div className="search-overlay">
 
                 {/* =====================================================
-            HEADER
-        ====================================================== */}
+                    HEADER
+                ====================================================== */}
 
                 <div className="search-overlay__header">
                     <div>
@@ -203,8 +220,8 @@ export function SearchOverlay({
                 </div>
 
                 {/* =====================================================
-            SEARCH INPUT
-        ====================================================== */}
+                    SEARCH INPUT
+                ====================================================== */}
 
                 <div className="search-input-wrapper">
                     <Search
@@ -243,8 +260,8 @@ export function SearchOverlay({
                 </div>
 
                 {/* =====================================================
-            DISCOVERY STATE
-        ====================================================== */}
+                    DISCOVERY STATE
+                ====================================================== */}
 
                 {!hasQuery ? (
                     <div className="search-discovery">
@@ -309,11 +326,11 @@ export function SearchOverlay({
 
                     <div className="search-empty">
                         <div className="search-empty__icon">
-                            <Search size={26} />
+                            <LoaderCircle className="spinner" size={26} />
                         </div>
 
                         <h3>
-                            Searching AniList...
+                            Searching...
                         </h3>
 
                         <p>
@@ -368,7 +385,7 @@ export function SearchOverlay({
                         <div className="search-section-heading">
                             <div>
                                 <span>
-                                    ANILIST RESULTS
+                                    SEARCH RESULTS
                                 </span>
 
                                 <h3>
@@ -441,6 +458,7 @@ export function SearchOverlay({
                                                                 size={13}
                                                                 fill="currentColor"
                                                             />
+
                                                             {anime.rating.toFixed(
                                                                 1,
                                                             )}
@@ -476,9 +494,9 @@ export function SearchOverlay({
 
                                         </div>
 
-                                        <Search
+                                        <ChevronRight
                                             className="search-result-card__arrow"
-                                            size={17}
+                                            size={18}
                                         />
 
                                     </button>
@@ -521,7 +539,6 @@ export function SearchOverlay({
                         >
                             Browse popular searches
                         </button>
-
                     </div>
                 )}
 

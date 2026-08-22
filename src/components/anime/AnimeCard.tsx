@@ -8,11 +8,15 @@ export function AnimeCard({
   anime,
   variant = 'poster',
   rank,
+  isSaved,
+  onToggleSave,
   onSelect
 }: {
   anime: Anime
   variant?: 'poster' | 'compact' | 'landscape' | 'continue' | 'ranked'
   rank?: number
+  isSaved?: boolean
+  onToggleSave?: (anime: Anime) => void
   onSelect?: (anime: Anime) => void
 }) {
   return (
@@ -35,12 +39,22 @@ export function AnimeCard({
         />
         <div className="anime-card__actions">
           <button
-            aria-label={`Save ${anime.title}`}
+            aria-label={isSaved ? `Remove ${anime.title} from list` : `Save ${anime.title}`}
+            title={isSaved ? 'In My List (Click to remove)' : 'Add to List'}
+            style={{
+              color: isSaved ? 'var(--color-accent)' : undefined,
+              borderColor: isSaved ? 'rgba(85, 216, 255, 0.4)' : undefined,
+            }}
             onClick={e => {
               e.stopPropagation()
+              onToggleSave?.(anime)
             }}
           >
-            <Bookmark size={16} />
+            <Bookmark
+              size={16}
+              fill={isSaved ? 'var(--color-accent)' : 'none'}
+              color={isSaved ? 'var(--color-accent)' : 'currentColor'}
+            />
           </button>
           <button
             aria-label={`Share ${anime.title}`}

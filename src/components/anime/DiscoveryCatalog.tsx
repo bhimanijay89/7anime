@@ -8,7 +8,17 @@ import './discovery.css'
 
 const genres = ['All', 'Action', 'Fantasy', 'Romance', 'Drama']
 const statuses = ['All', 'Airing', 'Completed', 'Upcoming'] as const
-export function DiscoveryCatalog({ anime }: { anime: Anime[] }) {
+export function DiscoveryCatalog({
+  anime,
+  isSaved,
+  onToggleSave,
+  onSelect,
+}: {
+  anime: Anime[]
+  isSaved?: (id: string | number) => boolean
+  onToggleSave?: (anime: Anime) => void
+  onSelect?: (anime: Anime) => void
+}) {
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState('All')
   const [status, setStatus] = useState<(typeof statuses)[number]>('All')
@@ -18,6 +28,24 @@ export function DiscoveryCatalog({ anime }: { anime: Anime[] }) {
     <div className="discovery__tools glass"><label><Search size={18} /><span className="sr-only">Search titles</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search titles" /></label><div className="discovery__select"><SlidersHorizontal size={16} /><select aria-label="Filter by status" value={status} onChange={event => setStatus(event.target.value as typeof status)}>{statuses.map(option => <option key={option}>{option}</option>)}</select></div></div>
     <div className="discovery__genres" aria-label="Filter by genre">{genres.map(option => <button className={genre === option ? 'active' : ''} onClick={() => setGenre(option)} aria-pressed={genre === option} key={option}>{option}</button>)}</div>
     <div className="discovery__results"><span>{results.length} {results.length === 1 ? 'title' : 'titles'} found</span><Button variant="ghost" onClick={() => { setQuery(''); setGenre('All'); setStatus('All') }}>Reset filters</Button></div>
-    {results.length ? <div className="discovery__grid">{results.map(item => <AnimeCard anime={item} key={item.id} />)}</div> : <EmptyState title="No titles match that search" description="Try another title, genre, or release status." action={<Button onClick={() => { setQuery(''); setGenre('All'); setStatus('All') }}>Clear filters</Button>} />}
+    {results.length ? (
+      <div className="discovery__grid">
+        {results.map(item => (
+          <AnimeCard
+            anime={item}
+            key={item.id}
+            isSaved={isSaved?.(item.id)}
+            onToggleSave={onToggleSave}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    ) : (
+      <EmptyState
+        title="No titles match that search"
+        description="Try another title, genre, or release status."
+        action={<Button onClick={() => { setQuery(''); setGenre('All'); setStatus('All') }}>Clear filters</Button>}
+      />
+    )}
   </section>
 }

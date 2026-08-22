@@ -10,6 +10,20 @@ html {
   background: var(--color-background);
 }
 
+/* ─── Caret & Selection Control ─── */
+:root {
+  caret-color: transparent;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+[contenteditable="true"] * {
+  caret-color: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 body {
   margin: 0;
   background:

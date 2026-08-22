@@ -1,14 +1,21 @@
 import { Bookmark, Check, Play, Star } from 'lucide-react'
-import { useState } from 'react'
 import type { Anime } from '../../types/domain'
 import { ShareButton } from '../share/ShareButton'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import './detail.css'
 
-export function AnimeDetailHero({ anime, onWatch }: { anime: Anime; onWatch: () => void }) {
-  const [inList, setInList] = useState(false)
-
+export function AnimeDetailHero({
+  anime,
+  isSaved,
+  onToggleSave,
+  onWatch,
+}: {
+  anime: Anime
+  isSaved?: boolean
+  onToggleSave?: (anime: Anime) => void
+  onWatch: () => void
+}) {
   return (
     <div
       className="detail-hero"
@@ -49,11 +56,11 @@ export function AnimeDetailHero({ anime, onWatch }: { anime: Anime; onWatch: () 
               <Play size={16} fill="currentColor" /> Watch Ep 1
             </Button>
             <Button
-              variant={inList ? 'success' : 'glass'}
-              onClick={() => setInList(prev => !prev)}
+              variant={isSaved ? 'success' : 'glass'}
+              onClick={() => onToggleSave?.(anime)}
             >
-              {inList ? <Check size={16} /> : <Bookmark size={16} />}
-              {inList ? 'In My List' : 'Add to List'}
+              {isSaved ? <Check size={16} /> : <Bookmark size={16} />}
+              {isSaved ? 'In My List' : 'Add to List'}
             </Button>
             <ShareButton
               data={{

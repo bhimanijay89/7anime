@@ -48,7 +48,7 @@
   display: none;
 }
 
-.rail__items > * {
+.rail__items>* {
   scroll-snap-align: start;
 }
 
@@ -165,12 +165,29 @@
 }
 
 .hero-top10__title {
-  font-size: clamp(2.4rem, 5.5vw, 4.5rem);
-  line-height: 0.96;
-  letter-spacing: -0.06em;
+  font-size: clamp(1.8rem, 4.5vw, 3.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
   font-weight: var(--font-weight-heavy);
   margin: 0;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.hero-top10__title--long {
+  font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+  line-height: 1.08;
+  -webkit-line-clamp: 3;
+}
+
+.hero-top10__title--long-xl {
+  font-size: clamp(1.15rem, 2.4vw, 1.8rem);
+  line-height: 1.12;
+  -webkit-line-clamp: 3;
 }
 
 .hero-top10__meta {
@@ -363,40 +380,61 @@
   }
 
   .hero-top10 {
-    min-height: 26rem;
+    min-height: 24rem;
     margin-top: var(--space-3);
     border-radius: var(--radius-lg);
   }
 
   .hero-top10__main {
-    padding: var(--space-5);
+    padding: var(--space-4);
     padding-bottom: var(--space-3);
   }
 
   .hero-top10__title {
-    font-size: clamp(1.8rem, 8vw, 2.5rem);
+    font-size: clamp(1.3rem, 5.5vw, 1.9rem);
+    -webkit-line-clamp: 2;
+  }
+
+  .hero-top10__title--long,
+  .hero-top10__title--long-xl {
+    font-size: clamp(1.05rem, 4.5vw, 1.5rem);
+    -webkit-line-clamp: 2;
   }
 
   .hero-top10__synopsis {
     -webkit-line-clamp: 2;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
+    opacity: 0.9;
   }
 
   .hero-top10__genres {
-    display: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
   }
 
-  .hero-top10__actions .button:nth-child(2) {
-    display: none;
+  .hero-top10__genres span {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+  }
+
+  .hero-top10__actions {
+    gap: 0.5rem;
+  }
+
+  .hero-top10__actions .button {
+    font-size: var(--font-size-xs);
+    padding: 0.5rem 0.85rem;
+    min-height: 44px;
   }
 
   .hero-top10__strip-area {
-    padding: 0 var(--space-4) var(--space-3);
+    padding: 0 var(--space-3) var(--space-3);
     gap: var(--space-1);
   }
 
   .hero-top10__thumb {
-    width: 3.5rem;
+    width: 3.2rem;
   }
 
   .hero-top10__strip {
@@ -438,6 +476,7 @@
 
 /* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
+
   .hero-top10__bg,
   .hero-top10__content,
   .hero-top10__poster,

@@ -1,42 +1,40 @@
 import {
+    AlertCircle,
     CalendarDays,
     ChevronLeft,
     ChevronRight,
     Clock,
+    Play,
+    RefreshCw,
+    Sparkles,
+    Tv,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+    type AiringScheduleEntry,
+    getAiringSchedule,
+} from '../../services/anilist'
 import type { Anime } from '../../types/domain'
 import { Badge } from '../ui/Badge'
 import { IconButton } from '../ui/Button'
 import './schedule.css'
 
 interface ScheduleViewProps {
-    anime: Anime[]
+    anime?: Anime[]
+    onSelectAnime?: (anime: Anime) => void
 }
 
 type ScheduleMode = 'day' | 'week'
 
-interface ScheduleItem {
-    id: string
-    anime: Anime
-    episode: number
-    date: Date
-    time: string
-}
-
-const RELEASE_TIMES = [
-    '10:30 AM',
-    '01:00 PM',
-    '06:30 PM',
-    '08:00 PM',
-    '07:30 PM',
-    '09:00 PM',
-    '10:00 PM',
-]
-
 function startOfDay(date: Date) {
     const result = new Date(date)
     result.setHours(0, 0, 0, 0)
+    return result
+}
+
+function endOfDay(date: Date) {
+    const result = new Date(date)
+    result.setHours(23, 59, 59, 999)
     return result
 }
 
@@ -55,20 +53,26 @@ function sameDay(a: Date, b: Date) {
 }
 
 function formatDayName(date: Date) {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
         weekday: 'short',
     }).format(date)
 }
 
+function formatFullDayName(date: Date) {
+    return new Intl.DateTimeFormat(undefined, {
+        weekday: 'long',
+    }).format(date)
+}
+
 function formatDate(date: Date) {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
         month: 'short',
         day: 'numeric',
     }).format(date)
 }
 
 function formatLongDate(date: Date) {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
@@ -76,50 +80,27 @@ function formatLongDate(date: Date) {
     }).format(date)
 }
 
+function formatLocalTime(airingAtSeconds: number) {
+    const date = new Date(airingAtSeconds * 1000)
+    return new Intl.DateTimeFormat(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+    }).format(date)
+}
+
 export function ScheduleView({
-    anime,
+    onSelectAnime,
 }: ScheduleViewProps) {
     const today = useMemo(
         () => startOfDay(new Date()),
         [],
     )
 
-    const [mode, setMode] =
-        useState<ScheduleMode>('day')
-
-    const [selectedDate, setSelectedDate] =
-        useState<Date>(today)
-
-    /*
-     * Generate upcoming mock schedule data.
-     *
-     * This keeps the schedule UI independent from
-     * the anime episode API for now.
-     */
-    const scheduleItems = useMemo(() => {
-        if (!anime.length) return []
-
-        const items: ScheduleItem[] = []
-
-        const scheduleAnime = anime.slice(0, 10)
-
-        scheduleAnime.forEach((item, index) => {
-            const dateOffset = index % 7
-
-            items.push({
-                id: `${item.id}-${dateOffset}`,
-                anime: item,
-                episode: 13 + index,
-                date: addDays(today, dateOffset),
-                time:
-                    RELEASE_TIMES[
-                    index % RELEASE_TIMES.length
-                    ],
-            })
-        })
-
-        return items
-    }, [anime, today])
+    const [mode, setMode] = useState<ScheduleMode>('day')
+    const [selectedDate, setSelectedDate] = useState<Date>(today)
+    const [scheduleItems, setScheduleItems] = useState<AiringScheduleEntry[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
+    const [error, setError] = useState<string | null>(null)
 
     /*
      * Seven days starting from the selected date.
@@ -131,11 +112,56 @@ export function ScheduleView({
     }, [selectedDate])
 
     /*
-     * Items for the selected day.
+     * Interactive 7-day strip for day mode quick picking.
+     */
+    const dayStripDays = useMemo(() => {
+        return Array.from({ length: 7 }, (_, index) => {
+            const offset = index - 3
+            return addDays(selectedDate, offset)
+        })
+    }, [selectedDate])
+
+    /*
+     * Fetch real AniList airing schedule data.
+     */
+    const fetchSchedule = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            let startSec: number
+            let endSec: number
+
+            if (mode === 'day') {
+                startSec = Math.floor(startOfDay(selectedDate).getTime() / 1000)
+                endSec = Math.floor(endOfDay(selectedDate).getTime() / 1000)
+            } else {
+                const weekStart = weekDays[0]
+                const weekEnd = weekDays[6]
+                startSec = Math.floor(startOfDay(weekStart).getTime() / 1000)
+                endSec = Math.floor(endOfDay(weekEnd).getTime() / 1000)
+            }
+
+            const entries = await getAiringSchedule(startSec, endSec, 1, 50)
+            setScheduleItems(entries)
+        } catch (err) {
+            console.error('Failed to load AniList schedule:', err)
+            setError(err instanceof Error ? err.message : 'Unable to fetch airing schedule from AniList.')
+            setScheduleItems([])
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedDate, mode, weekDays])
+
+    useEffect(() => {
+        fetchSchedule()
+    }, [fetchSchedule])
+
+    /*
+     * Items for the selected day in day mode.
      */
     const dayItems = useMemo(() => {
         return scheduleItems.filter(item =>
-            sameDay(item.date, selectedDate),
+            sameDay(new Date(item.airingAt * 1000), selectedDate),
         )
     }, [scheduleItems, selectedDate])
 
@@ -146,20 +172,11 @@ export function ScheduleView({
         return weekDays.map(date => ({
             date,
             items: scheduleItems.filter(item =>
-                sameDay(item.date, date),
+                sameDay(new Date(item.airingAt * 1000), date),
             ),
         }))
     }, [scheduleItems, weekDays])
 
-    /*
-     * Navigation.
-     *
-     * Day:
-     * previous/next day
-     *
-     * Week:
-     * previous/next 7 days
-     */
     const goPrevious = () => {
         setSelectedDate(
             addDays(
@@ -182,73 +199,60 @@ export function ScheduleView({
         setSelectedDate(today)
     }
 
+    const isCurrentDateToday = sameDay(selectedDate, today)
+
     return (
         <section
             className="schedule-page"
             aria-label="Anime release schedule"
         >
-            {/* ───────────────────────────────────────
-          Header
-          ─────────────────────────────────────── */}
-
+            {/* Header */}
             <header className="schedule-header">
-                <div>
+                <div className="schedule-header__main">
                     <p className="schedule-eyebrow">
                         <CalendarDays size={14} />
                         EPISODE CALENDAR
                     </p>
 
-                    <h1>Schedule</h1>
+                    <div className="schedule-header__title-row">
+                        <h1>Schedule</h1>
+                        <span className="schedule-header__badge">
+                            <Tv size={13} />
+                            Weekly Broadcasts
+                        </span>
+                    </div>
 
                     <p className="schedule-description">
-                        Stay up to date with upcoming anime
-                        episodes and their release times.
+                        Track real-time upcoming anime episode releases, airing times, and broadcast calendars powered by AniList.
                     </p>
                 </div>
             </header>
 
-            {/* ───────────────────────────────────────
-          Controls
-          ─────────────────────────────────────── */}
-
+            {/* Toolbar Controls */}
             <div className="schedule-toolbar">
                 <div className="schedule-tabs">
                     <button
                         type="button"
-                        className={
-                            mode === 'day'
-                                ? 'schedule-tab active'
-                                : 'schedule-tab'
-                        }
-                        onClick={() =>
-                            setMode('day')
-                        }
+                        className={mode === 'day' ? 'schedule-tab active' : 'schedule-tab'}
+                        onClick={() => setMode('day')}
                     >
-                        Day
+                        <CalendarDays size={14} />
+                        Day View
                     </button>
 
                     <button
                         type="button"
-                        className={
-                            mode === 'week'
-                                ? 'schedule-tab active'
-                                : 'schedule-tab'
-                        }
-                        onClick={() =>
-                            setMode('week')
-                        }
+                        className={mode === 'week' ? 'schedule-tab active' : 'schedule-tab'}
+                        onClick={() => setMode('week')}
                     >
-                        Week
+                        <Sparkles size={14} />
+                        Week View
                     </button>
                 </div>
 
                 <div className="schedule-date-controls">
                     <IconButton
-                        label={
-                            mode === 'day'
-                                ? 'Previous day'
-                                : 'Previous week'
-                        }
+                        label={mode === 'day' ? 'Previous day' : 'Previous week'}
                         onClick={goPrevious}
                     >
                         <ChevronLeft size={18} />
@@ -256,18 +260,14 @@ export function ScheduleView({
 
                     <button
                         type="button"
-                        className="schedule-today"
+                        className={`schedule-today ${isCurrentDateToday ? 'is-active-today' : ''}`}
                         onClick={goToday}
                     >
                         Today
                     </button>
 
                     <IconButton
-                        label={
-                            mode === 'day'
-                                ? 'Next day'
-                                : 'Next week'
-                        }
+                        label={mode === 'day' ? 'Next day' : 'Next week'}
                         onClick={goNext}
                     >
                         <ChevronRight size={18} />
@@ -275,26 +275,60 @@ export function ScheduleView({
                 </div>
             </div>
 
-            {/* ═══════════════════════════════════════
-          DAY VIEW
-          ═══════════════════════════════════════ */}
-
+            {/* Day Selector Strip */}
             {mode === 'day' && (
+                <nav className="schedule-day-strip" aria-label="Select day">
+                    <div className="schedule-day-strip__scroller">
+                        {dayStripDays.map(date => {
+                            const isSelected = sameDay(date, selectedDate)
+                            const isTodayDate = sameDay(date, today)
+
+                            return (
+                                <button
+                                    key={date.toISOString()}
+                                    type="button"
+                                    className={`schedule-day-pill ${isSelected ? 'schedule-day-pill--active' : ''} ${isTodayDate ? 'schedule-day-pill--today' : ''}`}
+                                    onClick={() => setSelectedDate(date)}
+                                >
+                                    <span className="schedule-day-pill__name">{formatDayName(date)}</span>
+                                    <span className="schedule-day-pill__date">{date.getDate()}</span>
+                                    {isTodayDate && <span className="schedule-day-pill__tag">TODAY</span>}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </nav>
+            )}
+
+            {/* Loading Skeleton State */}
+            {loading && <ScheduleSkeleton compact={mode === 'week'} />}
+
+            {/* Error State */}
+            {!loading && error && (
+                <ScheduleErrorState
+                    message={error}
+                    onRetry={fetchSchedule}
+                />
+            )}
+
+            {/* DAY VIEW */}
+            {!loading && !error && mode === 'day' && (
                 <div className="schedule-day-view">
                     <div className="schedule-day-heading">
-                        <div>
-                            <span>
-                                {formatDayName(selectedDate)}
-                            </span>
-
-                            <strong>
-                                {formatDate(selectedDate)}
-                            </strong>
+                        <div className="schedule-day-heading__info">
+                            <div className="schedule-day-heading__primary">
+                                <span>{formatFullDayName(selectedDate)}</span>
+                                <strong>{formatDate(selectedDate)}</strong>
+                                {isCurrentDateToday && (
+                                    <span className="schedule-day-heading__today-badge">TODAY</span>
+                                )}
+                            </div>
+                            <p className="schedule-day-heading__full-date">{formatLongDate(selectedDate)}</p>
                         </div>
 
-                        <p>
-                            {formatLongDate(selectedDate)}
-                        </p>
+                        <div className="schedule-day-heading__count">
+                            <span>{dayItems.length} {dayItems.length === 1 ? 'Release' : 'Releases'} Scheduled</span>
+                        </div>
                     </div>
 
                     {dayItems.length > 0 ? (
@@ -303,54 +337,39 @@ export function ScheduleView({
                                 <ScheduleCard
                                     key={item.id}
                                     item={item}
+                                    onSelect={onSelectAnime}
                                 />
                             ))}
                         </div>
                     ) : (
                         <ScheduleEmptyState
                             date={selectedDate}
+                            onGoToday={goToday}
                         />
                     )}
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════
-          WEEK VIEW
-          ═══════════════════════════════════════ */}
-
-            {mode === 'week' && (
+            {/* WEEK VIEW */}
+            {!loading && !error && mode === 'week' && (
                 <div className="schedule-week-view">
                     <div className="schedule-week-grid">
-                        {weekItems.map(
-                            ({ date, items }) => (
+                        {weekItems.map(({ date, items }) => {
+                            const isTodayDate = sameDay(date, today)
+
+                            return (
                                 <div
-                                    className={`schedule-week-column ${sameDay(date, today)
-                                            ? 'is-today'
-                                            : ''
-                                        }`}
+                                    className={`schedule-week-column ${isTodayDate ? 'is-today' : ''}`}
                                     key={date.toISOString()}
                                 >
-                                    {/* Day header */}
                                     <div className="schedule-week-day">
-                                        <span>
-                                            {formatDayName(date)}
-                                        </span>
-
-                                        <strong>
-                                            {formatDate(date)}
-                                        </strong>
-
-                                        {sameDay(
-                                            date,
-                                            today,
-                                        ) && (
-                                                <em>
-                                                    TODAY
-                                                </em>
-                                            )}
+                                        <span className="schedule-week-day__name">{formatDayName(date)}</span>
+                                        <strong className="schedule-week-day__date">{formatDate(date)}</strong>
+                                        {isTodayDate && (
+                                            <em className="schedule-week-day__today-tag">TODAY</em>
+                                        )}
                                     </div>
 
-                                    {/* Episodes */}
                                     <div className="schedule-week-items">
                                         {items.length > 0 ? (
                                             items.map(item => (
@@ -358,19 +377,19 @@ export function ScheduleView({
                                                     key={item.id}
                                                     item={item}
                                                     compact
+                                                    onSelect={onSelectAnime}
                                                 />
                                             ))
                                         ) : (
                                             <div className="schedule-no-episode">
-                                                <span>
-                                                    No releases
-                                                </span>
+                                                <CalendarDays size={18} opacity={0.4} />
+                                                <span>No releases</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                            ),
-                        )}
+                            )
+                        })}
                     </div>
                 </div>
             )}
@@ -378,76 +397,172 @@ export function ScheduleView({
     )
 }
 
-/* ═══════════════════════════════════════════════
-   Schedule Card
-   ═══════════════════════════════════════════════ */
+/* Schedule Card Component */
+interface ScheduleCardProps {
+    item: AiringScheduleEntry
+    compact?: boolean
+    onSelect?: (anime: Anime) => void
+}
 
 function ScheduleCard({
     item,
     compact = false,
-}: {
-    item: ScheduleItem
-    compact?: boolean
-}) {
+    onSelect,
+}: ScheduleCardProps) {
+    const handleCardClick = () => {
+        if (onSelect) {
+            onSelect(item.anime)
+        }
+    }
+
+    const localTimeStr = formatLocalTime(item.airingAt)
+    const isAired = item.airingAt * 1000 <= Date.now()
+
     return (
         <article
-            className={
-                compact
-                    ? 'schedule-card schedule-card--compact'
-                    : 'schedule-card'
-            }
+            className={`schedule-card ${compact ? 'schedule-card--compact' : ''} ${onSelect ? 'schedule-card--clickable' : ''}`}
+            onClick={handleCardClick}
+            tabIndex={onSelect ? 0 : undefined}
+            role={onSelect ? 'button' : undefined}
+            onKeyDown={e => {
+                if (onSelect && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault()
+                    onSelect(item.anime)
+                }
+            }}
         >
-            <div className="schedule-card__time">
-                <Clock size={14} />
-                <span>{item.time}</span>
+            <div className="schedule-card__top">
+                <div className="schedule-card__time">
+                    <Clock size={13} />
+                    <span>{localTimeStr}</span>
+                </div>
+
+                <span className="schedule-card__ep-badge">
+                    EP {item.episode}
+                </span>
             </div>
 
             <div className="schedule-card__poster">
                 <img
-                    src={item.anime.poster}
+                    src={item.anime.poster || 'https://placehold.co/300x450/1e2330/55d8ff?text=No+Cover'}
                     alt={`${item.anime.title} poster`}
                     loading="lazy"
                 />
+                <div className="schedule-card__poster-overlay">
+                    <div className="schedule-card__play-btn">
+                        <Play size={16} fill="currentColor" />
+                    </div>
+                </div>
             </div>
 
             <div className="schedule-card__content">
-                <h3>
-                    {item.anime.title}
-                </h3>
+                <h3>{item.anime.title}</h3>
 
-                <p>
-                    Episode {item.episode}
-                </p>
+                {item.anime.genres && item.anime.genres.length > 0 && !compact && (
+                    <div className="schedule-card__genres">
+                        {item.anime.genres.slice(0, 2).map(genre => (
+                            <span key={genre} className="schedule-card__genre-tag">
+                                {genre}
+                            </span>
+                        ))}
+                    </div>
+                )}
 
-                <Badge tone="info">
-                    Upcoming
-                </Badge>
+                <div className="schedule-card__footer">
+                    <Badge tone={isAired ? 'success' : 'info'}>
+                        {isAired ? 'Aired' : 'Upcoming'}
+                    </Badge>
+                    {!compact && (
+                        <span className="schedule-card__action">
+                            View Details
+                        </span>
+                    )}
+                </div>
             </div>
         </article>
     )
 }
 
-/* ═══════════════════════════════════════════════
-   Empty State
-   ═══════════════════════════════════════════════ */
+/* Skeleton Loading State Component */
+function ScheduleSkeleton({ compact = false }: { compact?: boolean }) {
+    const skeletonCount = compact ? 7 : 6
+
+    return (
+        <div className={compact ? 'schedule-week-skeleton' : 'schedule-day-list'}>
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+                <div key={index} className="schedule-skeleton-card">
+                    <div className="schedule-skeleton-poster" />
+                    <div className="schedule-skeleton-text-wrap">
+                        <div className="schedule-skeleton-line short" />
+                        <div className="schedule-skeleton-line long" />
+                        <div className="schedule-skeleton-line medium" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+/* Error State Component */
+interface ScheduleErrorStateProps {
+    message: string
+    onRetry: () => void
+}
+
+function ScheduleErrorState({ message, onRetry }: ScheduleErrorStateProps) {
+    return (
+        <div className="schedule-empty schedule-error">
+            <div className="schedule-empty__icon-wrap error-icon">
+                <AlertCircle size={32} />
+            </div>
+
+            <h2>Failed to Load Schedule</h2>
+
+            <p>{message}</p>
+
+            <button
+                type="button"
+                className="schedule-empty__btn"
+                onClick={onRetry}
+            >
+                <RefreshCw size={14} style={{ marginRight: '0.4rem', display: 'inline-block', verticalAlign: 'middle' }} />
+                Try Again
+            </button>
+        </div>
+    )
+}
+
+/* Empty State Component */
+interface ScheduleEmptyStateProps {
+    date: Date
+    onGoToday?: () => void
+}
 
 function ScheduleEmptyState({
     date,
-}: {
-    date: Date
-}) {
+    onGoToday,
+}: ScheduleEmptyStateProps) {
     return (
         <div className="schedule-empty">
-            <CalendarDays size={32} />
+            <div className="schedule-empty__icon-wrap">
+                <CalendarDays size={32} />
+            </div>
 
-            <h2>
-                No episodes scheduled
-            </h2>
+            <h2>No Episodes Scheduled</h2>
 
             <p>
-                There are no upcoming episodes
-                scheduled for {formatDate(date)}.
+                There are no anime episode releases scheduled for {formatDate(date)}. Select another day from the calendar strip above or check the full week schedule.
             </p>
+
+            {onGoToday && (
+                <button
+                    type="button"
+                    className="schedule-empty__btn"
+                    onClick={onGoToday}
+                >
+                    Back to Today
+                </button>
+            )}
         </div>
     )
 }

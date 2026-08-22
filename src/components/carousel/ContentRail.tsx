@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRef, type ReactNode } from 'react'
 import './rail.css'
 
-export function ContentRail({ title, children }: { title: string; children: ReactNode }) {
+export function ContentRail({ title, children, hideViewAll }: { title: string; children: ReactNode; hideViewAll?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
 
   const move = (amount: number) =>
@@ -12,9 +12,11 @@ export function ContentRail({ title, children }: { title: string; children: Reac
     <section className="rail">
       <header>
         <h2>{title}</h2>
-        <button className="rail__view-all" onClick={() => {}}>
-          View all →
-        </button>
+        {!hideViewAll && (
+          <button className="rail__view-all" onClick={() => { }}>
+            View all →
+          </button>
+        )}
       </header>
       <div className="rail__wrap">
         <button

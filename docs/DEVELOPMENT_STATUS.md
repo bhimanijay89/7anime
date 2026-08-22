@@ -2,41 +2,35 @@
 
 ## Current Phase
 
-Phase 7C — Anime Discovery & Filtering Experience
+Schedule Page — Real AniList Airing Schedule Data Integration & UI Polish
 
 ## Overall Status
 
-Phase 7B is COMPLETE and verified. The Home Page has been overhauled with a high-fidelity Top 10 carousel, dynamic poster system, and refreshed grid layout to maximize content density and engagement.
+Schedule Page has been upgraded to use real AniList `airingSchedules` GraphQL data via backend Upstash Redis caching. All mock schedule entries have been removed. Airing times are dynamically formatted using the browser's local timezone. Includes skeleton loading states, error states with retry, empty states, and responsive design across desktop and mobile screens (320px–430px). All TypeScript (`tsc -b`), build (`npm run build`), and lint (`npm run lint`) checks pass with 0 errors.
 
 ## Completed Phases
 
-- [x] Phase 1 — Web UI Foundation
-- [x] Phase 2 — Home Page UI
-- [x] Phase 3 — Anime Discovery UI
-- [x] Phase 4 — Anime Detail UI
-- [x] Phase 5 — Player and Episode UI
-- [x] Phase 6 — Watch Progress, Library & User Profiles
+- [x] Phase 1 (UI) — Web UI Foundation
+- [x] Phase 2 (UI) — Home Page UI
+- [x] Phase 3 (UI) — Anime Discovery UI
+- [x] Phase 4 (UI) — Anime Detail UI
+- [x] Phase 5 (UI) — Player and Episode UI
+- [x] Phase 6 (UI) — Watch Progress, Library & User Profiles
 - [x] Master UI Reconciliation & Baseline Stabilization Phase
-- [x] Phase 7A — Global Design System + Navigation Premium Polish
-
-## Current Phase Details (Phase 7A)
-
-- [x] Defined complete Liquid Glass tokens (`--color-glass`, `--color-glass-elevated`, `--color-glass-interactive`, `--color-glass-active`, `--color-glass-modal`, `--color-glass-border`, `--color-glass-border-hover`, `--color-glass-highlight`).
-- [x] Standardized typography tokens (`--font-size-xs` to `--font-size-3xl`), font weights (`400`, `500`, `600`, `700`, `850`), and line height scale (`1.15`, `1.5`, `1.65`).
-- [x] Added global glass utility classes (`.glass`, `.glass-elevated`, `.glass-interactive`, `.glass-modal`), `@supports not (backdrop-filter: blur(1px))` fallbacks, custom dark scrollbar styling, and high-contrast outline focus rings.
-- [x] Polished button primitives with hover translation (`-1px`), active scale (`0.98`), glowing accent state, and 44px+ minimum touch targets for icon buttons.
-- [x] Refined badge/chip typography and subtle tone border rings.
-- [x] Upgraded Modal and Drawer overlays with modal glass depth (`backdrop-filter: blur(24px)`), smooth scale-in animations, ESC key listeners, and body scroll locking.
-- [x] Refined floating desktop navbar with restrained active indicator (glass pill highlight + accent text + soft bottom glowing indicator line).
-- [x] Enhanced profile chip presentation with avatar circle icon (`UserRound`), username typography ("Yuki"), hover translation, and active glow border.
-- [x] Refined floating mobile bottom navigation (`24px` backdrop blur, 44px+ tap targets, active icon drop shadow).
-- [x] Standardized page layout rhythm (`preview.css`) for 1440px down to 320px without horizontal scrollbar overflow.
-- [x] Verified zero-error ESLint (`npm run lint`) and production build (`npm run build`).
-
-## Upcoming Phases
-
-- [ ] Phase 7B — Home + Top 10 + Poster System
-- [ ] Future UI / Feature Overhauls (Profile 2.0, Authentication UI, Schedule, etc.)
+- [x] Phase 1 (Backend Architecture) — PostgreSQL + Prisma Foundation
+- [x] Phase 2 (Backend Architecture) — Redis Foundation (Upstash REST Migration)
+- [x] Phase 3 (Backend Architecture) — Backend API Architecture & Response Envelope
+- [x] Phase 8 — Authentication System (JWT/Session) & UI Integration
+- [x] Upstash Redis Integration — Remote HTTP REST Caching & Graceful Fallbacks
+- [x] Exclusive Video Stream Provider — `megaplay.buzz` Sole Provider Enforcement
+- [x] Premium Player UI/UX Enhancement & Desktop Poster Scale Optimization
+- [x] Search UI/UX Redesign & Mobile Navbar Search Interaction Resolution
+- [x] Mobile UI/UX Redesign, One-Hand Touch Usability
+- [x] Upstash Redis Integration & Anime/API Cache-Aside Layer
+- [x] Navbar Auth Correction (Sign In Preserved, Logout Removed from Navbar)
+- [x] Text Caret Control (Hidden on Display Content, Preserved on Inputs/Editable Controls)
+- [x] Schedule Page UI/UX Redesign (Liquid Glass Theme, 7-Day Day Selector, Mobile Optimization)
+- [x] Schedule Page Real AniList Airing Schedule Data Integration & Redis Caching
 
 ## Current Blockers
 
@@ -44,12 +38,12 @@ Phase 7B is COMPLETE and verified. The Home Page has been overhauled with a high
 
 ## Known Technical Debt
 
-- Remote artwork uses Unsplash placeholders.
+- None.
 
 ## Last Updated
 
-2026-08-16
+2026-08-21
 
 ## Next Exact Action
 
-Phase 7C — Anime Discovery & Filtering Experience implementation.
+Await user instruction.

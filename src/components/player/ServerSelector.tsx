@@ -12,9 +12,9 @@ export interface StreamServer {
 }
 
 const servers: StreamServer[] = [
-  { id: 's1', name: 'Server Alpha', quality: '1080p HD', type: 'Sub', ping: '18ms' },
-  { id: 's2', name: 'Server Beta', quality: '1080p HD', type: 'Dub', ping: '24ms' },
-  { id: 's3', name: 'Server Gamma', quality: '720p Fast', type: 'Sub', ping: '32ms' },
+  { id: 's1', name: 'Server 1 (HD)', quality: '1080p HD', type: 'Sub', ping: '18ms' },
+  { id: 's2', name: 'Server 2 (HD)', quality: '1080p HD', type: 'Dub', ping: '24ms' },
+  { id: 's3', name: 'Server 3 (Fast)', quality: '720p Fast', type: 'Sub', ping: '32ms' },
 ]
 
 export function ServerSelector({

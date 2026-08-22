@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  username           String              @unique
+  passwordHash       String
+  avatar             String?
+  role               String              @default("USER")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  sessions           Session[]
+  library            LibraryEntry[]
+  progress           WatchProgress[]
+  userStats          UserStats?
+  achievements       UserAchievement[]
+  passwordResetCodes PasswordResetCode[]
+
+  @@map("users")
+}
+
+model PasswordResetCode {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash       String
+  resetTokenHash String?   @unique
+  expiresAt      DateTime
+  resetExpiresAt DateTime?
+  attempts       Int       @default(0)
+  verifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_codes")
+}
+
+model UserStats {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  xp                   Int       @default(0)
+  level                Int       @default(1)
+  coins                Int       @default(0)
+  currentStreak        Int       @default(0)
+  longestStreak        Int       @default(0)
+  totalEpisodesWatched Int       @default(0)
+  totalWatchSeconds    Int       @default(0)
+  lastActivityDate     DateTime?
+  lastWatchDate        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("user_stats")
+}
+
+model Achievement {
+  id          String            @id @default(uuid())
+  key         String            @unique
+  title       String
+  description String
+  xpReward    Int               @default(100)
+  coinReward  Int               @default(50)
+  createdAt   DateTime          @default(now())
+  users       UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+enum LibraryStatus {
+  WATCHING
+  COMPLETED
+  PLANNING
+  DROPPED
+}
+
+model LibraryEntry {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anilistId Int
+  status    LibraryStatus @default(WATCHING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([userId, anilistId])
+  @@index([userId])
+  @@index([anilistId])
+  @@map("library_entries")
+}
+
+model WatchProgress {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anilistId       Int
+  episodeNumber   Int
+  progressSeconds Int      @default(0)
+  durationSeconds Int      @default(0)
+  completed       Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, anilistId, episodeNumber])
+  @@index([userId])
+  @@index([anilistId])
+  @@map("watch_progress")
+}
+
+model AnimeMetadataCache {
+  anilistId Int      @id
+  payload   Json
+  updatedAt DateTime @updatedAt
+
+  @@map("anime_metadata_cache")
+}

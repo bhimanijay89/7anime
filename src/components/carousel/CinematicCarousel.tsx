@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Check,
   Pause,
   Play,
   Plus,
@@ -16,6 +17,9 @@ interface Top10HeroProps {
   anime: Anime[]
   onSelect?: (anime: Anime) => void
   onAddToList?: (anime: Anime) => void
+  onToggleSave?: (anime: Anime) => void
+  /** AniList IDs already saved in the user's library. */
+  savedAnimeIds?: string[]
 }
 
 interface UpcomingHeroProps {
@@ -31,6 +35,8 @@ export function Top10Hero({
   anime,
   onSelect,
   onAddToList,
+  onToggleSave,
+  savedAnimeIds = [],
 }: Top10HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -152,6 +158,18 @@ export function Top10Hero({
 
   const current = anime[activeIndex]
 
+  const savedIds = new Set(savedAnimeIds.map(String))
+  const isCurrentSaved = savedIds.has(String(current?.id ?? ''))
+
+  const handleToggleCurrent = () => {
+    if (!current) return
+    if (onToggleSave) {
+      onToggleSave(current)
+    } else {
+      onAddToList?.(current)
+    }
+  }
+
   if (!current) return null
 
   const rank = String(activeIndex + 1).padStart(2, '0')
@@ -160,8 +178,8 @@ export function Top10Hero({
     <section
       ref={containerRef}
       className={`hero-top10 ${transitioning
-          ? 'hero-top10--transitioning'
-          : ''
+        ? 'hero-top10--transitioning'
+        : ''
         }`}
       aria-roledescription="carousel"
       aria-label="Top 10 anime this week"
@@ -191,23 +209,35 @@ export function Top10Hero({
             <span>#{rank} THIS WEEK</span>
           </p>
 
-          <h1 className="hero-top10__title">
-            {current.title}
-          </h1>
+          {(() => {
+            const len = current.title.length
+            const titleClass =
+              len > 60
+                ? 'hero-top10__title hero-top10__title--long-xl'
+                : len > 35
+                  ? 'hero-top10__title hero-top10__title--long'
+                  : 'hero-top10__title'
+            return (
+              <h1 className={titleClass}>
+                {current.title}
+              </h1>
+            )
+          })()}
 
-          <div className="hero-top10__meta">
+          <div className="hero-top10__specs">
             {current.rating && (
-              <span className="hero-top10__rating">
+              <span>
                 <Star
                   size={14}
-                  fill="currentColor"
-                />
+                  fill="var(--color-warning)"
+                  color="var(--color-warning)"
+                />{' '}
                 {current.rating}
               </span>
             )}
 
             {current.type && (
-              <Badge tone="neutral">
+              <Badge tone="accent">
                 {current.type}
               </Badge>
             )}
@@ -264,13 +294,25 @@ export function Top10Hero({
             </Button>
 
             <Button
-              variant="glass"
-              onClick={() =>
-                onAddToList?.(current)
+              variant={isCurrentSaved ? 'success' : 'glass'}
+              onClick={handleToggleCurrent}
+              aria-label={
+                isCurrentSaved
+                  ? `Remove ${current.title} from list`
+                  : `Add ${current.title} to list`
               }
             >
-              <Plus size={16} />
-              Add to List
+              {isCurrentSaved ? (
+                <>
+                  <Check size={16} strokeWidth={2.8} />
+                  In My List
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  Add to List
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -308,8 +350,8 @@ export function Top10Hero({
             <button
               key={item.id}
               className={`hero-top10__thumb ${index === activeIndex
-                  ? 'hero-top10__thumb--active'
-                  : ''
+                ? 'hero-top10__thumb--active'
+                : ''
                 }`}
               onClick={() => goTo(index)}
               aria-label={`Show #${String(
@@ -529,8 +571,8 @@ export function UpcomingHero({
     <section
       ref={containerRef}
       className={`hero-top10 hero-upcoming ${transitioning
-          ? 'hero-top10--transitioning'
-          : ''
+        ? 'hero-top10--transitioning'
+        : ''
         }`}
       aria-roledescription="carousel"
       aria-label="Upcoming anime"
@@ -577,9 +619,20 @@ export function UpcomingHero({
             <span>UPCOMING · COMING SOON</span>
           </p>
 
-          <h2 className="hero-top10__title">
-            {current.title}
-          </h2>
+          {(() => {
+            const len = current.title.length
+            const titleClass =
+              len > 60
+                ? 'hero-top10__title hero-top10__title--long-xl'
+                : len > 35
+                  ? 'hero-top10__title hero-top10__title--long'
+                  : 'hero-top10__title'
+            return (
+              <h2 className={titleClass}>
+                {current.title}
+              </h2>
+            )
+          })()}
 
           <div className="hero-top10__meta">
             {current.type && (
@@ -664,8 +717,8 @@ export function UpcomingHero({
               <button
                 key={item.id}
                 className={`hero-top10__thumb ${index === activeIndex
-                    ? 'hero-top10__thumb--active'
-                    : ''
+                  ? 'hero-top10__thumb--active'
+                  : ''
                   }`}
                 onClick={() => goTo(index)}
                 aria-label={`Show upcoming anime ${item.title}`}

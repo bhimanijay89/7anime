@@ -199,12 +199,27 @@ export const continueWatching: Anime[] = [
   { ...previewAnime[7], progress: 55 },
 ]
 
-export const previewUser: User = { id: 'u1', username: 'Yuki', level: { level: 27, title: 'Hardcore Otaku', currentXp: 18420, nextLevelXp: 24000 }, streak: { days: 12, longestDays: 19 }, coins: 740 }
+export const guestUser: User = {
+  id: 'guest',
+  username: 'Guest',
+  level: {
+    level: 1,
+    title: 'New Explorer',
+    currentXp: 0,
+    nextLevelXp: 100,
+  },
+  streak: {
+    days: 0,
+    longestDays: 0,
+  },
+  coins: 0,
+}
 
-export const previewAchievements = [
-  { id: 'a1', title: 'First Episode', description: 'Watched your first complete episode on 7anime', unlocked: true },
-  { id: 'a2', title: 'Cyberpunk Fanatic', description: 'Finished 5 sci-fi or cyberpunk series', unlocked: true },
-  { id: 'a3', title: '10-Day Streak', description: 'Logged in and watched anime 10 days in a row', unlocked: true },
-  { id: 'a4', title: 'Night Owl', description: 'Watched anime between 2 AM and 5 AM', unlocked: true },
-  { id: 'a5', title: 'Master Collector', description: 'Saved 25 anime series to your personal library', unlocked: false },
+export const defaultAchievements = [
+  { id: 'a1', key: 'FIRST_EPISODE', title: 'First Step', description: 'Watch your first anime episode', unlocked: false },
+  { id: 'a2', key: 'EPISODES_10', title: 'Anime Enthusiast', description: 'Watch 10 anime episodes', unlocked: false },
+  { id: 'a3', key: 'EPISODES_50', title: 'Marathon Runner', description: 'Watch 50 anime episodes', unlocked: false },
+  { id: 'a4', key: 'EPISODES_100', title: 'Otaku Legend', description: 'Watch 100 anime episodes', unlocked: false },
+  { id: 'a5', key: 'STREAK_7', title: 'Dedicated Streamer', description: 'Maintain a 7-day watch streak', unlocked: false },
+  { id: 'a6', key: 'COLLECTOR_5', title: 'Library Curator', description: 'Save 5 anime to your library', unlocked: false },
 ]

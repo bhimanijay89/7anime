@@ -7,16 +7,7 @@ import type {
 const ANILIST_ENDPOINT =
     'https://graphql.anilist.co'
 
-const JIKAN_ENDPOINT =
-    'https://api.jikan.moe/v4'
-
-const REQUEST_TIMEOUT_MS = 12_000
-
-const JIKAN_PAGE_SIZE = 100
-
-const JIKAN_REQUEST_DELAY_MS = 400
-
-const JIKAN_MAX_RETRIES = 3
+const REQUEST_TIMEOUT_MS = 15000
 
 type AniListTitle = {
     romaji?: string | null
@@ -25,12 +16,12 @@ type AniListTitle = {
 }
 
 type AniListCoverImage = {
+    medium?: string | null
     large?: string | null
     extraLarge?: string | null
-    medium?: string | null
 }
 
-type AniListCharacterNode = {
+type AniListCharacterEdge = {
     node: {
         id: number
 
@@ -83,25 +74,21 @@ type AniListAnime = {
 
     seasonYear?: number | null
 
+    source?: string | null
+
+    nextAiringEpisode?: {
+        episode?: number | null
+    } | null
+
     studios?: {
         nodes?: Array<{
             name: string
         }>
     } | null
 
-    source?: string | null
-
     characters?: {
-        edges?: AniListCharacterNode[]
+        edges?: AniListCharacterEdge[]
     } | null
-}
-
-type AniListResponse<T> = {
-    data?: T
-
-    errors?: Array<{
-        message?: string
-    }>
 }
 
 type AniListAiringMedia =
@@ -119,52 +106,22 @@ type AniListAiringItem = {
     media: AniListAiringMedia
 }
 
-type JikanEpisode = {
-    mal_id: number
+type AniListResponse<T> = {
+    data?: T
 
-    title?: string | null
-
-    title_japanese?: string | null
-
-    title_romanji?: string | null
-
-    aired?: string | null
-
-    score?: number | null
-
-    filler?: boolean
-
-    recap?: boolean
+    errors?: Array<{
+        message?: string
+        status?: number
+    }>
 }
 
-type JikanEpisodesResponse = {
-    data?: JikanEpisode[]
 
-    pagination?: {
-        last_visible_page?: number
-
-        has_next_page?: boolean
-
-        current_page?: number
-
-        items?: {
-            count?: number
-
-            total?: number
-
-            per_page?: number
-        }
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| AniList Anime Details
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   ANILIST DETAILS
+   ========================================================= */
 
 const ANIME_DETAILS_QUERY = `
-    query AnimeDetails($id: Int) {
+    query AnimeDetails($id: Int!) {
         Media(
             id: $id
             type: ANIME
@@ -204,6 +161,10 @@ const ANIME_DETAILS_QUERY = `
             seasonYear
 
             source
+
+            nextAiringEpisode {
+                episode
+            }
 
             studios {
                 nodes {
@@ -247,11 +208,10 @@ const ANIME_DETAILS_QUERY = `
     }
 `
 
-/*
-|--------------------------------------------------------------------------
-| AniList Search
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   ANILIST SEARCH
+   ========================================================= */
 
 const ANIME_SEARCH_QUERY = `
     query SearchAnime(
@@ -304,6 +264,10 @@ const ANIME_SEARCH_QUERY = `
 
                 source
 
+                nextAiringEpisode {
+                    episode
+                }
+
                 studios {
                     nodes {
                         name
@@ -314,11 +278,10 @@ const ANIME_SEARCH_QUERY = `
     }
 `
 
-/*
-|--------------------------------------------------------------------------
-| AniList Airing / Upcoming
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   AIRING / UPCOMING
+   ========================================================= */
 
 const AIRING_ANIME_QUERY = `
     query AiringAnime(
@@ -389,11 +352,64 @@ const AIRING_ANIME_QUERY = `
     }
 `
 
-/*
-|--------------------------------------------------------------------------
-| Generic fetch helper
-|--------------------------------------------------------------------------
-*/
+const AIRING_SCHEDULE_QUERY = `
+    query AiringSchedule(
+        $airingAtGreater: Int
+        $airingAtLesser: Int
+        $page: Int
+        $perPage: Int
+    ) {
+        Page(
+            page: $page
+            perPage: $perPage
+        ) {
+            airingSchedules(
+                airingAt_greater: $airingAtGreater
+                airingAt_lesser: $airingAtLesser
+                sort: TIME
+            ) {
+                id
+                airingAt
+                episode
+                timeUntilAiring
+                media {
+                    id
+                    idMal
+                    title {
+                        romaji
+                        english
+                        native
+                    }
+                    coverImage {
+                        medium
+                        large
+                        extraLarge
+                    }
+                    bannerImage
+                    description
+                    status
+                    averageScore
+                    episodes
+                    duration
+                    genres
+                    format
+                    seasonYear
+                    source
+                    studios {
+                        nodes {
+                            name
+                        }
+                    }
+                }
+            }
+        }
+    }
+`
+
+
+/* =========================================================
+   FETCH HELPER
+   ========================================================= */
 
 async function fetchWithTimeout(
     url: string,
@@ -404,8 +420,9 @@ async function fetchWithTimeout(
 
     const timeoutId =
         window.setTimeout(
-            () =>
-                controller.abort(),
+            () => {
+                controller.abort()
+            },
             REQUEST_TIMEOUT_MS,
         )
 
@@ -425,167 +442,181 @@ async function fetchWithTimeout(
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| AniList Request
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   ANILIST REQUEST
+   ========================================================= */
 
 async function aniListRequest<T>(
     query: string,
     variables: Record<string, unknown>,
 ): Promise<T> {
-    const response =
-        await fetchWithTimeout(
-            ANILIST_ENDPOINT,
-            {
-                method: 'POST',
+    let response: Response
 
-                headers: {
-                    'Content-Type':
-                        'application/json',
+    try {
+        response =
+            await fetchWithTimeout(
+                ANILIST_ENDPOINT,
+                {
+                    method: 'POST',
 
-                    Accept:
-                        'application/json',
+                    headers: {
+                        'Content-Type':
+                            'application/json',
+
+                        Accept:
+                            'application/json',
+                    },
+
+                    body:
+                        JSON.stringify({
+                            query,
+                            variables,
+                        }),
                 },
+            )
+    } catch (err: unknown) {
+        if (
+            err instanceof
+            DOMException &&
+            err.name ===
+            'AbortError'
+        ) {
+            console.error(
+                '[AniList API] Request timeout.',
+                err,
+            )
 
-                body: JSON.stringify({
-                    query,
-                    variables,
-                }),
-            },
+            throw new Error(
+                'AniList request timed out.',
+                {
+                    cause: err,
+                },
+            )
+        }
+
+        if (
+            err instanceof
+            TypeError
+        ) {
+            console.error(
+                '[AniList API] Network/CORS failure.',
+                err,
+            )
+
+            throw new Error(
+                'Unable to connect to AniList. The API may be unavailable or blocked.',
+                {
+                    cause: err,
+                },
+            )
+        }
+
+        console.error(
+            '[AniList API] Unexpected fetch error:',
+            err,
         )
+
+        throw err
+    }
 
     if (!response.ok) {
+        console.error(
+            `[AniList API] HTTP ${response.status}: ${response.statusText}`,
+        )
+
+        if (
+            response.status ===
+            403
+        ) {
+            throw new Error(
+                'AniList API is temporarily unavailable (HTTP 403).',
+            )
+        }
+
+        if (
+            response.status ===
+            429
+        ) {
+            throw new Error(
+                'AniList API rate limit exceeded (HTTP 429).',
+            )
+        }
+
+        if (
+            response.status >=
+            500
+        ) {
+            throw new Error(
+                `AniList server error (HTTP ${response.status}).`,
+            )
+        }
+
         throw new Error(
-            `AniList request failed: ${response.status}`,
+            `AniList request failed (HTTP ${response.status}).`,
         )
     }
 
-    const payload =
-        (await response.json()) as
+    let payload:
         AniListResponse<T>
 
-    if (payload.errors?.length) {
+    try {
+        payload =
+            (await response.json()) as
+            AniListResponse<T>
+    } catch (err: unknown) {
+        console.error(
+            '[AniList API] Invalid JSON response.',
+            err,
+        )
+
         throw new Error(
-            payload.errors[0]?.message ||
-            'AniList returned an error.',
+            'AniList returned an invalid response.',
+            {
+                cause: err,
+            },
         )
     }
 
-    if (!payload.data) {
+    if (
+        payload.errors &&
+        payload.errors.length >
+        0
+    ) {
+        const errorMessage =
+            payload.errors[0]
+                ?.message ||
+            'AniList returned a GraphQL error.'
+
+        console.error(
+            '[AniList API] GraphQL error:',
+            errorMessage,
+        )
+
         throw new Error(
-            'AniList returned an empty response.',
+            errorMessage,
+        )
+    }
+
+    if (
+        !payload.data
+    ) {
+        console.error(
+            '[AniList API] Empty data response.',
+        )
+
+        throw new Error(
+            'AniList returned no data.',
         )
     }
 
     return payload.data
 }
 
-/*
-|--------------------------------------------------------------------------
-| Jikan Request
-|--------------------------------------------------------------------------
-*/
 
-async function jikanRequest<T>(
-    path: string,
-    retry = 0,
-): Promise<T> {
-    try {
-        const response =
-            await fetchWithTimeout(
-                `${JIKAN_ENDPOINT}${path}`,
-                {
-                    method: 'GET',
-
-                    headers: {
-                        Accept:
-                            'application/json',
-                    },
-                },
-            )
-
-        if (
-            response.status === 429 ||
-            response.status === 503
-        ) {
-            if (
-                retry <
-                JIKAN_MAX_RETRIES
-            ) {
-                const wait =
-                    1000 *
-                    Math.pow(
-                        2,
-                        retry,
-                    )
-
-                await sleep(wait)
-
-                return jikanRequest<T>(
-                    path,
-                    retry + 1,
-                )
-            }
-        }
-
-        if (!response.ok) {
-            throw new Error(
-                `Jikan request failed: ${response.status}`,
-            )
-        }
-
-        return (
-            await response.json()
-        ) as T
-    } catch (error) {
-        if (
-            retry <
-            JIKAN_MAX_RETRIES
-        ) {
-            const wait =
-                700 *
-                Math.pow(
-                    2,
-                    retry,
-                )
-
-            await sleep(wait)
-
-            return jikanRequest<T>(
-                path,
-                retry + 1,
-            )
-        }
-
-        throw error
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| Sleep
-|--------------------------------------------------------------------------
-*/
-
-function sleep(
-    milliseconds: number,
-): Promise<void> {
-    return new Promise(
-        resolve =>
-            window.setTimeout(
-                resolve,
-                milliseconds,
-            ),
-    )
-}
-
-/*
-|--------------------------------------------------------------------------
-| Metadata Helpers
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
 function cleanTitle(
     title: AniListTitle,
@@ -597,6 +628,7 @@ function cleanTitle(
         'Untitled Anime'
     )
 }
+
 
 function mapStatus(
     status?: string | null,
@@ -618,20 +650,27 @@ function mapStatus(
     }
 }
 
+
 function mapType(
     format?: string | null,
 ): Anime['type'] | undefined {
-    switch (format) {
-        case 'TV':
-            return 'TV'
-
-        case 'MOVIE':
-            return 'Movie'
-
-        default:
-            return undefined
+    if (
+        format ===
+        'TV'
+    ) {
+        return 'TV'
     }
+
+    if (
+        format ===
+        'MOVIE'
+    ) {
+        return 'Movie'
+    }
+
+    return undefined
 }
+
 
 function cleanDescription(
     description?: string | null,
@@ -664,14 +703,13 @@ function cleanDescription(
         .trim()
 }
 
-/*
-|--------------------------------------------------------------------------
-| Character Mapper
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   CHARACTER
+   ========================================================= */
 
 function mapCharacter(
-    edge: AniListCharacterNode,
+    edge: AniListCharacterEdge,
 ): Character | null {
     const name =
         edge.node.name.full?.trim()
@@ -679,7 +717,10 @@ function mapCharacter(
     const avatar =
         edge.node.image?.medium
 
-    if (!name || !avatar) {
+    if (
+        !name ||
+        !avatar
+    ) {
         return null
     }
 
@@ -695,14 +736,17 @@ function mapCharacter(
         name,
 
         role:
-            edge.role === 'MAIN'
+            edge.role ===
+                'MAIN'
                 ? 'Main'
                 : 'Supporting',
 
         avatar,
 
-        ...(voiceActor?.name?.full &&
-            voiceActor?.image?.medium
+        ...(voiceActor
+            ?.name?.full &&
+            voiceActor
+                ?.image?.medium
             ? {
                 voiceActor: {
                     name:
@@ -720,54 +764,34 @@ function mapCharacter(
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Jikan Episode Mapper
-|--------------------------------------------------------------------------
-*/
 
-function mapJikanEpisode(
-    episode: JikanEpisode,
-    episodeNumber: number,
-    animePoster: string,
-    duration?: number,
-): Episode {
-    const title =
-        episode.title?.trim() ||
-        `Episode ${episodeNumber}`
-
-    return {
-        id:
-            `jikan-${episode.mal_id}`,
-
-        number:
-            episodeNumber,
-
-        title,
-
-        duration:
-            duration ||
-            undefined,
-
-        thumbnail:
-            animePoster ||
-            undefined,
-    }
-}
+/* =========================================================
+   EPISODE CATALOGUE
+   ========================================================= */
 
 /*
-|--------------------------------------------------------------------------
-| Generate Safe Fallback Episodes
-|--------------------------------------------------------------------------
-|
-| If Jikan is temporarily unavailable but AniList knows the
-| total episode count, we still render a complete episode list
-| instead of showing "Episodes unavailable".
-|
-*/
+ * AniList provides the authoritative information we have
+ * for episode availability.
+ *
+ * For an airing anime:
+ *
+ *     nextAiringEpisode = 5
+ *
+ * means episodes 1-4 have already aired.
+ *
+ * We represent those real episode numbers locally so the
+ * player can construct:
+ *
+ * /stream/ani/{anilist-id}/{episode}/{language}
+ *
+ * We NEVER invent an episode count when AniList does not
+ * provide enough information.
+ */
 
-function createFallbackEpisodes(
-    totalEpisodes: number,
+function createEpisodeCatalogue(
+    totalEpisodes:
+        | number
+        | undefined,
     animePoster: string,
     duration?: number,
 ): Episode[] {
@@ -775,12 +799,13 @@ function createFallbackEpisodes(
         !Number.isFinite(
             totalEpisodes,
         ) ||
+        !totalEpisodes ||
         totalEpisodes <= 0
     ) {
         return []
     }
 
-    const safeTotal =
+    const count =
         Math.min(
             Math.floor(
                 totalEpisodes,
@@ -788,10 +813,15 @@ function createFallbackEpisodes(
             3000,
         )
 
+    if (
+        count <= 0
+    ) {
+        return []
+    }
+
     return Array.from(
         {
-            length:
-                safeTotal,
+            length: count,
         },
         (_, index) => {
             const number =
@@ -799,7 +829,7 @@ function createFallbackEpisodes(
 
             return {
                 id:
-                    `fallback-episode-${number}`,
+                    `anilist-episode-${number}`,
 
                 number,
 
@@ -818,137 +848,178 @@ function createFallbackEpisodes(
     )
 }
 
+
+/* =========================================================
+   EPISODE COUNT RESOLUTION
+   ========================================================= */
+
 /*
-|--------------------------------------------------------------------------
-| Fetch One Jikan Episode Page
-|--------------------------------------------------------------------------
-*/
+ * IMPORTANT:
+ *
+ * AniList's `episodes` field can represent the planned/full
+ * episode count for an airing season.
+ *
+ * For currently airing anime, `nextAiringEpisode.episode`
+ * gives us a much better indication of how many episodes
+ * are already available.
+ *
+ * Example:
+ *
+ *     episodes = 13
+ *     nextAiringEpisode = 5
+ *
+ * Available:
+ *
+ *     1, 2, 3, 4
+ *
+ * Therefore:
+ *
+ *     availableEpisodes = 4
+ *
+ * We never fall back to arbitrary values such as 12 or 24.
+ */
 
-async function getJikanEpisodePage(
-    malId: number,
-    page: number,
-    animePoster: string,
-    duration?: number,
-): Promise<{
-    episodes: Episode[]
-    hasNextPage: boolean
-}> {
-    const response =
-        await jikanRequest<JikanEpisodesResponse>(
-            `/anime/${malId}/episodes?page=${page}`,
-        )
-
+function resolveAvailableEpisodeCount(
+    source: AniListAnime,
+): number | undefined {
     const rawEpisodes =
-        response.data || []
+        source.episodes
 
-    const apiPageSize =
-        response.pagination
-            ?.items
-            ?.per_page ||
-        JIKAN_PAGE_SIZE
+    const nextAiringEpisode =
+        source.nextAiringEpisode
+            ?.episode
 
-    const episodes =
-        rawEpisodes.map(
-            (
-                episode,
-                index,
-            ) => {
-                const episodeNumber =
-                    ((page - 1) *
-                        apiPageSize) +
-                    index +
-                    1
-
-                return mapJikanEpisode(
-                    episode,
-                    episodeNumber,
-                    animePoster,
-                    duration,
-                )
-            },
-        )
-
-    return {
-        episodes,
-
-        hasNextPage:
-            response.pagination
-                ?.has_next_page === true,
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| Fetch ALL Anime Episodes
-|--------------------------------------------------------------------------
-*/
-
-export async function getAllAnimeEpisodes(
-    malId: number,
-    animePoster = '',
-    duration?: number,
-): Promise<Episode[]> {
+    /*
+     * Airing anime:
+     *
+     * If AniList tells us the next episode,
+     * everything before it has already aired.
+     */
     if (
-        !Number.isInteger(malId) ||
-        malId <= 0
+        typeof nextAiringEpisode ===
+        'number' &&
+        Number.isFinite(
+            nextAiringEpisode,
+        )
     ) {
-        return []
+        return Math.max(
+            0,
+            Math.floor(
+                nextAiringEpisode -
+                1,
+            ),
+        )
     }
 
-    const allEpisodes: Episode[] = []
-
-    let page = 1
-
-    const MAX_PAGES = 100
-
-    while (
-        page <= MAX_PAGES
+    /*
+     * Upcoming anime:
+     *
+     * No episode has aired yet.
+     */
+    if (
+        source.status ===
+        'NOT_YET_RELEASED'
     ) {
-        const result =
-            await getJikanEpisodePage(
-                malId,
-                page,
-                animePoster,
-                duration,
-            )
+        return 0
+    }
 
-        allEpisodes.push(
-            ...result.episodes,
-        )
-
+    /*
+     * Completed anime:
+     *
+     * AniList's episode count is the
+     * authoritative completed count.
+     */
+    if (
+        source.status ===
+        'FINISHED' ||
+        source.status ===
+        'CANCELLED'
+    ) {
         if (
-            !result.hasNextPage ||
-            result.episodes.length === 0
+            typeof rawEpisodes ===
+            'number' &&
+            Number.isFinite(
+                rawEpisodes,
+            ) &&
+            rawEpisodes > 0
         ) {
-            break
+            return Math.floor(
+                rawEpisodes,
+            )
         }
 
-        page += 1
+        return undefined
+    }
 
-        await sleep(
-            JIKAN_REQUEST_DELAY_MS,
+    /*
+     * Movies / specials:
+     *
+     * The existing application treats these
+     * as a single playable item.
+     */
+    if (
+        source.format ===
+        'MOVIE' ||
+        source.format ===
+        'SPECIAL'
+    ) {
+        return 1
+    }
+
+    /*
+     * For an airing anime without a reliable
+     * next-airing episode, do NOT guess.
+     */
+    if (
+        source.status ===
+        'RELEASING'
+    ) {
+        return undefined
+    }
+
+    /*
+     * For any unknown status, only use a positive
+     * AniList episode count when it is safe to do so.
+     */
+    if (
+        typeof rawEpisodes ===
+        'number' &&
+        Number.isFinite(
+            rawEpisodes,
+        ) &&
+        rawEpisodes > 0
+    ) {
+        return Math.floor(
+            rawEpisodes,
         )
     }
 
-    return allEpisodes
+    return undefined
 }
 
-/*
-|--------------------------------------------------------------------------
-| AniList → 7anime Mapper
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   MAP ANILIST ANIME
+   ========================================================= */
 
 export function mapAniListAnime(
     source: AniListAnime,
 ): Anime {
-    const studio =
-        source.studios?.nodes?.[0]
-            ?.name
+    const poster =
+        source.coverImage
+            ?.extraLarge ||
+        source.coverImage
+            ?.large ||
+        source.coverImage
+            ?.medium ||
+        ''
 
     const characters =
-        source.characters?.edges
-            ?.map(mapCharacter)
+        source.characters
+            ?.edges
+            ?.map(
+                mapCharacter,
+            )
             .filter(
                 (
                     character,
@@ -956,11 +1027,23 @@ export function mapAniListAnime(
                     character !== null,
             )
 
-    const poster =
-        source.coverImage?.extraLarge ||
-        source.coverImage?.large ||
-        source.coverImage?.medium ||
-        ''
+    const studio =
+        source.studios
+            ?.nodes?.[0]
+            ?.name
+
+    const totalEpisodes =
+        resolveAvailableEpisodeCount(
+            source,
+        )
+
+    const episodesList =
+        createEpisodeCatalogue(
+            totalEpisodes,
+            poster,
+            source.duration ||
+            undefined,
+        )
 
     return {
         id:
@@ -977,19 +1060,21 @@ export function mapAniListAnime(
 
         cover:
             source.bannerImage ||
-            source.coverImage
-                ?.extraLarge ||
-            source.coverImage
-                ?.large ||
             poster,
 
         banner:
             source.bannerImage ||
             poster,
 
+        malId:
+            source.idMal ||
+            undefined,
+
         episode:
-            source.episodes
-                ? `EP ${source.episodes}`
+            totalEpisodes !==
+                undefined &&
+                totalEpisodes > 0
+                ? `EP ${totalEpisodes}`
                 : undefined,
 
         status:
@@ -999,7 +1084,8 @@ export function mapAniListAnime(
 
         rating:
             source.averageScore
-                ? source.averageScore / 10
+                ? source.averageScore /
+                10
                 : undefined,
 
         genres:
@@ -1031,6 +1117,34 @@ export function mapAniListAnime(
                 ? `${source.duration}m per ep`
                 : undefined,
 
+        /*
+         * Sub count is based on the available
+         * episode count we resolved from AniList.
+         */
+        sub:
+            totalEpisodes !==
+                undefined &&
+                totalEpisodes > 0
+                ? totalEpisodes
+                : undefined,
+
+        /*
+         * We do NOT fabricate a dub count.
+         *
+         * Actual dub availability will be supplied
+         * later by the streaming/provider layer.
+         */
+        dub:
+            undefined,
+
+        totalEpisodes,
+
+        episodesList:
+            episodesList.length >
+                0
+                ? episodesList
+                : undefined,
+
         ...(characters &&
             characters.length > 0
             ? {
@@ -1040,103 +1154,50 @@ export function mapAniListAnime(
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Get Anime By AniList ID
-|--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| 1. AniList gives metadata + MAL ID.
-| 2. Jikan gives the complete episode catalogue.
-| 3. If Jikan fails, we generate safe fallback episodes.
-|
-*/
+
+/* =========================================================
+   GET ANIME
+   ========================================================= */
 
 export async function getAnimeById(
     id: number,
 ): Promise<Anime> {
+    if (
+        !Number.isInteger(id) ||
+        id <= 0
+    ) {
+        throw new Error(
+            'Invalid AniList anime ID.',
+        )
+    }
+
     const data =
         await aniListRequest<{
             Media: AniListAnime
         }>(
             ANIME_DETAILS_QUERY,
-            { id },
-        )
-
-    const source =
-        data.Media
-
-    const anime =
-        mapAniListAnime(
-            source,
-        )
-
-    const animePoster =
-        anime.poster
-
-    const duration =
-        source.duration ||
-        undefined
-
-    /*
-     * Jikan is only needed for episodes.
-     * If the anime has no MAL ID, skip it.
-     */
-    if (
-        source.idMal &&
-        Number.isInteger(
-            source.idMal,
-        )
-    ) {
-        try {
-            const episodes =
-                await getAllAnimeEpisodes(
-                    source.idMal,
-                    animePoster,
-                    duration,
-                )
-
-            if (
-                episodes.length > 0
-            ) {
-                anime.episodesList =
-                    episodes
-
-                return anime
-            }
-        } catch (error) {
-            console.warn(
-                'Jikan episode request failed. Using AniList episode count fallback.',
-                error,
-            )
-        }
-    }
-
-    /*
-     * Final safety fallback.
-     */
-    const fallbackEpisodes =
-        createFallbackEpisodes(
-            source.episodes || 0,
-            animePoster,
-            duration,
+            {
+                id,
+            },
         )
 
     if (
-        fallbackEpisodes.length > 0
+        !data.Media
     ) {
-        anime.episodesList =
-            fallbackEpisodes
+        throw new Error(
+            'Anime not found on AniList.',
+        )
     }
 
-    return anime
+    return mapAniListAnime(
+        data.Media,
+    )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Search Anime
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
 
 export async function searchAnime(
     search: string,
@@ -1146,9 +1207,30 @@ export async function searchAnime(
     const normalizedSearch =
         search.trim()
 
-    if (!normalizedSearch) {
+    if (
+        !normalizedSearch
+    ) {
         return []
     }
+
+    const safePage =
+        Math.max(
+            1,
+            Math.floor(
+                page,
+            ),
+        )
+
+    const safePerPage =
+        Math.min(
+            50,
+            Math.max(
+                1,
+                Math.floor(
+                    perPage,
+                ),
+            ),
+        )
 
     const data =
         await aniListRequest<{
@@ -1161,22 +1243,26 @@ export async function searchAnime(
                 search:
                     normalizedSearch,
 
-                page,
+                page:
+                    safePage,
 
-                perPage,
+                perPage:
+                    safePerPage,
             },
         )
 
-    return data.Page.media.map(
+    return (
+        data.Page.media ||
+        []
+    ).map(
         mapAniListAnime,
     )
 }
 
-/*
-|--------------------------------------------------------------------------
-| Upcoming Anime
-|--------------------------------------------------------------------------
-*/
+
+/* =========================================================
+   UPCOMING
+   ========================================================= */
 
 export type UpcomingAnimeItem = {
     anime: Anime
@@ -1188,10 +1274,32 @@ export type UpcomingAnimeItem = {
     timeUntilAiring: number
 }
 
+
 export async function getUpcomingAnime(
     page = 1,
     perPage = 20,
-): Promise<UpcomingAnimeItem[]> {
+): Promise<
+    UpcomingAnimeItem[]
+> {
+    const safePage =
+        Math.max(
+            1,
+            Math.floor(
+                page,
+            ),
+        )
+
+    const safePerPage =
+        Math.min(
+            50,
+            Math.max(
+                1,
+                Math.floor(
+                    perPage,
+                ),
+            ),
+        )
+
     const data =
         await aniListRequest<{
             Page: {
@@ -1201,12 +1309,19 @@ export async function getUpcomingAnime(
         }>(
             AIRING_ANIME_QUERY,
             {
-                page,
-                perPage,
+                page:
+                    safePage,
+
+                perPage:
+                    safePerPage,
             },
         )
 
-    return data.Page.airingSchedules.map(
+    return (
+        data.Page
+            .airingSchedules ||
+        []
+    ).map(
         item => ({
             anime:
                 mapAniListAnime(
@@ -1223,4 +1338,364 @@ export async function getUpcomingAnime(
                 item.timeUntilAiring,
         }),
     )
+}
+
+/* =========================================================
+   AIRING SCHEDULE
+   ========================================================= */
+
+const BACKEND_URL =
+    (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
+    'http://localhost:3001'
+
+export interface AiringScheduleEntry {
+    id: string
+    airingAt: number // Unix timestamp in seconds
+    episode: number
+    timeUntilAiring: number
+    anime: Anime
+}
+
+export async function getAiringSchedule(
+    airingAtGreater?: number,
+    airingAtLesser?: number,
+    page = 1,
+    perPage = 50,
+): Promise<AiringScheduleEntry[]> {
+    const params = new URLSearchParams()
+    if (typeof airingAtGreater === 'number' && Number.isFinite(airingAtGreater)) {
+        params.set('start', String(Math.floor(airingAtGreater)))
+    }
+    if (typeof airingAtLesser === 'number' && Number.isFinite(airingAtLesser)) {
+        params.set('end', String(Math.floor(airingAtLesser)))
+    }
+    params.set('page', String(Math.max(1, Math.floor(page))))
+    params.set('perPage', String(Math.min(100, Math.max(1, Math.floor(perPage)))))
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/anime/schedule?${params.toString()}`)
+        if (response.ok) {
+            const result = await response.json()
+            if (result.ok && Array.isArray(result.data?.schedules)) {
+                return result.data.schedules.map((item: AniListAiringItem) => ({
+                    id: String(item.id),
+                    airingAt: item.airingAt,
+                    episode: item.episode,
+                    timeUntilAiring: item.timeUntilAiring,
+                    anime: mapAniListAnime(item.media),
+                }))
+            }
+        }
+    } catch (err) {
+        console.warn('[7anime] Backend schedule endpoint request failed, using direct AniList query:', err)
+    }
+
+    const data = await aniListRequest<{
+        Page: {
+            airingSchedules: AniListAiringItem[]
+        }
+    }>(
+        AIRING_SCHEDULE_QUERY,
+        {
+            airingAtGreater: airingAtGreater ? Math.floor(airingAtGreater) : undefined,
+            airingAtLesser: airingAtLesser ? Math.floor(airingAtLesser) : undefined,
+            page: Math.max(1, Math.floor(page)),
+            perPage: Math.min(100, Math.max(1, Math.floor(perPage))),
+        },
+    )
+
+    return (data.Page?.airingSchedules || []).map(item => ({
+        id: String(item.id),
+        airingAt: item.airingAt,
+        episode: item.episode,
+        timeUntilAiring: item.timeUntilAiring,
+        anime: mapAniListAnime(item.media),
+    }))
+}
+
+
+/* =========================================================
+   TRENDING ANIME
+   ========================================================= */
+
+const TRENDING_ANIME_QUERY = `
+    query TrendingAnime(
+        $page: Int
+        $perPage: Int
+    ) {
+        Page(
+            page: $page
+            perPage: $perPage
+        ) {
+            media(
+                type: ANIME
+                sort: TRENDING_DESC
+            ) {
+                id
+
+                idMal
+
+                title {
+                    romaji
+                    english
+                    native
+                }
+
+                coverImage {
+                    medium
+                    large
+                    extraLarge
+                }
+
+                bannerImage
+
+                description
+
+                status
+
+                averageScore
+
+                episodes
+
+                duration
+
+                genres
+
+                format
+
+                seasonYear
+
+                source
+
+                nextAiringEpisode {
+                    episode
+                }
+
+                studios {
+                    nodes {
+                        name
+                    }
+                }
+            }
+        }
+    }
+`
+
+
+export async function getTrendingAnime(
+    page = 1,
+    perPage = 20,
+): Promise<Anime[]> {
+    const safePage =
+        Math.max(
+            1,
+            Math.floor(
+                page,
+            ),
+        )
+
+    const safePerPage =
+        Math.min(
+            50,
+            Math.max(
+                1,
+                Math.floor(
+                    perPage,
+                ),
+            ),
+        )
+
+    const data =
+        await aniListRequest<{
+            Page: {
+                media: AniListAnime[]
+            }
+        }>(
+            TRENDING_ANIME_QUERY,
+            {
+                page:
+                    safePage,
+
+                perPage:
+                    safePerPage,
+            },
+        )
+
+    return (
+        data.Page.media ||
+        []
+    ).map(
+        mapAniListAnime,
+    )
+}
+
+
+/* =========================================================
+   POPULAR / TOP RATED ANIME
+   ========================================================= */
+
+const POPULAR_ANIME_QUERY = `
+    query PopularAnime(
+        $page: Int
+        $perPage: Int
+    ) {
+        Page(
+            page: $page
+            perPage: $perPage
+        ) {
+            media(
+                type: ANIME
+                sort: SCORE_DESC
+            ) {
+                id
+
+                idMal
+
+                title {
+                    romaji
+                    english
+                    native
+                }
+
+                coverImage {
+                    medium
+                    large
+                    extraLarge
+                }
+
+                bannerImage
+
+                description
+
+                status
+
+                averageScore
+
+                episodes
+
+                duration
+
+                genres
+
+                format
+
+                seasonYear
+
+                source
+
+                nextAiringEpisode {
+                    episode
+                }
+
+                studios {
+                    nodes {
+                        name
+                    }
+                }
+            }
+        }
+    }
+`
+
+
+export async function getPopularAnime(
+    page = 1,
+    perPage = 20,
+): Promise<Anime[]> {
+    const safePage =
+        Math.max(
+            1,
+            Math.floor(
+                page,
+            ),
+        )
+
+    const safePerPage =
+        Math.min(
+            50,
+            Math.max(
+                1,
+                Math.floor(
+                    perPage,
+                ),
+            ),
+        )
+
+    const data =
+        await aniListRequest<{
+            Page: {
+                media: AniListAnime[]
+            }
+        }>(
+            POPULAR_ANIME_QUERY,
+            {
+                page:
+                    safePage,
+
+                perPage:
+                    safePerPage,
+            },
+        )
+
+    return (
+        data.Page.media ||
+        []
+    ).map(
+        mapAniListAnime,
+    )
+}
+
+
+/* =========================================================
+   MEGAPLAY EMBED
+   ========================================================= */
+
+/*
+ * MegaPlay:
+ *
+ * /stream/ani/{anilist-id}/{episode}/{language}
+ *
+ * The URL is intended to be embedded in an iframe.
+ */
+
+export function getMegaPlayEmbedUrl(
+    animeId: string | number,
+    episodeNumber: number,
+    language:
+        | 'sub'
+        | 'dub' = 'sub',
+): string {
+    const safeAnimeId =
+        encodeURIComponent(
+            String(
+                animeId,
+            ),
+        )
+
+    const safeEpisode =
+        Math.max(
+            1,
+            Math.floor(
+                episodeNumber,
+            ),
+        )
+
+    return (
+        `https://megaplay.buzz/stream/ani/` +
+        `${safeAnimeId}/` +
+        `${safeEpisode}/` +
+        `${language}`
+    )
+}
+
+export function getAnimeStreamEmbedUrl(
+    server: string,
+    animeId: string | number,
+    episodeNumber: number,
+    language:
+        | 'sub'
+        | 'dub' = 'sub',
+): string {
+    void server
+    return getMegaPlayEmbedUrl(animeId, episodeNumber, language)
 }

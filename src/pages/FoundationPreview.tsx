@@ -1,15 +1,24 @@
 import { ScheduleView } from '../components/schedule/ScheduleView'
 import {
   ArrowLeft,
+  LoaderCircle,
   Play,
   Plus,
   Sparkles,
-  LoaderCircle,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import type { Anime, Episode } from '../types/domain'
+import { useCallback, useEffect, useState } from 'react'
+import type {
+  Anime,
+  Episode,
+} from '../types/domain'
 
-import { getAnimeById } from '../services/anilist'
+import {
+  getAnimeById,
+  getPopularAnime,
+  getTrendingAnime,
+  getUpcomingAnime,
+  searchAnime,
+} from '../services/anilist'
 
 import { AnimeCard } from '../components/anime/AnimeCard'
 import { AnimeDetailHero } from '../components/anime/AnimeDetailHero'
@@ -29,10 +38,8 @@ import {
 
 import { FullPlayerView } from '../components/player/FullPlayerView'
 
-import {
-  LibraryView,
-} from '../components/profile/LibraryView'
-import { ProfileFullView } from '../components/profile/ProfileFullView'
+import { LibraryView } from '../components/profile/LibraryView'
+import { ProfileFullView, type UserProfileStats } from '../components/profile/ProfileFullView'
 
 import { SearchOverlay } from '../components/search/SearchOverlay'
 
@@ -44,33 +51,36 @@ import {
   useToast,
 } from '../components/ui/Toast'
 
+import { AuthModal } from '../components/auth/AuthModal'
+import type { AuthUser } from '../types/auth'
+import type { User } from '../types/domain'
+
 import {
-  continueWatching,
+  guestUser,
   previewAnime,
-  previewUser,
-  top10Anime,
   trendingAnime,
 } from '../data/anime'
 
 import './preview.css'
 
+const BACKEND_URL = 'http://localhost:3001'
 
 function Home() {
   const [currentView, setCurrentView] =
     useState<ViewMode>('home')
 
   const [selectedAnime, setSelectedAnime] =
-    useState<Anime>(previewAnime[0])
+    useState<Anime | null>(
+      null,
+    )
 
   const [selectedEpisode, setSelectedEpisode] =
-    useState<Episode | undefined>(undefined)
+    useState<Episode | undefined>(
+      undefined,
+    )
 
   const [savedLibrary, setSavedLibrary] =
-    useState<Anime[]>([
-      previewAnime[0],
-      previewAnime[1],
-      previewAnime[2],
-    ])
+    useState<Anime[]>([])
 
   const [search, setSearch] =
     useState(false)
@@ -81,7 +91,292 @@ function Home() {
   const [detailLoading, setDetailLoading] =
     useState(false)
 
-  const { notify } = useToast()
+  const [trendingData, setTrendingData] =
+    useState<Anime[]>([])
+
+  const [topRatedData, setTopRatedData] =
+    useState<Anime[]>([])
+
+  const [upcomingData, setUpcomingData] =
+    useState<Anime[]>([])
+
+  const [homeLoading, setHomeLoading] =
+    useState(true)
+
+  const [homeError, setHomeError] =
+    useState<string | null>(null)
+
+  // Auth, Library & Progress State
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [userProfile, setUserProfile] = useState<User>(guestUser)
+  const [profileStats, setProfileStats] = useState<UserProfileStats | undefined>(undefined)
+  const [continueWatchingList, setContinueWatchingList] = useState<Anime[]>([])
+
+  const { notify } =
+    useToast()
+
+  /* =========================================================
+     AUTH SESSION & USER DATA FETCH
+  ========================================================= */
+
+  const isSaved = useCallback(
+    (animeId: string | number) => {
+      const target = String(animeId)
+      return savedLibrary.some(item => String(item.id) === target)
+    },
+    [savedLibrary],
+  )
+
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/profile`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && data.data) {
+          const p = data.data
+          setUserProfile({
+            id: p.user.id,
+            username: p.user.username,
+            avatar: p.user.avatar || undefined,
+            level: {
+              level: p.level || 1,
+              title: p.level >= 25 ? 'Master Otaku' : p.level >= 10 ? 'Senior Otaku' : 'Anime Enthusiast',
+              currentXp: p.xp || 0,
+              nextLevelXp: p.nextLevelXp || 100,
+            },
+            streak: {
+              days: p.currentStreak || 0,
+              longestDays: p.longestStreak || 0,
+            },
+            coins: p.coins || 0,
+          })
+          setProfileStats(p)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error)
+    }
+  }, [])
+
+  const fetchUserLibrary = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/library`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && Array.isArray(data.data?.library)) {
+          const entries = data.data.library as Array<{ anilistId: number; status: string }>
+          const loadedAnime = await Promise.all(
+            entries.map(async (entry) => {
+              try {
+                return await getAnimeById(entry.anilistId)
+              } catch {
+                return null
+              }
+            })
+          )
+          setSavedLibrary(loadedAnime.filter((item): item is Anime => item !== null))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user library:', error)
+    }
+  }, [])
+
+  const fetchUserProgress = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/progress`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && Array.isArray(data.data?.progress)) {
+          const records = data.data.progress as Array<{
+            anilistId: number
+            episodeNumber: number
+            progressSeconds: number
+            durationSeconds: number
+            completed: boolean
+            updatedAt: string
+          }>
+
+          // Deduplicate by anilistId — keep only the latest episode per anime.
+          // Records arrive sorted by updatedAt desc from backend, so the first
+          // occurrence of each anilistId is the user's current watching position.
+          const seenAnime = new Set<number>()
+          const latestPerAnime = records.filter((rec) => {
+            if (seenAnime.has(rec.anilistId)) return false
+            seenAnime.add(rec.anilistId)
+            return true
+          })
+
+          const items = await Promise.all(
+            latestPerAnime.map(async (rec) => {
+              try {
+                const detail = await getAnimeById(rec.anilistId)
+                const duration = rec.durationSeconds > 0 ? rec.durationSeconds : 1440
+                const pct = Math.min(100, Math.round((rec.progressSeconds / duration) * 100))
+                return {
+                  ...detail,
+                  episode: `EP ${rec.episodeNumber}`,
+                  progress: pct,
+                }
+              } catch {
+                return null
+              }
+            })
+          )
+          const validItems: Anime[] = []
+          for (const item of items) {
+            if (item) {
+              validItems.push(item)
+            }
+          }
+          setContinueWatchingList(validItems)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user progress:', error)
+    }
+  }, [])
+
+  const handleProgressUpdate = useCallback(
+    async (
+      animeId: string | number,
+      episodeNumber: number,
+      progressSeconds: number,
+      durationSeconds: number,
+      completed?: boolean,
+    ) => {
+      const parsedId = Number(animeId)
+      if (!Number.isInteger(parsedId) || parsedId <= 0) return
+
+      if (authUser) {
+        try {
+          await fetch(`${BACKEND_URL}/api/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              anilistId: parsedId,
+              episodeNumber,
+              progressSeconds,
+              durationSeconds,
+              completed: Boolean(completed),
+            }),
+          })
+          await Promise.all([fetchUserProfile(), fetchUserProgress()])
+        } catch (err) {
+          console.error('Failed to save progress to backend:', err)
+        }
+      }
+    },
+    [authUser, fetchUserProfile, fetchUserProgress],
+  )
+
+  const checkAuthSession = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/auth/me`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && data.data?.user) {
+          setAuthUser(data.data.user as AuthUser)
+          await Promise.all([fetchUserProfile(), fetchUserLibrary(), fetchUserProgress()])
+          return
+        }
+      }
+      setAuthUser(null)
+      setUserProfile(guestUser)
+      setProfileStats(undefined)
+      setSavedLibrary([])
+      setContinueWatchingList([])
+    } catch (error) {
+      console.error('Session check failed:', error)
+      setAuthUser(null)
+      setUserProfile(guestUser)
+      setProfileStats(undefined)
+      setSavedLibrary([])
+      setContinueWatchingList([])
+    }
+  }, [fetchUserProfile, fetchUserLibrary, fetchUserProgress])
+
+  useEffect(() => {
+    checkAuthSession()
+  }, [checkAuthSession])
+
+  const handleAuthenticated = async (user: AuthUser) => {
+    setAuthUser(user)
+    setAuthModalOpen(false)
+    notify(`Welcome back, ${user.username}!`, 'success')
+    await Promise.all([fetchUserProfile(), fetchUserLibrary(), fetchUserProgress()])
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('Logout failed:', error)
+    } finally {
+      setAuthUser(null)
+      setUserProfile(guestUser)
+      setProfileStats(undefined)
+      setSavedLibrary([])
+      setContinueWatchingList([])
+      notify('You have signed out.', 'info')
+    }
+  }
+
+  /* =========================================================
+     LOAD HOME DATA FROM ANILIST (WITH GRACEFUL FALLBACK)
+  ========================================================= */
+
+  const loadHomeData = useCallback(async () => {
+    setHomeLoading(true)
+    setHomeError(null)
+
+    try {
+      const [
+        trending,
+        popular,
+        upcoming,
+      ] =
+        await Promise.allSettled([
+          getTrendingAnime(1, 20),
+          getPopularAnime(1, 20),
+          getUpcomingAnime(1, 15),
+        ])
+
+      const trendingList = trending.status === 'fulfilled' && trending.value.length > 0 ? trending.value : trendingAnime
+      const popularList = popular.status === 'fulfilled' && popular.value.length > 0 ? popular.value : previewAnime
+      const upcomingList = upcoming.status === 'fulfilled' && upcoming.value.length > 0
+        ? upcoming.value.map(item => item.anime)
+        : previewAnime.filter(a => a.status === 'Upcoming')
+
+      setTrendingData(trendingList)
+      setTopRatedData(popularList)
+      setUpcomingData(upcomingList)
+
+      if (
+        trending.status === 'rejected' &&
+        popular.status === 'rejected' &&
+        upcoming.status === 'rejected'
+      ) {
+        notify('AniList API is temporarily offline. Showing pre-cached anime feed.', 'info')
+      }
+    } catch (error) {
+      console.error('Unexpected error loading home data:', error)
+      setTrendingData(trendingAnime)
+      setTopRatedData(previewAnime)
+      setUpcomingData(previewAnime.filter(a => a.status === 'Upcoming'))
+    } finally {
+      setHomeLoading(false)
+    }
+  }, [notify])
+
+  useEffect(() => {
+    loadHomeData()
+  }, [loadHomeData])
 
 
   /* =========================================================
@@ -89,20 +384,35 @@ function Home() {
   ========================================================= */
 
   useEffect(() => {
-    const titles: Record<ViewMode, string> = {
-      home: '7anime — Premium Anime Streaming',
-      schedule: 'Schedule — 7anime',
-      detail: `${selectedAnime.title} — 7anime`,
-      player: `Playing ${selectedAnime.title} — 7anime`,
-      library: 'My Library — 7anime',
-      profile: 'My Space — 7anime',
+    const titles: Record<
+      ViewMode,
+      string
+    > = {
+      home:
+        '7anime — Premium Anime Streaming',
+
+      schedule:
+        'Schedule — 7anime',
+
+      detail:
+        `${selectedAnime?.title ?? 'Anime'} — 7anime`,
+
+      player:
+        `Playing ${selectedAnime?.title ?? 'Anime'} — 7anime`,
+
+      library:
+        'My Library — 7anime',
+
+      profile:
+        'My Space — 7anime',
     }
 
     document.title =
-      titles[currentView] || '7anime'
+      titles[currentView] ||
+      '7anime'
   }, [
     currentView,
-    selectedAnime.title,
+    selectedAnime?.title,
   ])
 
 
@@ -127,253 +437,441 @@ function Home() {
 
 
   /* =========================================================
-     NORMAL ANIME DETAIL
-     
-     IMPORTANT:
-     Every anime opened from Home / Top 10 /
-     Trending / Continue Watching / Library /
-     Upcoming / More Like This is loaded again
-     through AniList + Jikan so that the complete
-     episode catalogue is available.
+     CHECK WHETHER ANIME IS LOCAL PREVIEW DATA
+  =========================================================
+
+  The old preview data contains fake IDs such as:
+
+      id: '1'
+      id: '2'
+      id: '3'
+
+  Those are NOT AniList IDs.
+
+  We therefore identify those objects by reference/title
+  before deciding whether an ID can be sent directly to
+  AniList.
   ========================================================= */
 
-  const openDetail = async (
-    anime: Anime,
+  const isLocalPreviewAnime = (
   ) => {
-    const anilistId =
-      Number(anime.id)
-
-    /*
-     * If the ID is not a valid AniList numeric ID,
-     * use the anime object we already have.
-     */
-    if (
-      !Number.isInteger(anilistId) ||
-      anilistId <= 0
-    ) {
-      setSelectedAnime(anime)
-      setSelectedEpisode(undefined)
-      navigateTo('detail')
-      return
-    }
-
-    /*
-     * Show the same loading state used by
-     * Search → Anime Detail.
-     */
-    setDetailLoading(true)
-
-    try {
-      /*
-       * getAnimeById() is responsible for:
-       *
-       * 1. Fetching full AniList metadata.
-       * 2. Getting the MAL ID.
-       * 3. Fetching the Jikan episode catalogue.
-       * 4. Handling Jikan pagination.
-       * 5. Providing a safe episode fallback.
-       */
-      const fullAnime =
-        await getAnimeById(
-          anilistId,
-        )
-
-      /*
-       * Make absolutely sure we use the
-       * fully loaded object.
-       */
-      setSelectedAnime(
-        fullAnime,
-      )
-
-      setSelectedEpisode(
-        undefined,
-      )
-
-      navigateTo('detail')
-    } catch (error) {
-      console.error(
-        'Failed to load anime details:',
-        error,
-      )
-
-      /*
-       * Never leave the user stuck on
-       * the loading screen.
-       *
-       * If the API fails completely, open
-       * the information we already have.
-       */
-      setSelectedAnime(anime)
-
-      setSelectedEpisode(
-        undefined,
-      )
-
-      navigateTo('detail')
-
-      notify(
-        'Could not load full anime details. Showing available information.',
-        'info',
-      )
-    } finally {
-      setDetailLoading(false)
-    }
+    return false
   }
 
 
   /* =========================================================
-     SEARCH RESULT → FULL ANILIST + JIKAN DETAIL
+     FIND REAL ANILIST MATCH FOR LOCAL PREVIEW
   ========================================================= */
 
-  const openSearchAnime = async (
-    anime: Anime,
-  ) => {
-    const anilistId =
-      Number(anime.id)
+  const findAniListMatch =
+    async (
+      anime: Anime,
+    ): Promise<Anime | null> => {
+      try {
+        const results =
+          await searchAnime(
+            anime.title,
+            1,
+            10,
+          )
 
-    /*
-     * If this is not a valid AniList numeric ID,
-     * simply open the result we already have.
-     */
-    if (
-      !Number.isInteger(anilistId) ||
-      anilistId <= 0
-    ) {
-      setSearch(false)
-      openDetail(anime)
-      return
-    }
+        if (
+          results.length === 0
+        ) {
+          return null
+        }
 
-    setDetailLoading(true)
-    setSearch(false)
+        const normalizedTitle =
+          anime.title
+            .trim()
+            .toLowerCase()
 
-    try {
-      /*
-       * getAnimeById() loads:
-       * - AniList metadata
-       * - MAL ID
-       * - Jikan episodes
-       * - complete paginated episode catalogue
-       */
-      const fullAnime =
-        await getAnimeById(
-          anilistId,
+        /*
+         * Prefer exact title match.
+         */
+        const exactMatch =
+          results.find(
+            item =>
+              item.title
+                .trim()
+                .toLowerCase() ===
+              normalizedTitle,
+          )
+
+        return (
+          exactMatch ||
+          results[0] ||
+          null
+        )
+      } catch (error) {
+        console.error(
+          'AniList title search failed:',
+          error,
         )
 
-      setSelectedAnime(
-        fullAnime,
-      )
+        return null
+      }
+    }
 
-      setSelectedEpisode(
-        undefined,
-      )
 
-      navigateTo('detail')
-    } catch (error) {
-      console.error(
-        'Failed to load anime details:',
-        error,
-      )
+  /* =========================================================
+     LOAD COMPLETE ANIME
+  =========================================================
+
+  This is now the SINGLE entry point used by:
+
+  - Home cards
+  - Top 10
+  - Trending
+  - Continue Watching
+  - Upcoming
+  - Library
+  - Search results
+  - More Like This
+
+  Flow:
+
+  LOCAL PREVIEW
+      ↓
+  Search AniList by title
+      ↓
+  REAL AniList ID
+      ↓
+  getAnimeById()
+      ↓
+  AniList metadata
+      ↓
+  Jikan episode catalogue
+      ↓
+  EpisodeList
+      ↓
+  MegaPlay
+  ========================================================= */
+
+  const loadCompleteAnime =
+    async (
+      anime: Anime,
+    ): Promise<Anime> => {
+      let anilistId: number | null =
+        null
 
       /*
-       * Fallback to the search result
-       * instead of leaving the page empty.
+       * -------------------------------------------------------
+       * LOCAL PREVIEW DATA
+       * -------------------------------------------------------
        */
-      setSelectedAnime(anime)
 
-      setSelectedEpisode(
-        undefined,
-      )
+      if (
+        isLocalPreviewAnime()
+      ) {
+        const match =
+          await findAniListMatch(
+            anime,
+          )
 
-      navigateTo('detail')
+        if (match) {
+          const parsedId =
+            Number(
+              match.id,
+            )
 
-      notify(
-        'Could not load full anime details. Showing available information.',
-        'info',
-      )
-    } finally {
-      setDetailLoading(false)
+          if (
+            Number.isInteger(
+              parsedId,
+            ) &&
+            parsedId > 0
+          ) {
+            anilistId =
+              parsedId
+          }
+        }
+      } else {
+        /*
+         * -----------------------------------------------------
+         * REAL ANILIST DATA
+         * -----------------------------------------------------
+         */
+
+        const parsedId =
+          Number(
+            anime.id,
+          )
+
+        if (
+          Number.isInteger(
+            parsedId,
+          ) &&
+          parsedId > 0
+        ) {
+          anilistId =
+            parsedId
+        }
+      }
+
+      /*
+       * -------------------------------------------------------
+       * IF WE HAVE A REAL ANILIST ID
+       * -------------------------------------------------------
+       */
+
+      if (
+        anilistId !== null
+      ) {
+        try {
+          const fullAnime =
+            await getAnimeById(
+              anilistId,
+            )
+
+          /*
+           * Make absolutely sure the returned object
+           * has the real AniList ID.
+           */
+          if (
+            fullAnime &&
+            fullAnime.id
+          ) {
+            return fullAnime
+          }
+        } catch (error) {
+          console.error(
+            'Failed to load complete AniList anime:',
+            error,
+          )
+        }
+      }
+
+      /*
+       * -------------------------------------------------------
+       * SAFE FALLBACK
+       * -------------------------------------------------------
+       *
+       * Never crash the UI if AniList is temporarily
+       * unavailable.
+       */
+
+      return anime
     }
-  }
+
+
+  /* =========================================================
+     OPEN ANIME DETAIL
+  ========================================================= */
+
+  const openDetail =
+    async (
+      anime: Anime,
+    ) => {
+      setDetailLoading(true)
+
+      try {
+        const fullAnime =
+          await loadCompleteAnime(
+            anime,
+          )
+
+        setSelectedAnime(
+          fullAnime,
+        )
+
+        setSelectedEpisode(
+          undefined,
+        )
+
+        navigateTo(
+          'detail',
+        )
+      } catch (error) {
+        console.error(
+          'Failed to open anime detail:',
+          error,
+        )
+
+        setSelectedAnime(
+          anime,
+        )
+
+        setSelectedEpisode(
+          undefined,
+        )
+
+        navigateTo(
+          'detail',
+        )
+
+        notify(
+          'Could not load live anime information.',
+          'info',
+        )
+      } finally {
+        setDetailLoading(false)
+      }
+    }
+
+
+  /* =========================================================
+     SEARCH RESULT
+  ========================================================= */
+
+  const openSearchAnime =
+    async (
+      anime: Anime,
+    ) => {
+      setSearch(false)
+
+      await openDetail(
+        anime,
+      )
+    }
 
 
   /* =========================================================
      PLAYER
   ========================================================= */
 
-  const openFullPlayer = (
-    ep?: Episode,
-  ) => {
-    setSelectedEpisode(ep)
-    navigateTo('player')
-  }
-
-
-  /* =========================================================
-     LIBRARY
-  ========================================================= */
-
-  const handleRemoveFromLibrary = (
-    animeId: string,
-  ) => {
-    setSavedLibrary(prev =>
-      prev.filter(
-        item =>
-          item.id !== animeId,
-      ),
-    )
-
-    notify(
-      'Title removed from your library.',
-      'info',
-    )
-  }
-
-
-  const handleAddToList = (
-    anime: Anime,
-  ) => {
-    if (
-      !savedLibrary.find(
-        item =>
-          item.id === anime.id,
+  const openFullPlayer =
+    (
+      episode?: Episode,
+    ) => {
+      setSelectedEpisode(
+        episode,
       )
-    ) {
-      setSavedLibrary(prev => [
-        ...prev,
-        anime,
-      ])
 
-      notify(
-        `${anime.title} added to your library!`,
-        'success',
-      )
-    } else {
-      notify(
-        `${anime.title} is already in your library.`,
-        'info',
+      navigateTo(
+        'player',
       )
     }
-  }
 
 
   /* =========================================================
-     UPCOMING ANIME
+     REMOVE FROM LIBRARY
   ========================================================= */
 
-  const upcomingAnime =
-    previewAnime.filter(
-      anime =>
-        anime.status === 'Upcoming',
+  const handleRemoveFromLibrary =
+    async (
+      animeId: string,
+    ) => {
+      setSavedLibrary(
+        previous =>
+          previous.filter(
+            item =>
+              item.id !==
+              animeId,
+          ),
+      )
+
+      notify(
+        'Title removed from your library.',
+        'info',
+      )
+
+      if (authUser) {
+        const parsedId = Number(animeId)
+        if (Number.isInteger(parsedId) && parsedId > 0) {
+          try {
+            await fetch(`${BACKEND_URL}/api/library/${parsedId}`, {
+              method: 'DELETE',
+              credentials: 'include',
+            })
+            await fetchUserProfile()
+          } catch (err) {
+            console.error('Failed to remove from backend library:', err)
+          }
+        }
+      }
+    }
+
+
+  /* =========================================================
+     ADD TO LIBRARY
+  ========================================================= */
+
+  const handleAddToList =
+    async (
+      anime: Anime,
+    ) => {
+      const alreadySaved =
+        savedLibrary.some(
+          item =>
+            item.id ===
+            anime.id,
+        )
+
+      if (
+        !alreadySaved
+      ) {
+        setSavedLibrary(
+          previous => [
+            ...previous,
+            anime,
+          ],
+        )
+
+        notify(
+          `${anime.title} added to your library!`,
+          'success',
+        )
+
+        if (authUser) {
+          const parsedId = Number(anime.id)
+          if (Number.isInteger(parsedId) && parsedId > 0) {
+            try {
+              await fetch(`${BACKEND_URL}/api/library`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  anilistId: parsedId,
+                  status: 'WATCHING',
+                }),
+              })
+              await fetchUserProfile()
+            } catch (err) {
+              console.error('Failed to save to backend library:', err)
+            }
+          }
+        }
+      } else {
+        notify(
+          `${anime.title} is already in your library.`,
+          'info',
+        )
+      }
+    }
+
+  const handleToggleSave = useCallback(
+    async (anime: Anime) => {
+      const targetId = String(anime.id)
+      if (isSaved(targetId)) {
+        await handleRemoveFromLibrary(targetId)
+      } else {
+        await handleAddToList(anime)
+      }
+    },
+    [isSaved, handleRemoveFromLibrary, handleAddToList],
+  )
+
+
+  /* =========================================================
+     DERIVED HOME DATA
+  ========================================================= */
+
+  const heroAnime =
+    trendingData.slice(
+      0,
+      10,
     )
 
 
   /* =========================================================
-     FULL DETAIL LOADING SCREEN
+     LOADING SCREEN
   ========================================================= */
 
-  if (detailLoading) {
+  if (
+    detailLoading ||
+    (homeLoading &&
+      currentView === 'home')
+  ) {
     return (
       <>
         <DesktopNavbar
@@ -383,8 +881,21 @@ function Home() {
           onMenu={() =>
             setDrawer(true)
           }
-          onNavigate={navigateTo}
-          currentView="detail"
+          onNavigate={
+            navigateTo
+          }
+          onOpenAuthModal={() =>
+            setAuthModalOpen(true)
+          }
+          onLogout={
+            handleLogout
+          }
+          authUser={
+            authUser
+          }
+          currentView={
+            currentView
+          }
         />
 
         <main
@@ -393,12 +904,23 @@ function Home() {
         >
           <div
             style={{
-              minHeight: '70vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexDirection: 'column',
-              gap: 'var(--space-3)',
+              minHeight:
+                '70vh',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              flexDirection:
+                'column',
+
+              gap:
+                'var(--space-3)',
             }}
           >
             <LoaderCircle
@@ -407,7 +929,9 @@ function Home() {
             />
 
             <h2>
-              Loading anime details...
+              {detailLoading
+                ? 'Loading anime details...'
+                : 'Loading your anime feed...'}
             </h2>
 
             <p
@@ -416,15 +940,20 @@ function Home() {
                   'var(--color-text-muted)',
               }}
             >
-              Fetching anime information
-              and episode catalogue...
+              {detailLoading
+                ? 'Fetching AniList information and episode catalogue...'
+                : 'Curating trending, top-rated, and upcoming anime...'}
             </p>
           </div>
         </main>
 
         <MobileNavigation
-          onNavigate={navigateTo}
-          currentView="detail"
+          onNavigate={
+            navigateTo
+          }
+          currentView={
+            currentView
+          }
         />
       </>
     )
@@ -432,7 +961,7 @@ function Home() {
 
 
   /* =========================================================
-     MAIN RENDER
+     MAIN APPLICATION
   ========================================================= */
 
   return (
@@ -448,13 +977,26 @@ function Home() {
         onMenu={() =>
           setDrawer(true)
         }
-        onNavigate={navigateTo}
-        currentView={currentView}
+        onNavigate={
+          navigateTo
+        }
+        onOpenAuthModal={() =>
+          setAuthModalOpen(true)
+        }
+        onLogout={
+          handleLogout
+        }
+        authUser={
+          authUser
+        }
+        currentView={
+          currentView
+        }
       />
 
 
       {/* =====================================================
-          MAIN APPLICATION
+          MAIN
       ====================================================== */}
 
       <main
@@ -466,36 +1008,55 @@ function Home() {
             PLAYER
         ==================================================== */}
 
-        {currentView === 'player' ? (
-
+        {currentView ===
+          'player' && selectedAnime ? (
           <FullPlayerView
-            anime={selectedAnime}
+            anime={
+              selectedAnime
+            }
             initialEpisode={
               selectedEpisode
             }
+            isSaved={
+              isSaved(selectedAnime.id)
+            }
+            onToggleSave={
+              handleToggleSave
+            }
+            onProgressUpdate={
+              handleProgressUpdate
+            }
             onBack={() =>
-              navigateTo('detail')
+              navigateTo(
+                'detail',
+              )
             }
           />
 
-        ) : currentView === 'schedule' ? (
+        ) : currentView ===
+          'schedule' ? (
 
-          /* ===================================================
+          /* =================================================
              SCHEDULE
-          ==================================================== */
+          ================================================== */
 
           <ScheduleView
-            anime={top10Anime}
+            onSelectAnime={
+              openDetail
+            }
           />
 
-        ) : currentView === 'library' ? (
+        ) : currentView ===
+          'library' ? (
 
-          /* ===================================================
+          /* =================================================
              LIBRARY
-          ==================================================== */
+          ================================================== */
 
           <LibraryView
-            savedAnime={savedLibrary}
+            savedAnime={
+              savedLibrary
+            }
             onSelectAnime={
               openDetail
             }
@@ -504,294 +1065,425 @@ function Home() {
             }
           />
 
-        ) : currentView === 'profile' ? (
+        ) : currentView ===
+          'profile' ? (
 
-          /* ===================================================
+          /* =================================================
              PROFILE
-          ==================================================== */
+          ================================================== */
 
           <ProfileFullView
-            user={previewUser}
+            user={
+              userProfile
+            }
+            authUser={
+              authUser
+            }
+            profileStats={
+              profileStats
+            }
+            onLogout={
+              handleLogout
+            }
+            onOpenAuthModal={() =>
+              setAuthModalOpen(true)
+            }
           />
 
-        ) : currentView === 'home' ? (
+        ) : currentView ===
+          'home' ? (
 
-          /* ===================================================
+          /* =================================================
              HOME
-          ==================================================== */
+          ================================================== */
 
-          <>
-
-            {/* ===============================================
-                1. TOP 10 HERO
-            ================================================ */}
-
-            <Top10Hero
-              anime={top10Anime}
-              onSelect={
-                openDetail
-              }
-              onAddToList={
-                handleAddToList
-              }
-            />
-
-
-            {/* ===============================================
-                2. QUICK ACTIONS
-            ================================================ */}
-
-            <section
-              className="home-quick glass"
-              aria-label="Quick discovery"
+          homeError ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 'var(--space-10) var(--space-4)',
+                textAlign: 'center',
+                gap: 'var(--space-4)',
+                minHeight: '50vh',
+              }}
             >
-              <span>
-                <Sparkles size={17} />
-                Curated for your evening
-              </span>
-
-              <div>
-
-                <Button
-                  onClick={() =>
-                    openDetail(
-                      previewAnime[0],
-                    )
-                  }
-                >
-                  Start watching
-
-                  <Play
-                    size={15}
-                    fill="currentColor"
-                  />
-                </Button>
-
-
-                <Button
-                  variant="ghost"
-                  onClick={() =>
-                    navigateTo(
-                      'library',
-                    )
-                  }
-                >
-                  <Plus size={16} />
-
-                  My list (
-                  {savedLibrary.length}
-                  )
-                </Button>
-
-              </div>
-            </section>
-
-
-            {/* ===============================================
-                3. CONTINUE WATCHING
-            ================================================ */}
-
-            <ContentRail
-              title="Continue watching"
-            >
-              {continueWatching.map(
-                anime => (
-                  <AnimeCard
-                    anime={anime}
-                    variant="continue"
-                    key={anime.id}
-                    onSelect={
-                      openDetail
-                    }
-                  />
-                ),
-              )}
-            </ContentRail>
-
-
-            {/* ===============================================
-                4. TRENDING NOW
-            ================================================ */}
-
-            <section className="home-section-head">
-              <div>
-                <p className="eyebrow">
-                  Handpicked today
-                </p>
-
-                <h2>
-                  Trending now
-                </h2>
-              </div>
-
-              <p>
-                Stories finding their
-                audience right now.
+              <h3>Anime data is temporarily unavailable.</h3>
+              <p style={{ color: 'var(--text-dim)' }}>
+                {homeError}
               </p>
-            </section>
+              <Button onClick={() => loadHomeData()}>Try again</Button>
+            </div>
+          ) : (
+            <>
+
+              {/* ===============================================
+                  TOP 10
+              ================================================ */}
+
+              {heroAnime.length > 0 && (
+                <Top10Hero
+                  anime={
+                    heroAnime
+                  }
+                  onSelect={
+                    openDetail
+                  }
+                  onAddToList={
+                    handleAddToList
+                  }
+                  onToggleSave={
+                    handleToggleSave
+                  }
+                  savedAnimeIds={
+                    savedLibrary.map(item => String(item.id))
+                  }
+                />
+              )}
 
 
-            <ContentRail
-              title="Popular with 7anime viewers"
-            >
-              {trendingAnime.map(
-                anime => (
-                  <AnimeCard
-                    anime={anime}
-                    key={anime.id}
+              {/* ===============================================
+                  QUICK ACTIONS
+              ================================================ */}
+
+              <section
+                className="home-quick glass"
+                aria-label="Quick discovery"
+              >
+                <span>
+                  <Sparkles
+                    size={17}
+                  />
+
+                  Curated for your
+                  evening
+                </span>
+
+                <div>
+                  <Button
+                    onClick={() => {
+                      if (heroAnime[0]) {
+                        openDetail(heroAnime[0])
+                      }
+                    }}
+                    disabled={!heroAnime[0]}
+                  >
+                    Start watching
+
+                    <Play
+                      size={15}
+                      fill="currentColor"
+                    />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      navigateTo(
+                        'library',
+                      )
+                    }
+                  >
+                    <Plus
+                      size={16}
+                    />
+
+                    My list (
+                    {
+                      savedLibrary.length
+                    }
+                    )
+                  </Button>
+                </div>
+              </section>
+
+
+              {/* ===============================================
+                  CONTINUE WATCHING
+              ================================================ */}
+
+              <ContentRail
+                title="Continue watching"
+                hideViewAll
+              >
+                {continueWatchingList.length > 0 ? (
+                  continueWatchingList.map(anime => (
+                    <AnimeCard
+                      anime={anime}
+                      variant="continue"
+                      key={`continue-${anime.id}`}
+                      isSaved={isSaved(anime.id)}
+                      onToggleSave={handleToggleSave}
+                      onSelect={openDetail}
+                    />
+                  ))
+                ) : (
+                  <div className="empty-state-message" style={{ padding: 'var(--space-6) var(--space-8)', color: 'var(--text-dim)' }}>
+                    No anime in progress yet.
+                  </div>
+                )}
+              </ContentRail>
+
+
+              {/* ===============================================
+                  TRENDING
+              ================================================ */}
+
+              <section
+                className="home-section-head"
+              >
+                <div>
+                  <p className="eyebrow">
+                    Handpicked today
+                  </p>
+
+                  <h2>
+                    Trending now
+                  </h2>
+                </div>
+
+                <p>
+                  Stories finding
+                  their audience
+                  right now.
+                </p>
+              </section>
+
+              {trendingData.length > 0 && (
+                <ContentRail
+                  title="Popular with 7anime viewers"
+                >
+                  {trendingData
+                    .slice(0, 10)
+                    .map(
+                      anime => (
+                        <AnimeCard
+                          anime={
+                            anime
+                          }
+                          key={
+                            anime.id
+                          }
+                          isSaved={
+                            isSaved(anime.id)
+                          }
+                          onToggleSave={
+                            handleToggleSave
+                          }
+                          onSelect={
+                            openDetail
+                          }
+                        />
+                      ),
+                    )}
+                </ContentRail>
+              )}
+
+
+              {/* ===============================================
+                  UPCOMING
+              ================================================ */}
+
+              {upcomingData.length >
+                0 && (
+                  <UpcomingHero
+                    anime={
+                      upcomingData
+                    }
                     onSelect={
                       openDetail
                     }
                   />
-                ),
+                )}
+
+
+              {/* ===============================================
+                  TOP RATED
+              ================================================ */}
+
+              {topRatedData.length > 0 && (
+                <ContentRail
+                  title="Top rated"
+                >
+                  {topRatedData
+                    .slice(0, 10)
+                    .map(
+                      (
+                        anime,
+                        index,
+                      ) => (
+                        <AnimeCard
+                          anime={
+                            anime
+                          }
+                          variant="ranked"
+                          rank={
+                            index +
+                            1
+                          }
+                          key={`${anime.id}-rated-${index}`}
+                          isSaved={
+                            isSaved(anime.id)
+                          }
+                          onToggleSave={
+                            handleToggleSave
+                          }
+                          onSelect={
+                            openDetail
+                          }
+                        />
+                      ),
+                    )}
+                </ContentRail>
               )}
-            </ContentRail>
 
 
-            {/* ===============================================
-                5. UPCOMING ANIME HERO
-            ================================================ */}
+              {/* ===============================================
+                  DISCOVERY
+              ================================================ */}
 
-            {upcomingAnime.length > 0 && (
-              <UpcomingHero
-                anime={upcomingAnime}
+              <DiscoveryCatalog
+                anime={
+                  topRatedData
+                }
+                isSaved={
+                  isSaved
+                }
+                onToggleSave={
+                  handleToggleSave
+                }
                 onSelect={
                   openDetail
                 }
               />
-            )}
 
-
-            {/* ===============================================
-                6. TOP RATED
-            ================================================ */}
-
-            <ContentRail
-              title="Top rated"
-            >
-              {[...previewAnime]
-                .sort(
-                  (a, b) =>
-                    (b.rating || 0) -
-                    (a.rating || 0),
-                )
-                .map(
-                  (
-                    anime,
-                    index,
-                  ) => (
-                    <AnimeCard
-                      anime={anime}
-                      variant="ranked"
-                      rank={
-                        index + 1
-                      }
-                      key={`${anime.id}-${index}`}
-                      onSelect={
-                        openDetail
-                      }
-                    />
-                  ),
-                )}
-            </ContentRail>
-
-
-            {/* ===============================================
-                7. DISCOVERY
-            ================================================ */}
-
-            <DiscoveryCatalog
-              anime={trendingAnime}
-            />
-
-          </>
+            </>
+          )
 
         ) : (
 
-          /* ===================================================
+          /* =================================================
              ANIME DETAIL
-          ==================================================== */
+          ================================================== */
 
-          <div className="anime-detail">
+          <div
+            className="anime-detail"
+          >
+            {selectedAnime ? (
+              <>
+                <div
+                  style={{
+                    margin:
+                      'var(--space-4) 0 0 0',
+                  }}
+                >
+                  <Button
+                    variant="glass"
+                    onClick={() =>
+                      navigateTo(
+                        'home',
+                      )
+                    }
+                  >
+                    <ArrowLeft
+                      size={16}
+                    />
 
-            <div
-              style={{
-                margin:
-                  'var(--space-4) 0 0 0',
-              }}
-            >
-              <Button
-                variant="glass"
-                onClick={() =>
-                  navigateTo('home')
-                }
-              >
-                <ArrowLeft
-                  size={16}
+                    Back to Discover
+                  </Button>
+                </div>
+
+
+                {/* ===============================================
+                    HERO
+                ================================================ */}
+
+                <AnimeDetailHero
+                  anime={
+                    selectedAnime
+                  }
+                  isSaved={
+                    isSaved(selectedAnime.id)
+                  }
+                  onToggleSave={
+                    handleToggleSave
+                  }
+                  onWatch={() =>
+                    openFullPlayer()
+                  }
                 />
 
-                Back to Discover
-              </Button>
-            </div>
+
+                {/* ===============================================
+                    EPISODES
+                ================================================ */}
+
+                <EpisodeList
+                  episodes={
+                    selectedAnime
+                      .episodesList ??
+                    []
+                  }
+                  onPlayEpisode={
+                    episode =>
+                      openFullPlayer(
+                        episode,
+                      )
+                  }
+                />
 
 
-            <AnimeDetailHero
-              anime={selectedAnime}
-              onWatch={() =>
-                openFullPlayer()
-              }
-            />
+                {/* ===============================================
+                    METADATA
+                ================================================ */}
+
+                <AnimeMetadataTabs
+                  anime={
+                    selectedAnime
+                  }
+                />
 
 
-            {/* =================================================
-                EPISODE LIST
+                {/* ===============================================
+                    MORE LIKE THIS
+                ================================================ */}
 
-                The selected anime now comes from getAnimeById(),
-                which loads the Jikan episode catalogue.
-
-                If Jikan is temporarily unavailable, the service
-                provides a safe fallback based on AniList's
-                episode count when possible.
-            ================================================== */}
-
-            <EpisodeList
-              episodes={
-                selectedAnime.episodesList ??
-                []
-              }
-              onPlayEpisode={ep =>
-                openFullPlayer(ep)
-              }
-            />
-
-
-            <AnimeMetadataTabs
-              anime={selectedAnime}
-            />
-
-
-            <ContentRail
-              title="More like this"
-            >
-              {trendingAnime
-                .filter(
-                  item =>
-                    item.id !==
-                    selectedAnime.id,
-                )
-                .map(
-                  anime => (
-                    <AnimeCard
-                      anime={anime}
-                      key={anime.id}
-                      onSelect={
-                        openDetail
-                      }
-                    />
-                  ),
-                )}
-            </ContentRail>
-
+                <ContentRail
+                  title="More like this"
+                >
+                  {trendingData
+                    .filter(
+                      anime =>
+                        anime.id !==
+                        selectedAnime.id,
+                    )
+                    .slice(0, 8)
+                    .map(
+                      anime => (
+                        <AnimeCard
+                          anime={
+                            anime
+                          }
+                          key={
+                            anime.id
+                          }
+                          onSelect={
+                            openDetail
+                          }
+                        />
+                      ),
+                    )}
+                </ContentRail>
+              </>
+            ) : (
+              <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-dim)' }}>
+                Anime details unavailable.
+                <br /><br />
+                <Button onClick={() => navigateTo('home')}>Go Back</Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -803,8 +1495,15 @@ function Home() {
       ====================================================== */}
 
       <MobileNavigation
-        onNavigate={navigateTo}
-        currentView={currentView}
+        onNavigate={
+          navigateTo
+        }
+        onSearch={() =>
+          setSearch(true)
+        }
+        currentView={
+          currentView
+        }
       />
 
 
@@ -813,7 +1512,9 @@ function Home() {
       ====================================================== */}
 
       <SearchOverlay
-        open={search}
+        open={
+          search
+        }
         onClose={() =>
           setSearch(false)
         }
@@ -828,7 +1529,9 @@ function Home() {
       ====================================================== */}
 
       <Drawer
-        open={drawer}
+        open={
+          drawer
+        }
         onClose={() =>
           setDrawer(false)
         }
@@ -837,66 +1540,111 @@ function Home() {
           Your 7anime space
         </h2>
 
-        <p>
-          Welcome back,{' '}
-          <strong>
-            {previewUser.username}
-          </strong>
-          ! Manage your space.
-        </p>
+        {authUser ? (
+          <p>
+            Welcome back,{' '}
+            <strong>
+              {authUser.username}
+            </strong>
+            ! Manage your account & space.
+          </p>
+        ) : (
+          <p>
+            Welcome to 7anime! Sign in to access your personal space, watch history, and library.
+          </p>
+        )}
 
         <div
           style={{
-            display: 'flex',
+            display:
+              'flex',
+
             flexDirection:
               'column',
-            gap: 'var(--space-2)',
+
+            gap:
+              'var(--space-2)',
+
             marginTop:
               'var(--space-3)',
           }}
         >
+          {authUser ? (
+            <>
+              <Button
+                onClick={() => {
+                  setDrawer(false)
+                  navigateTo('profile')
+                }}
+              >
+                View Profile Space
+              </Button>
 
-          <Button
-            onClick={() => {
-              setDrawer(false)
+              <Button
+                variant="glass"
+                onClick={() => {
+                  setDrawer(false)
+                  navigateTo('library')
+                }}
+              >
+                My Library ({savedLibrary.length})
+              </Button>
 
-              navigateTo(
-                'profile',
-              )
-            }}
-          >
-            View Profile Space
-          </Button>
+              <Button
+                variant="glass"
+                onClick={() => {
+                  setDrawer(false)
+                  handleLogout()
+                }}
+              >
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => {
+                  setDrawer(false)
+                  setAuthModalOpen(true)
+                }}
+              >
+                Sign In / Create Account
+              </Button>
 
-
-          <Button
-            variant="glass"
-            onClick={() => {
-              setDrawer(false)
-
-              navigateTo(
-                'library',
-              )
-            }}
-          >
-            My Library (
-            {savedLibrary.length}
-            )
-          </Button>
-
+              <Button
+                variant="glass"
+                onClick={() => {
+                  setDrawer(false)
+                  navigateTo('library')
+                }}
+              >
+                My Library ({savedLibrary.length})
+              </Button>
+            </>
+          )}
 
           <Button
             variant="ghost"
             onClick={() =>
-              setDrawer(false)
+              setDrawer(
+                false,
+              )
             }
           >
             Close Menu
           </Button>
-
         </div>
       </Drawer>
 
+      {/* =====================================================
+          AUTH MODAL
+      ====================================================== */}
+
+      <AuthModal
+        open={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onAuthenticated={handleAuthenticated}
+      />
     </>
   )
 }

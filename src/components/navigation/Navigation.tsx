@@ -3,11 +3,14 @@ import {
   CalendarDays,
   House,
   Library,
+  LogIn,
   Menu,
   Search,
   UserRound,
 } from 'lucide-react'
 import { IconButton } from '../ui/Button'
+import logoImg from '../../public/logo.png'
+import type { AuthUser } from '../../types/auth'
 import './navigation.css'
 
 export type ViewMode =
@@ -39,7 +42,11 @@ export function Brand({
         }
       }}
     >
-      <span>7</span>anime
+      <img
+        src={logoImg}
+        alt="7anime"
+        className="brand__logo"
+      />
     </a>
   )
 }
@@ -52,11 +59,16 @@ export function DesktopNavbar({
   onMenu,
   onSearch,
   onNavigate,
+  onOpenAuthModal,
+  authUser,
   currentView = 'home',
 }: {
   onMenu: () => void
   onSearch: () => void
   onNavigate?: (view: ViewMode) => void
+  onOpenAuthModal?: () => void
+  onLogout?: () => void
+  authUser?: AuthUser | null
   currentView?: ViewMode
 }) {
   return (
@@ -101,31 +113,6 @@ export function DesktopNavbar({
           <span>Home</span>
         </a>
 
-        {/* Library */}
-        <a
-          className={
-            currentView === 'library'
-              ? 'active'
-              : ''
-          }
-          href="#library"
-          aria-current={
-            currentView === 'library'
-              ? 'page'
-              : undefined
-          }
-          onClick={e => {
-            e.preventDefault()
-            onNavigate?.('library')
-          }}
-        >
-          <Library
-            size={16}
-            aria-hidden="true"
-          />
-          <span>Library</span>
-        </a>
-
         {/* Schedule */}
         <a
           className={
@@ -150,6 +137,31 @@ export function DesktopNavbar({
           />
           <span>Schedule</span>
         </a>
+
+        {/* Library */}
+        <a
+          className={
+            currentView === 'library'
+              ? 'active'
+              : ''
+          }
+          href="#library"
+          aria-current={
+            currentView === 'library'
+              ? 'page'
+              : undefined
+          }
+          onClick={e => {
+            e.preventDefault()
+            onNavigate?.('library')
+          }}
+        >
+          <Library
+            size={16}
+            aria-hidden="true"
+          />
+          <span>Library</span>
+        </a>
       </nav>
 
       {/* Right-side Actions */}
@@ -168,30 +180,44 @@ export function DesktopNavbar({
           <Bell size={18} />
         </IconButton>
 
-        {/* Profile */}
-        <button
-          className={`profile-chip ${currentView === 'profile'
-              ? 'profile-chip--active'
-              : ''
-            }`}
-          onClick={() =>
-            onNavigate
-              ? onNavigate('profile')
-              : onMenu()
-          }
-          aria-label="View user profile"
-        >
-          <span
-            className="profile-chip__avatar"
-            aria-hidden="true"
-          >
-            <UserRound size={15} />
-          </span>
+        {/* Auth / Profile Actions */}
+        {authUser ? (
+          <div className="nav-profile-group">
+            <button
+              className={`profile-chip ${currentView === 'profile'
+                  ? 'profile-chip--active'
+                  : ''
+                }`}
+              onClick={() =>
+                onNavigate
+                  ? onNavigate('profile')
+                  : onMenu()
+              }
+              aria-label="View user profile"
+            >
+              <span
+                className="profile-chip__avatar"
+                aria-hidden="true"
+              >
+                {authUser.username.slice(0, 1).toUpperCase()}
+              </span>
 
-          <span className="profile-chip__name">
-            Yuki
-          </span>
-        </button>
+              <span className="profile-chip__name">
+                {authUser.username}
+              </span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="auth-nav-btn"
+            onClick={onOpenAuthModal}
+            aria-label="Sign in"
+          >
+            <LogIn size={15} />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   )
@@ -216,6 +242,7 @@ export function MobileNavigation({
   const items = [
     ['Home', House, 'home'],
     ['Search', Search, 'search'],
+    ['Schedule', CalendarDays, 'schedule'],
     ['Library', Library, 'library'],
     ['Profile', UserRound, 'profile'],
   ] as const

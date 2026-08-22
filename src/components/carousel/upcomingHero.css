@@ -195,26 +195,29 @@
 
 .upcoming-hero__title {
     margin: 0;
-
     max-width: 42rem;
+    color: var(--color-text-primary);
+    font-size: clamp(1.8rem, 4.2vw, 3.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    font-weight: var(--font-weight-heavy);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
 
-    color:
-        var(--color-text-primary);
+.upcoming-hero__title--long {
+    font-size: clamp(1.4rem, 3.2vw, 2.4rem);
+    line-height: 1.08;
+    -webkit-line-clamp: 3;
+}
 
-    font-size:
-        clamp(2.4rem,
-            5vw,
-            4.4rem);
-
-    line-height: 0.98;
-
-    letter-spacing:
-        -0.055em;
-
-    font-weight:
-        var(--font-weight-heavy);
-
-    text-wrap: balance;
+.upcoming-hero__title--long-xl {
+    font-size: clamp(1.15rem, 2.4vw, 1.8rem);
+    line-height: 1.12;
+    -webkit-line-clamp: 3;
 }
 
 
@@ -629,7 +632,7 @@
 
 @media (max-width: 620px) {
     .upcoming-hero {
-        height: 30rem;
+        height: 24rem;
     }
 
     .upcoming-hero__background {
@@ -649,7 +652,7 @@
     .upcoming-hero__content {
         left: 1.25rem;
         right: 1.25rem;
-        bottom: 3.8rem;
+        bottom: 3.2rem;
         top: auto;
 
         width: auto;
@@ -658,8 +661,8 @@
     }
 
     .upcoming-hero__poster {
-        width: 7rem;
-        height: 10rem;
+        width: 6.5rem;
+        height: 9.5rem;
 
         right: 1.25rem;
         top: 1.25rem;
@@ -679,7 +682,7 @@
 
     .upcoming-hero__title {
         font-size:
-            2.35rem;
+            1.75rem;
     }
 
     .upcoming-hero__pagination {

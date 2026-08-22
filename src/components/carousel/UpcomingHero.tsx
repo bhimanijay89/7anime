@@ -146,9 +146,20 @@ export function UpcomingHero({
                         <span>UPCOMING ANIME</span>
                     </div>
 
-                    <h2 className="upcoming-hero__title">
-                        {currentAnime.title}
-                    </h2>
+                    {(() => {
+                        const len = currentAnime.title.length
+                        const titleClass =
+                            len > 60
+                                ? 'upcoming-hero__title upcoming-hero__title--long-xl'
+                                : len > 35
+                                    ? 'upcoming-hero__title upcoming-hero__title--long'
+                                    : 'upcoming-hero__title'
+                        return (
+                            <h2 className={titleClass}>
+                                {currentAnime.title}
+                            </h2>
+                        )
+                    })()}
 
                     <div className="upcoming-hero__meta">
                         {currentAnime.type && (
