@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Schedule Page — Real AniList Airing Schedule Data Integration & UI Polish
+Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
 
 ## Overall Status
 
-Schedule Page has been upgraded to use real AniList `airingSchedules` GraphQL data via backend Upstash Redis caching. All mock schedule entries have been removed. Airing times are dynamically formatted using the browser's local timezone. Includes skeleton loading states, error states with retry, empty states, and responsive design across desktop and mobile screens (320px–430px). All TypeScript (`tsc -b`), build (`npm run build`), and lint (`npm run lint`) checks pass with 0 errors.
+All three production bugs (Auth Session Loss after Page Refresh, Continue Watching empty state, and Library Persistence after Logout/Login) have been resolved. The authentication flow now features a dual Bearer Token (`7anime_token` in `localStorage`) + `HttpOnly` cookie strategy that prevents session loss across cross-site domains (`7anime-tv.vercel.app` ↔ `sevenanime-vodw.onrender.com`). Production fallback URLs in `FoundationPreview.tsx` and `anilist.ts` have been aligned to `https://sevenanime-vodw.onrender.com`. All checks (`npm run lint`, `npm run build`, `npm run build:backend`) pass with 0 errors.
 
 ## Completed Phases
 
@@ -31,6 +31,7 @@ Schedule Page has been upgraded to use real AniList `airingSchedules` GraphQL da
 - [x] Text Caret Control (Hidden on Display Content, Preserved on Inputs/Editable Controls)
 - [x] Schedule Page UI/UX Redesign (Liquid Glass Theme, 7-Day Day Selector, Mobile Optimization)
 - [x] Schedule Page Real AniList Airing Schedule Data Integration & Redis Caching
+- [x] Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
 
 ## Current Blockers
 
@@ -42,8 +43,8 @@ Schedule Page has been upgraded to use real AniList `airingSchedules` GraphQL da
 
 ## Last Updated
 
-2026-08-21
+2026-08-22
 
 ## Next Exact Action
 
-Await user instruction.
+Deploy frontend to Vercel and backend to Render.

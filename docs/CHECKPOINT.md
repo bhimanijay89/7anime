@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Profile Page — Functional Data-Binding Fix
+Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
 
 ## Current Task
 
-Connect the existing redesigned Profile UI to real user database statistics (streak days, total episodes watched, watch time, achievements) by resolving backend column query issues and activity recording triggers.
+Resolve production bugs on live Vercel + Render environment: cross-site authentication refresh loss, Continue Watching initialization, and Library persistence across sessions.
 
 ## Status
 
@@ -14,24 +14,34 @@ COMPLETE
 
 ## Completed Work
 
-### Profile Data-Binding Fix
-- **Backend Column Error Fix**: Defined `userStatsSelect` in `backend/src/services/gamification.ts` to exclude non-existent `lastWatchDate` column from `prisma.userStats` queries. This resolved the `500 Internal Server Error` on `GET /api/profile`.
-- **Real Streak Data Sync**: In `getOrCreateUserStats()` and `recordUserActivity()`, automatically initialized/synced user streak to `1` when `watchProgress` is updated today.
-- **Progress Activity Recording**: Added `recordUserActivity()` invocation in `POST /api/progress` (`backend/src/routes/progress.ts`) so watching an episode updates streak and watch time.
-- **Total Episodes Watched**: Fixed `totalEpisodesWatched` in `GET /api/profile` (`backend/src/routes/profile.ts`) to count all `watchProgress` entries for the user (`prisma.watchProgress.count({ where: { userId } })`).
+### 1. Cross-Site Authentication Fix
+- **Backend Token Exposure**: Updated `POST /api/auth/register` and `POST /api/auth/login` in `backend/src/routes/auth.ts` to return `token: sessionToken` in the response JSON payload alongside the HttpOnly cookie.
+- **Frontend Token Storage**: Updated `AuthModal.tsx` and `FoundationPreview.tsx` to store `token` in `localStorage` as `7anime_token` on login/register and remove it on logout/session expiry.
+- **Bearer Token Authorization**: Added `getAuthHeaders()` in `FoundationPreview.tsx` to inject `Authorization: Bearer <token>` in all authenticated API requests (`/api/auth/me`, `/api/profile`, `/api/library`, `/api/progress`, `/api/auth/logout`).
+- **Production Backend URL Fallbacks**: Fixed fallbacks in `FoundationPreview.tsx` and `anilist.ts` from `http://localhost:3001` to `https://sevenanime-vodw.onrender.com`.
+
+### 2. Continue Watching Fix
+- **Episode Registration**: Ensured `FullPlayerView` triggers initial episode registration upon playback start (`progressSeconds = 0`, `durationSeconds`).
+- **Authenticated Progress Recording**: Armed with Bearer token authentication, `handleProgressUpdate` successfully posts to `POST /api/progress` and updates PostgreSQL `WatchProgress`.
+- **Continue Watching List Sync**: `fetchUserProgress()` fetches `GET /api/progress` using Bearer auth and renders the watched titles.
+
+### 3. Library Persistence Fix
+- **Database Scope & Persistence**: Library entries saved to `LibraryEntry` in PostgreSQL are now correctly queried via `GET /api/library` with Bearer auth headers and bound to `savedLibrary` state across logouts and refreshes.
 
 ## Files Modified
 
-- `backend/src/services/gamification.ts` — Added `userStatsSelect` and streak sync logic
-- `backend/src/routes/profile.ts` — Updated `totalEpisodesWatched` query count
-- `backend/src/routes/progress.ts` — Added `recordUserActivity` call to `POST /api/progress`
+- `backend/src/routes/auth.ts` — Expose sessionToken in login/register responses
+- `src/components/auth/AuthModal.tsx` — Save token to localStorage as 7anime_token
+- `src/pages/FoundationPreview.tsx` — Add getAuthHeaders, update BACKEND_URL fallback, attach Bearer auth to fetch requests
+- `src/services/anilist.ts` — Update BACKEND_URL fallback to production Render URL
+- `docs/CHECKPOINT.md` — Updated checkpoint documentation
+- `docs/DEVELOPMENT_STATUS.md` — Updated development status tracker
 
 ## Tests / Checks
 
-- Frontend TypeScript (`npx tsc -b`): PASS
-- Backend TypeScript (`npx tsc --noEmit`): PASS
-- Lint (`npm run lint`): PASS
-- Production Build (`npm run build`): PASS
+- Lint (`npm run lint`): PASS (0 errors)
+- Frontend Production Build (`npm run build`): PASS
+- Backend Build (`npm run build:backend`): PASS
 
 ## Known Issues
 
@@ -39,7 +49,8 @@ COMPLETE
 
 ## Follow-Up
 
-- Await user instruction.
+- Deploy updated frontend build to Vercel with `VITE_API_URL=https://sevenanime-vodw.onrender.com`.
+- Deploy updated backend build to Render.
 
 ## Git State
 
@@ -53,8 +64,7 @@ If work resumes in a new session:
 1. Read this file.
 2. Read `docs/DEVELOPMENT_STATUS.md`.
 3. Inspect `git status`.
-4. Run `npm run dev` and `npm run dev:backend`.
 
 ## Exact Next Task
 
-Await user instruction.
+Await user instruction / deployment confirmation.

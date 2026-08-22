@@ -264,6 +264,7 @@ router.post(
                         sanitizeUser(
                             user,
                         ),
+                    token: sessionToken,
                     expiresAt,
                 },
             )
@@ -386,6 +387,7 @@ router.post(
                         sanitizeUser(
                             user,
                         ),
+                    token: sessionToken,
                     expiresAt,
                 },
             )

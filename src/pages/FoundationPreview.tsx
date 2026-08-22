@@ -65,7 +65,16 @@ import './preview.css'
 
 const BACKEND_URL =
   import.meta.env.VITE_API_URL ||
-  'http://localhost:3001'
+  'https://sevenanime-vodw.onrender.com'
+
+function getAuthHeaders(extraHeaders?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...extraHeaders }
+  const token = localStorage.getItem('7anime_token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
 
 function Home() {
   const [currentView, setCurrentView] =
@@ -132,7 +141,10 @@ function Home() {
 
   const fetchUserProfile = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/profile`, { credentials: 'include' })
+      const res = await fetch(`${BACKEND_URL}/api/profile`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.data) {
@@ -163,7 +175,10 @@ function Home() {
 
   const fetchUserLibrary = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/library`, { credentials: 'include' })
+      const res = await fetch(`${BACKEND_URL}/api/library`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && Array.isArray(data.data?.library)) {
@@ -187,7 +202,10 @@ function Home() {
 
   const fetchUserProgress = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/progress`, { credentials: 'include' })
+      const res = await fetch(`${BACKEND_URL}/api/progress`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && Array.isArray(data.data?.progress)) {
@@ -255,7 +273,7 @@ function Home() {
         try {
           await fetch(`${BACKEND_URL}/api/progress`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
             credentials: 'include',
             body: JSON.stringify({
               anilistId: parsedId,
@@ -276,7 +294,10 @@ function Home() {
 
   const checkAuthSession = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/me`, { credentials: 'include' })
+      const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      })
       if (res.ok) {
         const data = await res.json()
         if (data.ok && data.data?.user) {
@@ -285,6 +306,7 @@ function Home() {
           return
         }
       }
+      localStorage.removeItem('7anime_token')
       setAuthUser(null)
       setUserProfile(guestUser)
       setProfileStats(undefined)
@@ -292,6 +314,7 @@ function Home() {
       setContinueWatchingList([])
     } catch (error) {
       console.error('Session check failed:', error)
+      localStorage.removeItem('7anime_token')
       setAuthUser(null)
       setUserProfile(guestUser)
       setProfileStats(undefined)
@@ -304,7 +327,10 @@ function Home() {
     checkAuthSession()
   }, [checkAuthSession])
 
-  const handleAuthenticated = async (user: AuthUser) => {
+  const handleAuthenticated = async (user: AuthUser, token?: string) => {
+    if (token) {
+      localStorage.setItem('7anime_token', token)
+    }
     setAuthUser(user)
     setAuthModalOpen(false)
     notify(`Welcome back, ${user.username}!`, 'success')
@@ -315,11 +341,13 @@ function Home() {
     try {
       await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         credentials: 'include',
       })
     } catch (error) {
       console.error('Logout failed:', error)
     } finally {
+      localStorage.removeItem('7anime_token')
       setAuthUser(null)
       setUserProfile(guestUser)
       setProfileStats(undefined)
@@ -773,6 +801,7 @@ function Home() {
           try {
             await fetch(`${BACKEND_URL}/api/library/${parsedId}`, {
               method: 'DELETE',
+              headers: getAuthHeaders(),
               credentials: 'include',
             })
             await fetchUserProfile()
@@ -820,7 +849,7 @@ function Home() {
             try {
               await fetch(`${BACKEND_URL}/api/library`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
                 body: JSON.stringify({
                   anilistId: parsedId,

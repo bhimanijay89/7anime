@@ -18,7 +18,7 @@ import './auth.css'
 export interface AuthModalProps {
   open: boolean
   onClose: () => void
-  onAuthenticated: (user: AuthUser) => void
+  onAuthenticated: (user: AuthUser, token?: string) => void
   initialMode?: 'login' | 'register'
 }
 
@@ -137,8 +137,11 @@ export function AuthModal({
         const data = await response.json()
 
         if (response.ok && data.ok && data.data?.user) {
+          if (typeof data.data.token === 'string' && data.data.token) {
+            localStorage.setItem('7anime_token', data.data.token)
+          }
           resetForm()
-          onAuthenticated(data.data.user as AuthUser)
+          onAuthenticated(data.data.user as AuthUser, data.data.token as string | undefined)
         } else {
           setError(data.error?.message || 'Invalid email or password.')
         }
@@ -156,8 +159,11 @@ export function AuthModal({
         const data = await response.json()
 
         if (response.ok && data.ok && data.data?.user) {
+          if (typeof data.data.token === 'string' && data.data.token) {
+            localStorage.setItem('7anime_token', data.data.token)
+          }
           resetForm()
-          onAuthenticated(data.data.user as AuthUser)
+          onAuthenticated(data.data.user as AuthUser, data.data.token as string | undefined)
         } else {
           setError(data.error?.message || 'Registration failed.')
         }
