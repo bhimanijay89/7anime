@@ -211,13 +211,38 @@ router.post(
                     },
                 })
 
-            const { getOrCreateUserStats, ensureSeedAchievements } = await import('../services/gamification.js')
-            await ensureSeedAchievements().catch(() => {})
-            await getOrCreateUserStats(user.id).catch(() => {})
+            const {
+                getOrCreateUserStats,
+                ensureSeedAchievements,
+            } = await import(
+                '../services/gamification.js'
+            )
 
-            const sessionToken = createSessionToken()
-            const tokenHash = hashToken(sessionToken)
-            const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000)
+            await ensureSeedAchievements().catch(
+                () => { },
+            )
+
+            await getOrCreateUserStats(
+                user.id,
+            ).catch(() => { })
+
+            const sessionToken =
+                createSessionToken()
+
+            const tokenHash =
+                hashToken(
+                    sessionToken,
+                )
+
+            const expiresAt =
+                new Date(
+                    Date.now() +
+                    SESSION_DAYS *
+                    24 *
+                    60 *
+                    60 *
+                    1000,
+                )
 
             await prisma.session.create({
                 data: {
@@ -229,13 +254,16 @@ router.post(
 
             res.setHeader(
                 'Set-Cookie',
-                `sevenanime_session=${sessionToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_DAYS * 24 * 60 * 60}`,
+                `sevenanime_session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=${SESSION_DAYS * 24 * 60 * 60}`,
             )
 
             return sendSuccess(
                 res,
                 {
-                    user: sanitizeUser(user),
+                    user:
+                        sanitizeUser(
+                            user,
+                        ),
                     expiresAt,
                 },
             )
@@ -348,7 +376,7 @@ router.post(
 
             res.setHeader(
                 'Set-Cookie',
-                `sevenanime_session=${sessionToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${SESSION_DAYS * 24 * 60 * 60}`,
+                `sevenanime_session=${sessionToken}; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=${SESSION_DAYS * 24 * 60 * 60}`,
             )
 
             return sendSuccess(
@@ -484,7 +512,7 @@ router.post(
 
             res.setHeader(
                 'Set-Cookie',
-                'sevenanime_session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0',
+                'sevenanime_session=; HttpOnly; Secure; Path=/; SameSite=None; Max-Age=0',
             )
 
             return sendSuccess(
@@ -516,76 +544,165 @@ router.post(
  * =========================================================
  */
 
-router.post('/auth/forgot-password', async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body as { email?: unknown }
+router.post(
+    '/auth/forgot-password',
+    async (req: Request, res: Response) => {
+        try {
+            const { email } =
+                req.body as {
+                    email?: unknown
+                }
 
-    if (typeof email !== 'string' || !isValidEmail(email.trim().toLowerCase())) {
-      return sendError(
-        res,
-        'Please provide a valid email address.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (
+                typeof email !== 'string' ||
+                !isValidEmail(
+                    email
+                        .trim()
+                        .toLowerCase(),
+                )
+            ) {
+                return sendError(
+                    res,
+                    'Please provide a valid email address.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    const normalizedEmail = email.trim().toLowerCase()
+            const normalizedEmail =
+                email.trim().toLowerCase()
 
-    const genericSuccess = 'If an account exists for this email, a verification code has been sent.'
+            const genericSuccess =
+                'If an account exists for this email, a verification code has been sent.'
 
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    })
+            const user =
+                await prisma.user.findUnique({
+                    where: {
+                        email:
+                            normalizedEmail,
+                    },
+                })
 
-    if (!user) {
-      return sendSuccess(res, { message: genericSuccess })
-    }
+            if (!user) {
+                return sendSuccess(
+                    res,
+                    {
+                        message:
+                            genericSuccess,
+                    },
+                )
+            }
 
-    const existingCodes = await prisma.passwordResetCode.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-      take: 1,
-    })
+            const existingCodes =
+                await prisma.passwordResetCode.findMany(
+                    {
+                        where: {
+                            userId: user.id,
+                        },
+                        orderBy: {
+                            createdAt:
+                                'desc',
+                        },
+                        take: 1,
+                    },
+                )
 
-    if (existingCodes.length > 0) {
-      const recent = existingCodes[0]
-      const secondsSinceLast = (Date.now() - recent.createdAt.getTime()) / 1000
+            if (
+                existingCodes.length > 0
+            ) {
+                const recent =
+                    existingCodes[0]
 
-      if (secondsSinceLast < 60) {
-        return sendSuccess(res, { message: genericSuccess })
-      }
-    }
+                const secondsSinceLast =
+                    (Date.now() -
+                        recent.createdAt.getTime()) /
+                    1000
 
-    await prisma.passwordResetCode.deleteMany({
-      where: { userId: user.id },
-    })
+                if (
+                    secondsSinceLast < 60
+                ) {
+                    return sendSuccess(
+                        res,
+                        {
+                            message:
+                                genericSuccess,
+                        },
+                    )
+                }
+            }
 
-    const code = crypto.randomInt(100000, 1000000).toString()
-    const codeHash = await bcrypt.hash(code, 10)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+            await prisma.passwordResetCode.deleteMany(
+                {
+                    where: {
+                        userId: user.id,
+                    },
+                },
+            )
 
-    await prisma.passwordResetCode.create({
-      data: {
-        userId: user.id,
-        codeHash,
-        expiresAt,
-      },
-    })
+            const code =
+                crypto
+                    .randomInt(
+                        100000,
+                        1000000,
+                    )
+                    .toString()
 
-    const { sendPasswordResetEmail } = await import('../utils/mailer.js')
-    await sendPasswordResetEmail(user.email, code)
+            const codeHash =
+                await bcrypt.hash(
+                    code,
+                    10,
+                )
 
-    return sendSuccess(res, { message: genericSuccess })
-  } catch (error) {
-    console.error('[auth] Forgot password error:', error)
-    return sendError(
-      res,
-      'Unable to process password reset request.',
-      ErrorCode.INTERNAL_ERROR,
-      500,
-    )
-  }
-})
+            const expiresAt =
+                new Date(
+                    Date.now() +
+                    10 * 60 * 1000,
+                )
+
+            await prisma.passwordResetCode.create(
+                {
+                    data: {
+                        userId:
+                            user.id,
+                        codeHash,
+                        expiresAt,
+                    },
+                },
+            )
+
+            const {
+                sendPasswordResetEmail,
+            } = await import(
+                '../utils/mailer.js'
+            )
+
+            await sendPasswordResetEmail(
+                user.email,
+                code,
+            )
+
+            return sendSuccess(
+                res,
+                {
+                    message:
+                        genericSuccess,
+                },
+            )
+        } catch (error) {
+            console.error(
+                '[auth] Forgot password error:',
+                error,
+            )
+
+            return sendError(
+                res,
+                'Unable to process password reset request.',
+                ErrorCode.INTERNAL_ERROR,
+                500,
+            )
+        }
+    },
+)
 
 /*
  * =========================================================
@@ -593,115 +710,194 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
  * =========================================================
  */
 
-router.post('/auth/verify-reset-code', async (req: Request, res: Response) => {
-  try {
-    const { email, code } = req.body as { email?: unknown; code?: unknown }
+router.post(
+    '/auth/verify-reset-code',
+    async (req: Request, res: Response) => {
+        try {
+            const {
+                email,
+                code,
+            } = req.body as {
+                email?: unknown
+                code?: unknown
+            }
 
-    if (typeof email !== 'string' || typeof code !== 'string') {
-      return sendError(
-        res,
-        'Email and 6-digit verification code are required.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (
+                typeof email !== 'string' ||
+                typeof code !== 'string'
+            ) {
+                return sendError(
+                    res,
+                    'Email and 6-digit verification code are required.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const cleanCode = code.trim()
+            const normalizedEmail =
+                email.trim().toLowerCase()
 
-    if (!/^\d{6}$/.test(cleanCode)) {
-      return sendError(
-        res,
-        'Verification code must be a 6-digit number.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            const cleanCode =
+                code.trim()
 
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    })
+            if (
+                !/^\d{6}$/.test(
+                    cleanCode,
+                )
+            ) {
+                return sendError(
+                    res,
+                    'Verification code must be a 6-digit number.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    if (!user) {
-      return sendError(
-        res,
-        'Invalid or expired verification code.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            const user =
+                await prisma.user.findUnique({
+                    where: {
+                        email:
+                            normalizedEmail,
+                    },
+                })
 
-    const record = await prisma.passwordResetCode.findFirst({
-      where: {
-        userId: user.id,
-        expiresAt: { gt: new Date() },
-        verifiedAt: null,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+            if (!user) {
+                return sendError(
+                    res,
+                    'Invalid or expired verification code.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    if (!record) {
-      return sendError(
-        res,
-        'Invalid or expired verification code.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            const record =
+                await prisma.passwordResetCode.findFirst(
+                    {
+                        where: {
+                            userId:
+                                user.id,
+                            expiresAt: {
+                                gt: new Date(),
+                            },
+                            verifiedAt:
+                                null,
+                        },
+                        orderBy: {
+                            createdAt:
+                                'desc',
+                        },
+                    },
+                )
 
-    if (record.attempts >= 5) {
-      await prisma.passwordResetCode.delete({ where: { id: record.id } })
-      return sendError(
-        res,
-        'Too many failed attempts. Please request a new verification code.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (!record) {
+                return sendError(
+                    res,
+                    'Invalid or expired verification code.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    await prisma.passwordResetCode.update({
-      where: { id: record.id },
-      data: { attempts: { increment: 1 } },
-    })
+            if (
+                record.attempts >= 5
+            ) {
+                await prisma.passwordResetCode.delete(
+                    {
+                        where: {
+                            id: record.id,
+                        },
+                    },
+                )
 
-    const isMatch = await bcrypt.compare(cleanCode, record.codeHash)
+                return sendError(
+                    res,
+                    'Too many failed attempts. Please request a new verification code.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    if (!isMatch) {
-      return sendError(
-        res,
-        'Invalid verification code.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            await prisma.passwordResetCode.update(
+                {
+                    where: {
+                        id: record.id,
+                    },
+                    data: {
+                        attempts: {
+                            increment: 1,
+                        },
+                    },
+                },
+            )
 
-    const resetToken = crypto.randomBytes(32).toString('hex')
-    const resetTokenHash = hashToken(resetToken)
-    const resetExpiresAt = new Date(Date.now() + 15 * 60 * 1000)
+            const isMatch =
+                await bcrypt.compare(
+                    cleanCode,
+                    record.codeHash,
+                )
 
-    await prisma.passwordResetCode.update({
-      where: { id: record.id },
-      data: {
-        verifiedAt: new Date(),
-        resetTokenHash,
-        resetExpiresAt,
-      },
-    })
+            if (!isMatch) {
+                return sendError(
+                    res,
+                    'Invalid verification code.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    return sendSuccess(res, {
-      token: resetToken,
-      message: 'Verification code confirmed. You may now reset your password.',
-    })
-  } catch (error) {
-    console.error('[auth] Verify reset code error:', error)
-    return sendError(
-      res,
-      'Unable to verify reset code.',
-      ErrorCode.INTERNAL_ERROR,
-      500,
-    )
-  }
-})
+            const resetToken =
+                crypto.randomBytes(32)
+                    .toString('hex')
+
+            const resetTokenHash =
+                hashToken(
+                    resetToken,
+                )
+
+            const resetExpiresAt =
+                new Date(
+                    Date.now() +
+                    15 * 60 * 1000,
+                )
+
+            await prisma.passwordResetCode.update(
+                {
+                    where: {
+                        id: record.id,
+                    },
+                    data: {
+                        verifiedAt:
+                            new Date(),
+                        resetTokenHash,
+                        resetExpiresAt,
+                    },
+                },
+            )
+
+            return sendSuccess(
+                res,
+                {
+                    token:
+                        resetToken,
+                    message:
+                        'Verification code confirmed. You may now reset your password.',
+                },
+            )
+        } catch (error) {
+            console.error(
+                '[auth] Verify reset code error:',
+                error,
+            )
+
+            return sendError(
+                res,
+                'Unable to verify reset code.',
+                ErrorCode.INTERNAL_ERROR,
+                500,
+            )
+        }
+    },
+)
 
 /*
  * =========================================================
@@ -709,77 +905,117 @@ router.post('/auth/verify-reset-code', async (req: Request, res: Response) => {
  * =========================================================
  */
 
-router.post('/auth/reset-password', async (req: Request, res: Response) => {
-  try {
-    const { token, password } = req.body as {
-      token?: unknown
-      password?: unknown
-    }
+router.post(
+    '/auth/reset-password',
+    async (req: Request, res: Response) => {
+        try {
+            const {
+                token,
+                password,
+            } = req.body as {
+                token?: unknown
+                password?: unknown
+            }
 
-    if (typeof token !== 'string' || typeof password !== 'string') {
-      return sendError(
-        res,
-        'Reset token and new password are required.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (
+                typeof token !== 'string' ||
+                typeof password !== 'string'
+            ) {
+                return sendError(
+                    res,
+                    'Reset token and new password are required.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    if (password.length < 8) {
-      return sendError(
-        res,
-        'New password must be at least 8 characters long.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (password.length < 8) {
+                return sendError(
+                    res,
+                    'New password must be at least 8 characters long.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    const resetTokenHash = hashToken(token)
+            const resetTokenHash =
+                hashToken(token)
 
-    const record = await prisma.passwordResetCode.findFirst({
-      where: {
-        resetTokenHash,
-        resetExpiresAt: { gt: new Date() },
-        verifiedAt: { not: null },
-      },
-    })
+            const record =
+                await prisma.passwordResetCode.findFirst(
+                    {
+                        where: {
+                            resetTokenHash,
+                            resetExpiresAt: {
+                                gt: new Date(),
+                            },
+                            verifiedAt: {
+                                not: null,
+                            },
+                        },
+                    },
+                )
 
-    if (!record) {
-      return sendError(
-        res,
-        'Invalid or expired password reset token. Please request a new verification code.',
-        ErrorCode.BAD_REQUEST,
-        400,
-      )
-    }
+            if (!record) {
+                return sendError(
+                    res,
+                    'Invalid or expired password reset token. Please request a new verification code.',
+                    ErrorCode.BAD_REQUEST,
+                    400,
+                )
+            }
 
-    const passwordHash = await bcrypt.hash(password, 12)
+            const passwordHash =
+                await bcrypt.hash(
+                    password,
+                    12,
+                )
 
-    await prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash },
-    })
+            await prisma.user.update({
+                where: {
+                    id: record.userId,
+                },
+                data: {
+                    passwordHash,
+                },
+            })
 
-    await prisma.session.deleteMany({
-      where: { userId: record.userId },
-    })
+            await prisma.session.deleteMany({
+                where: {
+                    userId:
+                        record.userId,
+                },
+            })
 
-    await prisma.passwordResetCode.delete({
-      where: { id: record.id },
-    })
+            await prisma.passwordResetCode.delete(
+                {
+                    where: {
+                        id: record.id,
+                    },
+                },
+            )
 
-    return sendSuccess(res, {
-      message: 'Password updated successfully. Please sign in with your new password.',
-    })
-  } catch (error) {
-    console.error('[auth] Reset password error:', error)
-    return sendError(
-      res,
-      'Unable to reset password.',
-      ErrorCode.INTERNAL_ERROR,
-      500,
-    )
-  }
-})
+            return sendSuccess(
+                res,
+                {
+                    message:
+                        'Password updated successfully. Please sign in with your new password.',
+                },
+            )
+        } catch (error) {
+            console.error(
+                '[auth] Reset password error:',
+                error,
+            )
+
+            return sendError(
+                res,
+                'Unable to reset password.',
+                ErrorCode.INTERNAL_ERROR,
+                500,
+            )
+        }
+    },
+)
 
 export default router

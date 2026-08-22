@@ -24,6 +24,12 @@ import {
 
 const app = express()
 
+/*
+ * =========================================================
+ * Server configuration
+ * =========================================================
+ */
+
 // Render provides PORT automatically.
 // Locally, it falls back to 3001.
 const PORT = Number(
@@ -31,10 +37,74 @@ const PORT = Number(
 )
 
 // Render requires the server to listen on 0.0.0.0.
-// You can still override it with HOST if needed.
 const HOST =
     process.env.HOST ||
     '0.0.0.0'
+
+/*
+ * =========================================================
+ * CORS configuration
+ * =========================================================
+ */
+
+const allowedOrigins = [
+    'https://7anime-tv.vercel.app',
+    'https://7anime.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:5174',
+]
+
+app.use(
+    cors({
+        origin: (
+            origin,
+            callback,
+        ) => {
+            // Allow requests without an Origin header.
+            // Useful for direct API/server-side requests.
+            if (!origin) {
+                callback(null, true)
+                return
+            }
+
+            if (
+                allowedOrigins.includes(
+                    origin,
+                )
+            ) {
+                callback(null, true)
+                return
+            }
+
+            console.warn(
+                `[7anime-api] CORS blocked origin: ${origin}`,
+            )
+
+            callback(
+                new Error(
+                    'Not allowed by CORS',
+                ),
+            )
+        },
+
+        credentials: true,
+
+        methods: [
+            'GET',
+            'POST',
+            'PUT',
+            'PATCH',
+            'DELETE',
+            'OPTIONS',
+        ],
+
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Request-ID',
+        ],
+    }),
+)
 
 /*
  * =========================================================
@@ -42,13 +112,8 @@ const HOST =
  * =========================================================
  */
 
-app.use(requestMetaMiddleware)
-
 app.use(
-    cors({
-        origin: true,
-        credentials: true,
-    }),
+    requestMetaMiddleware,
 )
 
 app.use(
@@ -77,7 +142,8 @@ app.use(
         next,
     ) => {
         const startedAt =
-            req.startedAt || Date.now()
+            req.startedAt ||
+            Date.now()
 
         console.log(
             `[7anime-api] [${req.id}] ${req.method} ${req.originalUrl}`,
@@ -112,11 +178,14 @@ app.get(
         _req,
         res,
     ) => {
-        let dbStatus = 'disconnected'
+        let dbStatus =
+            'disconnected'
 
         try {
             await prisma.$queryRaw`SELECT 1`
-            dbStatus = 'connected'
+
+            dbStatus =
+                'connected'
         } catch (error) {
             console.error(
                 '[7anime-api] Database health check failed:',
@@ -127,15 +196,25 @@ app.get(
         const redisStatus =
             await getRedisStatus()
 
-        return sendSuccess(res, {
-            service: '7anime-api',
-            status:
-                dbStatus === 'connected'
-                    ? 'healthy'
-                    : 'degraded',
-            database: dbStatus,
-            redis: redisStatus,
-        })
+        return sendSuccess(
+            res,
+            {
+                service:
+                    '7anime-api',
+
+                status:
+                    dbStatus ===
+                        'connected'
+                        ? 'healthy'
+                        : 'degraded',
+
+                database:
+                    dbStatus,
+
+                redis:
+                    redisStatus,
+            },
+        )
     },
 )
 
@@ -151,12 +230,19 @@ app.get(
         _req,
         res,
     ) => {
-        return sendSuccess(res, {
-            service: '7anime-api',
-            version: '0.1.0',
-            message:
-                '7anime backend is running.',
-        })
+        return sendSuccess(
+            res,
+            {
+                service:
+                    '7anime-api',
+
+                version:
+                    '0.1.0',
+
+                message:
+                    '7anime backend is running.',
+            },
+        )
     },
 )
 
@@ -177,11 +263,30 @@ console.log(
  * =========================================================
  */
 
-app.use('/api', animeRouter)
-app.use('/api', authRouter)
-app.use('/api', profileRouter)
-app.use('/api', libraryRouter)
-app.use('/api', progressRouter)
+app.use(
+    '/api',
+    animeRouter,
+)
+
+app.use(
+    '/api',
+    authRouter,
+)
+
+app.use(
+    '/api',
+    profileRouter,
+)
+
+app.use(
+    '/api',
+    libraryRouter,
+)
+
+app.use(
+    '/api',
+    progressRouter,
+)
 
 console.log(
     '[7anime-api] All core API routers (anime, auth, profile, library, progress) mounted at /api',
@@ -199,11 +304,16 @@ app.get(
         _req,
         res,
     ) => {
-        return sendSuccess(res, {
-            route: '/api/anime-test',
-            message:
-                'Anime route namespace is working.',
-        })
+        return sendSuccess(
+            res,
+            {
+                route:
+                    '/api/anime-test',
+
+                message:
+                    'Anime route namespace is working.',
+            },
+        )
     },
 )
 
@@ -247,12 +357,15 @@ const errorHandler:
             error,
         )
 
-        if (res.headersSent) {
+        if (
+            res.headersSent
+        ) {
             return
         }
 
         if (
-            error instanceof AppError
+            error instanceof
+            AppError
         ) {
             sendError(
                 res,
@@ -261,6 +374,7 @@ const errorHandler:
                 error.statusCode,
                 error.details,
             )
+
             return
         }
 
@@ -272,7 +386,9 @@ const errorHandler:
         )
     }
 
-app.use(errorHandler)
+app.use(
+    errorHandler,
+)
 
 /*
  * =========================================================
@@ -285,33 +401,43 @@ app.listen(
     HOST,
     () => {
         console.log('')
+
         console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         )
+
         console.log(
             '        7anime Backend API',
         )
+
         console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         )
+
         console.log(
             `Server: http://${HOST}:${PORT}`,
         )
+
         console.log(
             `Health: http://${HOST}:${PORT}/api/health`,
         )
+
         console.log(
             `Anime:  http://${HOST}:${PORT}/api/anime/:anilistId`,
         )
+
         console.log(
             `Test:   http://${HOST}:${PORT}/api/anime-test`,
         )
+
         console.log(
             'Status: READY',
         )
+
         console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
         )
+
         console.log('')
     },
 )
