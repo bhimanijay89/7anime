@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
+4-Server Video Provider System System Complete
 
 ## Overall Status
 
-All three production bugs (Auth Session Loss after Page Refresh, Continue Watching empty state, and Library Persistence after Logout/Login) have been resolved. The authentication flow now features a dual Bearer Token (`7anime_token` in `localStorage`) + `HttpOnly` cookie strategy that prevents session loss across cross-site domains (`7anime-tv.vercel.app` ↔ `sevenanime-vodw.onrender.com`). Production fallback URLs in `FoundationPreview.tsx` and `anilist.ts` have been aligned to `https://sevenanime-vodw.onrender.com`. All checks (`npm run lint`, `npm run build`, `npm run build:backend`) pass with 0 errors.
+The 4-Server Video Provider System phase has been completed. All 4 video servers follow strict ID strategies and authoritative URL contracts. Server 1 (`ani.megaplay.su` + AniList ID) and Server 3 (`ani.megaplay.su` + MAL ID) enforce `?color=%237c5cfc`. Server 2 (`megaplay.buzz` + AniList ID) and Server 4 (`megaplay.buzz` + MAL ID) serve clean stream URLs. `FullPlayerView.tsx` and `videoResolver.ts` communicate cleanly via `server1`, `server2`, `server3`, `server4` states. No UI elements were modified. All automated checks (`npm run lint`, `npm run build`) pass with 0 errors.
 
 ## Completed Phases
 
@@ -32,6 +32,10 @@ All three production bugs (Auth Session Loss after Page Refresh, Continue Watchi
 - [x] Schedule Page UI/UX Redesign (Liquid Glass Theme, 7-Day Day Selector, Mobile Optimization)
 - [x] Schedule Page Real AniList Airing Schedule Data Integration & Redis Caching
 - [x] Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
+- [x] Direct Iframe Video Provider Integration (`ani.megaplay.su` Server 1 & `megaplay.buzz` Server 2)
+- [x] Bleach DUB Fix & Server 2 MAL-First Resolution Alignment
+- [x] UI/UX Fix — Player Controls Layout & Mobile Scroll Optimization
+- [x] 4-Server Video Provider System Completion
 
 ## Current Blockers
 
@@ -43,8 +47,8 @@ All three production bugs (Auth Session Loss after Page Refresh, Continue Watchi
 
 ## Last Updated
 
-2026-08-22
+2026-08-24
 
 ## Next Exact Action
 
-Deploy frontend to Vercel and backend to Render.
+Phase complete. Await user instruction / next phase directive.

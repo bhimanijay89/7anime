@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Production Cross-Site Authentication, Continue Watching & Library Persistence Fixes
+4-Server Video Provider System System Complete
 
 ## Current Task
 
-Resolve production bugs on live Vercel + Render environment: cross-site authentication refresh loss, Continue Watching initialization, and Library persistence across sessions.
+Wiring and completion of the 4-server video provider system without changing any UI elements, establishing strict URL generation rules per server, updating `videoResolver.ts` and `FullPlayerView.tsx`, and verifying Bleach and One Piece embed URLs.
 
 ## Status
 
@@ -14,34 +14,35 @@ COMPLETE
 
 ## Completed Work
 
-### 1. Cross-Site Authentication Fix
-- **Backend Token Exposure**: Updated `POST /api/auth/register` and `POST /api/auth/login` in `backend/src/routes/auth.ts` to return `token: sessionToken` in the response JSON payload alongside the HttpOnly cookie.
-- **Frontend Token Storage**: Updated `AuthModal.tsx` and `FoundationPreview.tsx` to store `token` in `localStorage` as `7anime_token` on login/register and remove it on logout/session expiry.
-- **Bearer Token Authorization**: Added `getAuthHeaders()` in `FoundationPreview.tsx` to inject `Authorization: Bearer <token>` in all authenticated API requests (`/api/auth/me`, `/api/profile`, `/api/library`, `/api/progress`, `/api/auth/logout`).
-- **Production Backend URL Fallbacks**: Fixed fallbacks in `FoundationPreview.tsx` and `anilist.ts` from `http://localhost:3001` to `https://sevenanime-vodw.onrender.com`.
+### 1. 4-Server Provider Contract Implementation
+- **Server 1 (`server1`)**: `https://ani.megaplay.su/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}?color=%237c5cfc`
+- **Server 2 (`server2`)**: `https://megaplay.buzz/stream/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}`
+- **Server 3 (`server3`)**: `https://ani.megaplay.su/mal/{MAL_ID}/{EPISODE}/{sub|dub}?color=%237c5cfc`
+- **Server 4 (`server4`)**: `https://megaplay.buzz/stream/mal/{MAL_ID}/{EPISODE}/{sub|dub}`
 
-### 2. Continue Watching Fix
-- **Episode Registration**: Ensured `FullPlayerView` triggers initial episode registration upon playback start (`progressSeconds = 0`, `durationSeconds`).
-- **Authenticated Progress Recording**: Armed with Bearer token authentication, `handleProgressUpdate` successfully posts to `POST /api/progress` and updates PostgreSQL `WatchProgress`.
-- **Continue Watching List Sync**: `fetchUserProgress()` fetches `GET /api/progress` using Bearer auth and renders the watched titles.
+### 2. Strict ID Strategy & Theme Color Enforcement
+- Enforced strict ID strategies: Server 1/2 strictly use AniList ID; Server 3/4 strictly use MAL ID.
+- Added `?color=%237c5cfc` query parameter exclusively to Server 1 and Server 3 (`ani.megaplay.su`).
+- Return controlled empty string `''` when Server 3 or 4 lacks a valid `malId` without silent ID strategy switching.
 
-### 3. Library Persistence Fix
-- **Database Scope & Persistence**: Library entries saved to `LibraryEntry` in PostgreSQL are now correctly queried via `GET /api/library` with Bearer auth headers and bound to `savedLibrary` state across logouts and refreshes.
+### 3. Player Integration & Clean Up
+- Mapped `server1`, `server2`, `server3`, `server4` buttons in `FullPlayerView.tsx`.
+- Removed obsolete `'megaplay'` server string defaults across `anilist.ts` and `FullPlayerView.tsx`.
+- Retained React key remounting (`<iframe key={`${embedUrl}`} src={embedUrl} ... />`) when server, language, or episode changes.
 
 ## Files Modified
 
-- `backend/src/routes/auth.ts` — Expose sessionToken in login/register responses
-- `src/components/auth/AuthModal.tsx` — Save token to localStorage as 7anime_token
-- `src/pages/FoundationPreview.tsx` — Add getAuthHeaders, update BACKEND_URL fallback, attach Bearer auth to fetch requests
-- `src/services/anilist.ts` — Update BACKEND_URL fallback to production Render URL
-- `docs/CHECKPOINT.md` — Updated checkpoint documentation
-- `docs/DEVELOPMENT_STATUS.md` — Updated development status tracker
+- `src/services/videoResolver.ts` — Implemented exact 4-server provider contract and theme color rules.
+- `src/services/anilist.ts` — Updated `getMegaPlayEmbedUrl` default server parameter to `server1`.
+- `src/components/player/FullPlayerView.tsx` — Cleaned up server state checks and mapped Server 1..4 buttons cleanly.
+- `docs/CHECKPOINT.md` — Updated checkpoint documentation.
+- `docs/DEVELOPMENT_STATUS.md` — Updated development status tracker.
 
 ## Tests / Checks
 
-- Lint (`npm run lint`): PASS (0 errors)
-- Frontend Production Build (`npm run build`): PASS
-- Backend Build (`npm run build:backend`): PASS
+- ESLint (`npm run lint`): PASS (0 errors)
+- Frontend Production Build (`npm run build`): PASS (5.01s)
+- Contract Verification (Bleach TYBW Part 4 & One Piece): 100% MATCH on all 4 servers for SUB/DUB/Episodes.
 
 ## Known Issues
 
@@ -49,8 +50,7 @@ COMPLETE
 
 ## Follow-Up
 
-- Deploy updated frontend build to Vercel with `VITE_API_URL=https://sevenanime-vodw.onrender.com`.
-- Deploy updated backend build to Render.
+- Deploy updated frontend build to production.
 
 ## Git State
 
@@ -67,4 +67,4 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Await user instruction / deployment confirmation.
+Phase completed. Await user instruction / next phase directive.

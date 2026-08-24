@@ -1334,14 +1334,18 @@
 
 /* Tablet / Stacked Single Column (<= 900px) */
 @media (max-width: 900px) {
+  .cinema-player {
+    padding-bottom: max(2rem, env(safe-area-inset-bottom, 2rem));
+  }
+
   .cinema-player__layout {
     grid-template-columns: 1fr;
   }
 
   .player-sidebar {
-    height: 380px;
+    height: auto;
+    max-height: 480px;
     min-height: 0;
-    max-height: none;
   }
 
   .cinema-player__info-card {
@@ -1357,6 +1361,7 @@
 @media (max-width: 650px) {
   .cinema-player {
     gap: 10px;
+    padding-bottom: max(3.5rem, env(safe-area-inset-bottom, 3.5rem));
   }
 
   .cinema-player__topbar {
@@ -1389,6 +1394,7 @@
   .cinema-player__server-group,
   .cinema-player__audio-group {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .cinema-player__toolbar {
@@ -1415,7 +1421,8 @@
   }
 
   .player-sidebar {
-    height: 340px;
+    height: auto;
+    max-height: 420px;
   }
 
   .cinema-player__info-card {

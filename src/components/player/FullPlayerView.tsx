@@ -8,8 +8,6 @@ import {
   Radio,
   Sparkles,
   Star,
-  Volume2,
-  VolumeX,
 } from 'lucide-react'
 
 import {
@@ -26,8 +24,8 @@ import type {
 } from '../../types/domain'
 
 import {
-  getMegaPlayEmbedUrl,
-} from '../../services/anilist'
+  resolveVideoEmbedUrl,
+} from '../../services/videoResolver'
 
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
@@ -110,8 +108,8 @@ export function FullPlayerView({
     server,
     setServer,
   ] = useState<
-    'megaplay' | 'server2'
-  >('megaplay')
+    'server1' | 'server2' | 'server3' | 'server4' | string
+  >('server1')
 
   const [
     autoNext,
@@ -132,15 +130,8 @@ export function FullPlayerView({
     'sub' | 'dub'
   >('sub')
 
-  const [
-    muted,
-    setMuted,
-  ] = useState(false)
 
-  const [
-    isIframeLoading,
-    setIsIframeLoading,
-  ] = useState(true)
+
 
   const iframeRef =
     useRef<
@@ -159,17 +150,7 @@ export function FullPlayerView({
     }
   }, [isSaved])
 
-  /* =======================================================
-     RESET IFRAME LOADING
-  ======================================================== */
 
-  useEffect(() => {
-    setIsIframeLoading(true)
-  }, [
-    currentEpisode?.id,
-    language,
-    server,
-  ])
 
   /* =======================================================
      INITIAL EPISODE
@@ -670,11 +651,13 @@ export function FullPlayerView({
 
   const embedUrl =
     currentEpisode
-      ? getMegaPlayEmbedUrl(
-        anime.id,
-        currentEpisode.number,
+      ? resolveVideoEmbedUrl({
+        server,
+        malId: currentEpisode.malId ?? anime.malId,
+        anilistId: anime.id,
+        episodeNumber: currentEpisode.number,
         language,
-      )
+      })
       : ''
 
   /* =======================================================
@@ -753,15 +736,6 @@ export function FullPlayerView({
         ) {
           event.preventDefault()
           goNext()
-        }
-
-        if (
-          event.key.toLowerCase() ===
-          'm'
-        ) {
-          setMuted(
-            value => !value,
-          )
         }
       }
 
@@ -966,8 +940,29 @@ export function FullPlayerView({
         <div className="cinema-player__stage-container">
 
           {/* ===============================================
-              SERVERS & AUDIO
-          ================================================ */}
+              VIDEO PLAYER STAGE
+          ============================================== */}
+
+          <div className="cinema-player__stage">
+            <div
+              className="cinema-player__ambient"
+              aria-hidden="true"
+            />
+
+            <iframe
+              key={`${embedUrl}`}
+              ref={iframeRef}
+              src={embedUrl}
+              title={`${anime.title} Episode ${currentEpisode.number}`}
+              className="cinema-player__iframe"
+              allowFullScreen
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            />
+          </div>
+
+          {/* ===============================================
+              SERVERS & AUDIO SELECTOR (BELOW PLAYER)
+          ============================================== */}
 
           <div className="cinema-player__servers glass">
             <div className="cinema-player__server-group">
@@ -978,13 +973,13 @@ export function FullPlayerView({
               <button
                 type="button"
                 className={`cinema-player__server-chip ${server ===
-                    'megaplay'
+                    'server1'
                     ? 'active'
                     : ''
                   }`}
                 onClick={() =>
                   setServer(
-                    'megaplay',
+                    'server1',
                   )
                 }
               >
@@ -993,7 +988,7 @@ export function FullPlayerView({
                 />
 
                 <span>
-                  Server 1 (MegaPlay HD)
+                  Server 1
                 </span>
               </button>
 
@@ -1016,6 +1011,50 @@ export function FullPlayerView({
 
                 <span>
                   Server 2
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`cinema-player__server-chip ${server ===
+                    'server3'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setServer(
+                    'server3',
+                  )
+                }
+              >
+                <Sparkles
+                  size={13}
+                />
+
+                <span>
+                  Server 3
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`cinema-player__server-chip ${server ===
+                    'server4'
+                    ? 'active'
+                    : ''
+                  }`}
+                onClick={() =>
+                  setServer(
+                    'server4',
+                  )
+                }
+              >
+                <Radio
+                  size={13}
+                />
+
+                <span>
+                  Server 4
                 </span>
               </button>
             </div>
@@ -1061,45 +1100,6 @@ export function FullPlayerView({
                 DUB
               </button>
             </div>
-          </div>
-
-          {/* ===============================================
-              VIDEO PLAYER STAGE
-          ============================================== */}
-
-          <div className="cinema-player__stage">
-            <div
-              className="cinema-player__ambient"
-              aria-hidden="true"
-            />
-
-            {isIframeLoading && (
-              <div
-                className="cinema-player__loader"
-                aria-live="polite"
-              >
-                <div className="cinema-player__spinner" />
-
-                <span>
-                  Preparing your episode...
-                </span>
-              </div>
-            )}
-
-            <iframe
-              key={`${embedUrl}`}
-              ref={iframeRef}
-              src={embedUrl}
-              title={`${anime.title} Episode ${currentEpisode.number}`}
-              className="cinema-player__iframe"
-              allowFullScreen
-              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-              onLoad={() =>
-                setIsIframeLoading(
-                  false,
-                )
-              }
-            />
           </div>
 
           {/* ===============================================
@@ -1260,39 +1260,6 @@ export function FullPlayerView({
                   />
                 ) : (
                   <Bookmark
-                    size={16}
-                  />
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={`cinema-player__control-btn icon-only ${muted
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setMuted(
-                    value => !value,
-                  )
-                }
-                aria-label={
-                  muted
-                    ? 'Unmute'
-                    : 'Mute'
-                }
-                title={
-                  muted
-                    ? 'Unmute (M)'
-                    : 'Mute (M)'
-                }
-              >
-                {muted ? (
-                  <VolumeX
-                    size={16}
-                  />
-                ) : (
-                  <Volume2
                     size={16}
                   />
                 )}

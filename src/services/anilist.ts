@@ -4,6 +4,8 @@ import type {
     Episode,
 } from '../types/domain'
 
+import { resolveVideoEmbedUrl } from './videoResolver'
+
 const ANILIST_ENDPOINT =
     'https://graphql.anilist.co'
 
@@ -1661,41 +1663,31 @@ export async function getPopularAnime(
 export function getMegaPlayEmbedUrl(
     animeId: string | number,
     episodeNumber: number,
-    language:
-        | 'sub'
-        | 'dub' = 'sub',
+    language: 'sub' | 'dub' = 'sub',
+    malId?: number | string | null,
+    server: string = 'server1',
 ): string {
-    const safeAnimeId =
-        encodeURIComponent(
-            String(
-                animeId,
-            ),
-        )
-
-    const safeEpisode =
-        Math.max(
-            1,
-            Math.floor(
-                episodeNumber,
-            ),
-        )
-
-    return (
-        `https://megaplay.buzz/stream/ani/` +
-        `${safeAnimeId}/` +
-        `${safeEpisode}/` +
-        `${language}`
-    )
+    return resolveVideoEmbedUrl({
+        server,
+        malId,
+        anilistId: animeId,
+        episodeNumber,
+        language,
+    })
 }
 
 export function getAnimeStreamEmbedUrl(
     server: string,
     animeId: string | number,
     episodeNumber: number,
-    language:
-        | 'sub'
-        | 'dub' = 'sub',
+    language: 'sub' | 'dub' = 'sub',
+    malId?: number | string | null,
 ): string {
-    void server
-    return getMegaPlayEmbedUrl(animeId, episodeNumber, language)
+    return resolveVideoEmbedUrl({
+        server,
+        malId,
+        anilistId: animeId,
+        episodeNumber,
+        language,
+    })
 }

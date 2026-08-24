@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Bleach Iframe Test Workbench</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
+
+    iframe {
+      width: 100%;
+      height: 350px;
+      border: none;
+      border-radius: 6px;
+      background: #000;
+    }
+
+    h3 {
+      margin-top: 0;
+      font-size: 14px;
+      color: #38bdf8;
+      word-break: break-all;
+    }
+
+    .status {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Bleach Iframe Embed Tester</h1>
+  <div id="controls">
+    <label>Select Bleach Version: </label>
+    <select id="bleachSelect" onchange="updateIframes()">
+      <option value="269|269|Bleach Original (366 eps)">Bleach Original (AniList: 269, MAL: 269)</option>
+      <option value="116674|41467|TYBW Part 1">Bleach TYBW Part 1 (AniList: 116674, MAL: 41467)</option>
+      <option value="159322|53998|TYBW Part 2">Bleach TYBW Part 2 (AniList: 159322, MAL: 53998)</option>
+      <option value="169755|56784|TYBW Part 3">Bleach TYBW Part 3 (AniList: 169755, MAL: 56784)</option>
+      <option value="185874|60636|TYBW Part 4" selected>Bleach TYBW Part 4 (AniList: 185874, MAL: 60636)</option>
+    </select>
+    &nbsp;&nbsp;
+    <label>Episode: </label>
+    <input type="number" id="epInput" value="1" min="1" style="width: 60px;" onchange="updateIframes()">
+  </div>
+
+  <br>
+
+  <div class="grid">
+    <div class="card">
+      <h3 id="title-s1-mal-sub">Server 1 MAL SUB</h3>
+      <iframe id="iframe-s1-mal-sub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s1-mal-dub">Server 1 MAL DUB</h3>
+      <iframe id="iframe-s1-mal-dub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s1-ani-sub">Server 1 AniList SUB</h3>
+      <iframe id="iframe-s1-ani-sub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s1-ani-dub">Server 1 AniList DUB</h3>
+      <iframe id="iframe-s1-ani-dub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s2-ani-sub">Server 2 AniList SUB</h3>
+      <iframe id="iframe-s2-ani-sub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s2-ani-dub">Server 2 AniList DUB</h3>
+      <iframe id="iframe-s2-ani-dub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s2-mal-sub">Server 2 MAL SUB (Experimental)</h3>
+      <iframe id="iframe-s2-mal-sub"></iframe>
+    </div>
+    <div class="card">
+      <h3 id="title-s2-mal-dub">Server 2 MAL DUB (Experimental)</h3>
+      <iframe id="iframe-s2-mal-dub"></iframe>
+    </div>
+  </div>
+
+  <script>
+    function updateIframes() {
+      const [aniId, malId, name] = document.getElementById('bleachSelect').value.split('|');
+      const ep = document.getElementById('epInput').value || 1;
+
+      const s1MalSub = `https://ani.megaplay.su/mal/${malId}/${ep}/sub?color=%237c5cfc`;
+      const s1MalDub = `https://ani.megaplay.su/mal/${malId}/${ep}/dub?color=%237c5cfc`;
+      const s1AniSub = `https://ani.megaplay.su/ani/${aniId}/${ep}/sub?color=%237c5cfc`;
+      const s1AniDub = `https://ani.megaplay.su/ani/${aniId}/${ep}/dub?color=%237c5cfc`;
+
+      const s2AniSub = `https://megaplay.buzz/stream/ani/${aniId}/${ep}/sub`;
+      const s2AniDub = `https://megaplay.buzz/stream/ani/${aniId}/${ep}/dub`;
+      const s2MalSub = `https://megaplay.buzz/stream/mal/${malId}/${ep}/sub`;
+      const s2MalDub = `https://megaplay.buzz/stream/mal/${malId}/${ep}/dub`;
+
+      document.getElementById('title-s1-mal-sub').innerText = `Server 1 MAL SUB: ${s1MalSub}`;
+      document.getElementById('iframe-s1-mal-sub').src = s1MalSub;
+
+      document.getElementById('title-s1-mal-dub').innerText = `Server 1 MAL DUB: ${s1MalDub}`;
+      document.getElementById('iframe-s1-mal-dub').src = s1Dub = s1MalDub;
+
+      document.getElementById('title-s1-ani-sub').innerText = `Server 1 AniList SUB: ${s1AniSub}`;
+      document.getElementById('iframe-s1-ani-sub').src = s1AniSub;
+
+      document.getElementById('title-s1-ani-dub').innerText = `Server 1 AniList DUB: ${s1AniDub}`;
+      document.getElementById('iframe-s1-ani-dub').src = s1AniDub;
+
+      document.getElementById('title-s2-ani-sub').innerText = `Server 2 AniList SUB: ${s2AniSub}`;
+      document.getElementById('iframe-s2-ani-sub').src = s2AniSub;
+
+      document.getElementById('title-s2-ani-dub').innerText = `Server 2 AniList DUB: ${s2AniDub}`;
+      document.getElementById('iframe-s2-ani-dub').src = s2AniDub;
+
+      document.getElementById('title-s2-mal-sub').innerText = `Server 2 MAL SUB: ${s2MalSub}`;
+      document.getElementById('iframe-s2-mal-sub').src = s2MalSub;
+
+      document.getElementById('title-s2-mal-dub').innerText = `Server 2 MAL DUB: ${s2MalDub}`;
+      document.getElementById('iframe-s2-mal-dub').src = s2MalDub;
+    }
+
+    updateIframes();
+  </script>
+</body>
+
+</html>
