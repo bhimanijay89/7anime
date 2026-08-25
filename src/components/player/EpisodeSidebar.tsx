@@ -22,17 +22,8 @@ export function EpisodeSidebar({
    * ---------------------------------------------------------
    * Episode duration formatter
    * ---------------------------------------------------------
-   *
-   * Supports values such as:
-   *   85
-   *   "85"
-   *   "85m"
-   *   "1h 25m"
-   *   "01:25:00"
-   *   "25:00"
-   *
-   * We intentionally DO NOT use a fake "24m" fallback.
    */
+
   const formatDuration = (duration: unknown): string | null => {
     if (duration === null || duration === undefined) {
       return null
@@ -92,7 +83,10 @@ export function EpisodeSidebar({
     if (msMatch) {
       const minutes = Number(msMatch[1])
 
-      if (Number.isFinite(minutes) && minutes > 0) {
+      if (
+        Number.isFinite(minutes) &&
+        minutes > 0
+      ) {
         return `${minutes}m`
       }
     }
@@ -117,6 +111,7 @@ export function EpisodeSidebar({
    * Episode ranges
    * ---------------------------------------------------------
    */
+
   const ranges = useMemo(() => {
     if (episodes.length <= 50) {
       return []
@@ -153,6 +148,7 @@ export function EpisodeSidebar({
    * Current episode
    * ---------------------------------------------------------
    */
+
   const currentEpIndex = useMemo(() => {
     return episodes.findIndex(
       ep => ep.id === currentEpisodeId
@@ -160,9 +156,21 @@ export function EpisodeSidebar({
   }, [episodes, currentEpisodeId])
 
   /*
-   * Automatically switch to the range containing
-   * the currently playing episode.
+   * ---------------------------------------------------------
+   * Effective range
+   *
+   * IMPORTANT:
+   * We intentionally DO NOT automatically switch the
+   * selected range based on the currently playing episode.
+   *
+   * This allows the user to manually click:
+   * 1-100
+   * 101-200
+   * 201-300
+   * etc.
+   * ---------------------------------------------------------
    */
+
   const effectiveRangeIndex = useMemo(() => {
     if (ranges.length === 0) {
       return 0
@@ -172,21 +180,13 @@ export function EpisodeSidebar({
       return -1
     }
 
-    if (currentEpIndex >= 0) {
-      const rangeIdx = Math.floor(
-        currentEpIndex / RANGE_SIZE
-      )
-
-      if (rangeIdx < ranges.length) {
-        return rangeIdx
-      }
-    }
-
-    return activeRangeIndex
+    return Math.min(
+      activeRangeIndex,
+      ranges.length - 1
+    )
   }, [
     ranges.length,
     query,
-    currentEpIndex,
     activeRangeIndex
   ])
 
@@ -195,9 +195,13 @@ export function EpisodeSidebar({
    * Filtered episodes
    * ---------------------------------------------------------
    */
+
   const filtered = useMemo(() => {
     const list = episodes
 
+    /*
+     * Search mode
+     */
     if (query.trim()) {
       const q = query
         .toLowerCase()
@@ -210,6 +214,9 @@ export function EpisodeSidebar({
       )
     }
 
+    /*
+     * Range mode
+     */
     if (
       ranges.length > 0 &&
       effectiveRangeIndex >= 0
@@ -225,6 +232,9 @@ export function EpisodeSidebar({
       }
     }
 
+    /*
+     * If there are no ranges, show everything.
+     */
     return list
   }, [
     episodes,
@@ -232,6 +242,31 @@ export function EpisodeSidebar({
     ranges,
     effectiveRangeIndex
   ])
+
+  /*
+   * ---------------------------------------------------------
+   * Range click handler
+   * ---------------------------------------------------------
+   */
+
+  const handleRangeClick = (index: number) => {
+    setActiveRangeIndex(index)
+
+    /*
+     * Clear search when switching ranges.
+     * This guarantees that the selected range
+     * controls the episode list.
+     */
+    if (query) {
+      setQuery('')
+    }
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * Render
+   * ---------------------------------------------------------
+   */
 
   return (
     <aside
@@ -241,6 +276,7 @@ export function EpisodeSidebar({
       {/* -------------------------------------------------
           Header
       ------------------------------------------------- */}
+
       <div className="player-sidebar__header">
         <div>
           <h3>Episodes</h3>
@@ -261,6 +297,7 @@ export function EpisodeSidebar({
       {/* -------------------------------------------------
           Search
       ------------------------------------------------- */}
+
       <div className="player-sidebar__search">
         <Search
           size={14}
@@ -293,6 +330,7 @@ export function EpisodeSidebar({
       {/* -------------------------------------------------
           Episode ranges
       ------------------------------------------------- */}
+
       {ranges.length > 0 &&
         !query.trim() && (
           <div
@@ -304,11 +342,14 @@ export function EpisodeSidebar({
                 key={range.label}
                 type="button"
                 className={`player-sidebar__range-btn ${index === effectiveRangeIndex
-                    ? 'active'
-                    : ''
+                  ? 'active'
+                  : ''
                   }`}
                 onClick={() =>
-                  setActiveRangeIndex(index)
+                  handleRangeClick(index)
+                }
+                aria-pressed={
+                  index === effectiveRangeIndex
                 }
               >
                 {range.label}
@@ -320,6 +361,7 @@ export function EpisodeSidebar({
       {/* -------------------------------------------------
           Episode list
       ------------------------------------------------- */}
+
       <div className="player-sidebar__list">
         {filtered.length === 0 ? (
           <div className="player-sidebar__empty">
@@ -358,6 +400,7 @@ export function EpisodeSidebar({
                 {/* -----------------------------------------
                     Thumbnail
                 ----------------------------------------- */}
+
                 <div className="player-sidebar__thumb">
                   {ep.thumbnail ? (
                     <img
@@ -384,12 +427,7 @@ export function EpisodeSidebar({
 
                   {active && (
                     <div className="player-sidebar__now-playing">
-                      <span className="player-sidebar__equalizer">
-                        <span className="bar bar-1" />
-                        <span className="bar bar-2" />
-                        <span className="bar bar-3" />
-                      </span>
-                      <span>PLAYING</span>
+                      <span>NOW</span>
                     </div>
                   )}
                 </div>
@@ -397,6 +435,7 @@ export function EpisodeSidebar({
                 {/* -----------------------------------------
                     Episode information
                 ----------------------------------------- */}
+
                 <div className="player-sidebar__info">
                   <div className="player-sidebar__title-row">
                     <strong>
@@ -409,7 +448,7 @@ export function EpisodeSidebar({
                       <small>{duration}</small>
                     ) : (
                       <small className="player-sidebar__duration-unavailable">
-                        Duration N/A
+                        Duration unavailable
                       </small>
                     )}
 
@@ -422,7 +461,7 @@ export function EpisodeSidebar({
 
                     {active && (
                       <span className="player-sidebar__playing-tag">
-                        Playing Now
+                        Playing
                       </span>
                     )}
                   </div>
