@@ -577,6 +577,8 @@ router.post(
             const genericSuccess =
                 'If an account exists for this email, a verification code has been sent.'
 
+            console.log(`[auth/forgot-password] Request received for email: ${normalizedEmail}`)
+
             const user =
                 await prisma.user.findUnique({
                     where: {
@@ -585,7 +587,10 @@ router.post(
                     },
                 })
 
+            console.log(`[auth/forgot-password] User lookup: email=${normalizedEmail}, userExists=${Boolean(user)}`)
+
             if (!user) {
+                console.warn(`[auth/forgot-password] User not found in database for email ${normalizedEmail}. Returning generic success without calling mailer.`)
                 return sendSuccess(
                     res,
                     {
@@ -623,6 +628,7 @@ router.post(
                 if (
                     secondsSinceLast < 60
                 ) {
+                    console.warn(`[auth/forgot-password] Rate limit hit: Code requested ${Math.round(secondsSinceLast)}s ago (<60s) for ${user.email}. Returning generic success without sending duplicate email.`)
                     return sendSuccess(
                         res,
                         {
@@ -661,7 +667,7 @@ router.post(
                     10 * 60 * 1000,
                 )
 
-            await prisma.passwordResetCode.create(
+            const dbRecord = await prisma.passwordResetCode.create(
                 {
                     data: {
                         userId:
@@ -672,16 +678,45 @@ router.post(
                 },
             )
 
+            console.log(`[auth/forgot-password] Inserted PasswordResetCode row in DB. Row ID: ${dbRecord.id}`)
+
             const {
                 sendPasswordResetEmail,
             } = await import(
                 '../utils/mailer.js'
             )
 
-            await sendPasswordResetEmail(
-                user.email,
-                code,
-            )
+            console.log(`[auth/forgot-password] Calling sendPasswordResetEmail for ${user.email}...`)
+
+            const mailResult =
+                await sendPasswordResetEmail(
+                    user.email,
+                    code,
+                )
+
+            console.log(`[auth/forgot-password] Mailer Result: success=${mailResult.success}, MessageID=${mailResult.messageId || 'NONE'}, SMTP_Response="${mailResult.response || 'NONE'}"`)
+
+            if (!mailResult.success) {
+                console.error(
+                    `[auth/forgot-password] Email dispatch failed for ${user.email}:`,
+                    mailResult.errorCode,
+                    mailResult.error,
+                )
+
+                await prisma.passwordResetCode.deleteMany({
+                    where: {
+                        userId: user.id,
+                    },
+                }).catch(() => {})
+
+                return sendError(
+                    res,
+                    mailResult.error ||
+                        'Failed to send verification email. Please check server email configuration.',
+                    ErrorCode.INTERNAL_ERROR,
+                    500,
+                )
+            }
 
             return sendSuccess(
                 res,

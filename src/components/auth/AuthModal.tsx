@@ -26,7 +26,7 @@ type AuthMode = 'login' | 'register' | 'forgot-email' | 'forgot-otp' | 'forgot-r
 
 const BACKEND_URL =
   import.meta.env.VITE_API_URL ||
-  'https://sevenanime-vodw.onrender.com'
+  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://sevenanime-vodw.onrender.com')
 
 export function AuthModal({
   open,

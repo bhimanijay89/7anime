@@ -143,7 +143,7 @@ router.post(
       })
 
       // Record activity to maintain watch streak and total time
-      await recordUserActivity(userId, safeProgress).catch(() => {})
+      await recordUserActivity(userId, safeProgress).catch(() => { })
 
       return sendSuccess(res, { progress: entry })
     } catch (error) {
