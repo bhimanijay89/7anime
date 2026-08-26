@@ -1,4 +1,5 @@
-import nodemailer from 'nodemailer'
+import { google } from 'googleapis'
+import { Resend } from 'resend'
 
 export interface MailerResult {
   success: boolean
@@ -9,91 +10,52 @@ export interface MailerResult {
   response?: string
 }
 
-function getSmtpConfig() {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com'
-  const port = Number(process.env.SMTP_PORT || 465)
-  const user = process.env.SMTP_USER
-  const pass = process.env.SMTP_PASSWORD
-  const from = process.env.SMTP_FROM || (user ? `7anime Security <${user}>` : '7anime Security <no-reply@7anime.io>')
+function getOAuth2Client() {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
 
-  return { host, port, user, pass, from }
+  if (!clientId || !clientSecret) return null
+
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri)
 }
 
-export function isSmtpConfigured(): boolean {
-  const { host, user, pass } = getSmtpConfig()
-  return Boolean(host && user && pass)
+export function isMailerConfigured(): boolean {
+  const hasGmailOAuth = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN)
+  const hasResend = Boolean(process.env.RESEND_API_KEY)
+
+  return hasGmailOAuth || hasResend
 }
 
-export async function verifySmtpConnection(): Promise<MailerResult> {
-  const { host, port, user, pass } = getSmtpConfig()
+function makeRawMimeEmail(from: string, to: string, subject: string, htmlContent: string): string {
+  const str = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: =?utf-8?B?${Buffer.from(subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(htmlContent).toString('base64'),
+  ].join('\r\n')
 
-  if (!host || !user || !pass) {
-    return {
-      success: false,
-      errorCode: 'NOT_CONFIGURED',
-      error: 'SMTP credentials (SMTP_HOST, SMTP_USER, SMTP_PASSWORD) are not fully configured in environment variables.',
-    }
-  }
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-    connectTimeout: 10000,
-  } as unknown as nodemailer.TransportOptions)
-
-  try {
-    await transporter.verify()
-    return { success: true }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err)
-    const errCode = (err as { code?: string })?.code || ''
-
-    if (errCode === 'EAUTH' || errorMsg.includes('535') || errorMsg.includes('BadCredentials')) {
-      return {
-        success: false,
-        errorCode: 'EAUTH',
-        error: 'Gmail SMTP authentication failed (535 BadCredentials). Please check your SMTP_USER and Google App Password in .env.',
-      }
-    }
-
-    return {
-      success: false,
-      errorCode: 'ECONNECTION',
-      error: `SMTP connection error (${errCode || 'UNKNOWN'}): ${errorMsg}`,
-    }
-  }
+  return Buffer.from(str)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 export async function sendPasswordResetEmail(email: string, code: string): Promise<MailerResult> {
-  const { host, port, user, pass, from } = getSmtpConfig()
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN
+  const gmailUser = process.env.GMAIL_USER || 'bricodz07@gmail.com'
+  const resendApiKey = process.env.RESEND_API_KEY
+
+  const from = `7anime Security <${gmailUser}>`
 
   console.log(`[7anime-mailer] Initiating password reset email to ${email}...`)
-  console.log(`[7anime-mailer] Config: host=${host}, port=${port}, user=${user || 'NOT_SET'}, passSet=${Boolean(pass)}`)
-
-  if (!host || !user || !pass) {
-    console.warn(`[7anime-mailer] SMTP not configured. Cannot send real reset email. Mock code for ${email}: ${code}`)
-    return {
-      success: false,
-      errorCode: 'NOT_CONFIGURED',
-      error: 'SMTP server is not configured on the backend.',
-    }
-  }
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-    connectTimeout: 10000,
-  } as unknown as nodemailer.TransportOptions)
 
   const logoUrl = process.env.PUBLIC_LOGO_URL || 'https://7anime-tv.vercel.app/logo.png'
 
@@ -192,43 +154,86 @@ export async function sendPasswordResetEmail(email: string, code: string): Promi
 </body>
 </html>`
 
-  try {
-    const info = await transporter.sendMail({
-      from,
-      to: email,
-      subject: 'Your 7anime Password Reset Code',
-      html: htmlContent,
-    })
+  // 1. Primary Option: Gmail API via OAuth 2.0
+  if (clientId && clientSecret && refreshToken) {
+    console.log(`[7anime-mailer] Using Gmail API OAuth 2.0 dispatch...`)
+    try {
+      const oauth2Client = getOAuth2Client()
+      if (!oauth2Client) throw new Error('OAuth2 client configuration error.')
 
-    console.log(`[7anime-mailer] Password reset email sent successfully to ${email}. MessageID: ${info.messageId}`)
-    return {
-      success: true,
-      messageId: info.messageId,
-      response: info.response,
-    }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err)
-    const errCode = (err as { code?: string })?.code || 'UNKNOWN'
+      oauth2Client.setCredentials({ refresh_token: refreshToken })
 
-    console.error(`[7anime-mailer] Failed to send SMTP email to ${email}. Code: ${errCode}, Error: ${errorMsg}`)
+      const gmail = google.gmail({ version: 'v1', auth: oauth2Client })
+      const rawMessage = makeRawMimeEmail(from, email, 'Your 7anime Password Reset Code', htmlContent)
 
-    let errorCode: MailerResult['errorCode'] = 'ESEND'
-    let userFriendlyError = 'Failed to send password reset email.'
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: rawMessage,
+        },
+      })
 
-    if (errCode === 'EAUTH' || errorMsg.includes('535') || errorMsg.includes('BadCredentials')) {
-      errorCode = 'EAUTH'
-      userFriendlyError = 'Email authentication failed (Invalid Google App Password).'
-    } else if (errCode === 'ECONNECTION' || errCode === 'ETIMEDOUT' || errCode === 'ESOCKET') {
-      errorCode = 'ECONNECTION'
-      userFriendlyError = 'Could not connect to SMTP email server.'
-    }
+      console.log(`[7anime-mailer] Password reset email sent successfully via Gmail API. MessageID: ${res.data.id}`)
+      return {
+        success: true,
+        messageId: res.data.id || undefined,
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error(`[7anime-mailer] Gmail API OAuth dispatch failed:`, errorMsg)
 
-    return {
-      success: false,
-      errorCode,
-      error: userFriendlyError,
+      return {
+        success: false,
+        errorCode: 'EAUTH',
+        error: 'Failed to send password reset email via Gmail API OAuth 2.0.',
+      }
     }
   }
+
+  // 2. Fallback Option: Resend HTTPS API
+  if (resendApiKey) {
+    console.log(`[7anime-mailer] Falling back to Resend HTTPS API dispatch...`)
+    try {
+      const resend = new Resend(resendApiKey)
+      const resendFrom = process.env.RESEND_FROM || '7anime Security <onboarding@resend.dev>'
+
+      const { data, error } = await resend.emails.send({
+        from: resendFrom,
+        to: email,
+        subject: 'Your 7anime Password Reset Code',
+        html: htmlContent,
+      })
+
+      if (error) {
+        console.error(`[7anime-mailer] Resend API error:`, error.name, error.message)
+        return {
+          success: false,
+          errorCode: 'ESEND',
+          error: error.message || 'Failed to send password reset email via Resend API.',
+        }
+      }
+
+      console.log(`[7anime-mailer] Password reset email sent successfully via Resend. MessageID: ${data?.id}`)
+      return {
+        success: true,
+        messageId: data?.id,
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error(`[7anime-mailer] Resend fallback exception:`, errorMsg)
+
+      return {
+        success: false,
+        errorCode: 'ESEND',
+        error: errorMsg || 'Failed to send password reset email via Resend API.',
+      }
+    }
+  }
+
+  console.warn(`[7anime-mailer] Neither Gmail OAuth nor Resend API keys are configured. Cannot send reset email.`)
+  return {
+    success: false,
+    errorCode: 'NOT_CONFIGURED',
+    error: 'Email transport credentials are not configured on the server.',
+  }
 }
-
-

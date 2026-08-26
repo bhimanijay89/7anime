@@ -7,9 +7,11 @@ dist/
 # Environment variables
 .env
 .env.*
-.env.local
-.env.production
-.env.development
+!.env.example
+*.pem
+*credentials*.json
+*oauth*.json
+*token*.json
 
 # IDE / Editor
 .vscode/

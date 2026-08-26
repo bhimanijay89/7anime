@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'node:crypto'
+import { google } from 'googleapis'
 
 import prisma from '../db/client.js'
 import {
@@ -1054,5 +1055,106 @@ router.post(
         }
     },
 )
+
+// GET /api/auth/google/url - Generate Google OAuth 2.0 authorization URL for Gmail API
+router.get('/google/url', (_req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+    const redirectUri =
+        process.env.GOOGLE_REDIRECT_URI ||
+        'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+
+    if (!clientId || !clientSecret) {
+        return res.status(400).json({
+            error: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured in environment variables.',
+        })
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        redirectUri,
+    )
+
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: ['https://www.googleapis.com/auth/gmail.send'],
+    })
+
+    return res.redirect(authUrl)
+})
+
+// GET /api/auth/google/callback - Handle OAuth 2.0 callback and exchange code for refresh token
+router.get('/google/callback', async (req, res) => {
+    const code = req.query.code as string | undefined
+
+    if (!code) {
+        return res
+            .status(400)
+            .send(
+                '<h1>Authorization Failed</h1><p>Missing code query parameter from Google OAuth redirect.</p>',
+            )
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET
+    const redirectUri =
+        process.env.GOOGLE_REDIRECT_URI ||
+        'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+
+    if (!clientId || !clientSecret) {
+        return res
+            .status(500)
+            .send(
+                '<h1>OAuth Configuration Error</h1><p>GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are missing on the server.</p>',
+            )
+    }
+
+    try {
+        const oauth2Client = new google.auth.OAuth2(
+            clientId,
+            clientSecret,
+            redirectUri,
+        )
+        const { tokens } = await oauth2Client.getToken(code)
+
+        console.log('[Gmail OAuth] Successfully exchanged code for tokens!')
+        console.log('[Gmail OAuth] Refresh Token Present:', Boolean(tokens.refresh_token))
+
+        if (!tokens.refresh_token) {
+            return res.send(`
+        <html>
+          <body style="font-family: sans-serif; padding: 40px; background: #05070d; color: #fff;">
+            <h1 style="color: #f87171;">OAuth Warning: No Refresh Token Received</h1>
+            <p>Google did not return a <code>refresh_token</code> because consent was previously granted.</p>
+            <p>Please revoke access for this app in your Google Account Security settings, or visit <a href="/api/auth/google/url" style="color: #38bdf8;">/api/auth/google/url</a> again (prompt=consent).</p>
+          </body>
+        </html>
+      `)
+        }
+
+        // Securely display only the refresh token on screen for one-time admin copying into Render environment secrets
+        return res.send(`
+      <html>
+        <body style="font-family: sans-serif; padding: 40px; background: #05070d; color: #fff; max-width: 650px; margin: 0 auto;">
+          <h1 style="color: #4ade80;">✅ Gmail OAuth 2.0 Authorized Successfully!</h1>
+          <p>Your one-time <code>GMAIL_REFRESH_TOKEN</code> has been generated below.</p>
+          <div style="background: #0f131f; border: 1px solid #1e293b; border-radius: 12px; padding: 20px; margin: 20px 0; word-break: break-all;">
+            <p style="margin: 0 0 10px 0; color: #38bdf8; font-weight: bold;">GMAIL_REFRESH_TOKEN:</p>
+            <code style="background: #090d16; color: #38bdf8; padding: 8px 12px; border-radius: 6px; display: block; font-size: 14px;">${tokens.refresh_token}</code>
+          </div>
+          <p style="color: #94a3b8; font-size: 14px;">Copy this token and save it as <code>GMAIL_REFRESH_TOKEN</code> in your Render Dashboard environment settings.</p>
+        </body>
+      </html>
+    `)
+    } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err)
+        console.error('[Gmail OAuth] Token exchange error:', errorMsg)
+        return res
+            .status(500)
+            .send(`<h1>OAuth Authorization Error</h1><p>${errorMsg}</p>`)
+    }
+})
 
 export default router
