@@ -387,7 +387,7 @@ export function EpisodeSidebar({
           <div className="player-sidebar__range-container">
             <button
               type="button"
-              className="player-sidebar__range-nav-btn"
+              className="player-sidebar__range-nav-btn hidden md:inline-flex"
               onClick={() => scrollEpisodeRanges('left')}
               disabled={!canScrollLeft}
               aria-label="Scroll episode ranges left"
@@ -422,7 +422,7 @@ export function EpisodeSidebar({
 
             <button
               type="button"
-              className="player-sidebar__range-nav-btn"
+              className="player-sidebar__range-nav-btn hidden md:inline-flex"
               onClick={() => scrollEpisodeRanges('right')}
               disabled={!canScrollRight}
               aria-label="Scroll episode ranges right"
