@@ -384,10 +384,10 @@ export function EpisodeSidebar({
 
       {ranges.length > 0 &&
         !query.trim() && (
-          <div className="player-sidebar__range-container flex w-full min-w-0 max-w-full items-center overflow-hidden shrink-0">
+          <div className="player-sidebar__range-container">
             <button
               type="button"
-              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
+              className="player-sidebar__range-nav-btn"
               onClick={() => scrollEpisodeRanges('left')}
               disabled={!canScrollLeft}
               aria-label="Scroll episode ranges left"
@@ -397,15 +397,15 @@ export function EpisodeSidebar({
 
             <div
               ref={rangeScrollRef}
-              className="player-sidebar__ranges min-w-0 flex-1 overflow-x-auto overflow-y-hidden whitespace-nowrap"
+              className="player-sidebar__ranges"
               aria-label="Episode ranges"
             >
-              <div className="player-sidebar__range-track flex w-max flex-nowrap items-center gap-1.5">
+              <div className="player-sidebar__range-track">
                 {ranges.map((range, index) => (
                   <button
                     key={range.label}
                     type="button"
-                    className={`player-sidebar__range-btn shrink-0 whitespace-nowrap ${index === effectiveRangeIndex
+                    className={`player-sidebar__range-btn ${index === effectiveRangeIndex
                       ? 'active'
                       : ''
                       }`}
@@ -424,7 +424,7 @@ export function EpisodeSidebar({
 
             <button
               type="button"
-              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
+              className="player-sidebar__range-nav-btn"
               onClick={() => scrollEpisodeRanges('right')}
               disabled={!canScrollRight}
               aria-label="Scroll episode ranges right"
