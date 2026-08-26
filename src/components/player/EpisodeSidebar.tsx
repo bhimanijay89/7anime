@@ -384,10 +384,10 @@ export function EpisodeSidebar({
 
       {ranges.length > 0 &&
         !query.trim() && (
-          <div className="player-sidebar__range-container">
+          <div className="player-sidebar__range-container flex w-full min-w-0 max-w-full items-center justify-between gap-1.5 px-3 mb-2.5 flex-nowrap shrink-0 overflow-hidden">
             <button
               type="button"
-              className="player-sidebar__range-nav-btn"
+              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
               onClick={() => scrollEpisodeRanges('left')}
               disabled={!canScrollLeft}
               aria-label="Scroll episode ranges left"
@@ -397,15 +397,16 @@ export function EpisodeSidebar({
 
             <div
               ref={rangeScrollRef}
-              className="player-sidebar__ranges"
+              className="player-sidebar__ranges flex-1 min-w-0 overflow-x-auto overflow-y-hidden whitespace-nowrap py-0.5"
               aria-label="Episode ranges"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              <div className="player-sidebar__range-track">
+              <div className="player-sidebar__range-track flex flex-nowrap items-center gap-1.5 w-max min-w-0">
                 {ranges.map((range, index) => (
                   <button
                     key={range.label}
                     type="button"
-                    className={`player-sidebar__range-btn ${index === effectiveRangeIndex
+                    className={`player-sidebar__range-btn shrink-0 whitespace-nowrap ${index === effectiveRangeIndex
                       ? 'active'
                       : ''
                       }`}
@@ -424,7 +425,7 @@ export function EpisodeSidebar({
 
             <button
               type="button"
-              className="player-sidebar__range-nav-btn"
+              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
               onClick={() => scrollEpisodeRanges('right')}
               disabled={!canScrollRight}
               aria-label="Scroll episode ranges right"
