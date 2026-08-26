@@ -13,7 +13,11 @@ export interface MailerResult {
 function getOAuth2Client() {
   const clientId = process.env.GOOGLE_CLIENT_ID
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+      : 'http://localhost:3001/api/auth/google/callback')
 
   if (!clientId || !clientSecret) return null
 

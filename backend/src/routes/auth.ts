@@ -1056,13 +1056,27 @@ router.post(
     },
 )
 
+// GET /api/auth/google/status - Diagnostic endpoint for OAuth route presence
+router.get('/auth/google/status', (_req, res) => {
+    return sendSuccess(res, {
+        gmailOAuthRoutes: true,
+        version: '34a532c',
+        configured: Boolean(
+            process.env.GOOGLE_CLIENT_ID &&
+                process.env.GOOGLE_CLIENT_SECRET,
+        ),
+    })
+})
+
 // GET /api/auth/google/url - Generate Google OAuth 2.0 authorization URL for Gmail API
-router.get('/google/url', (_req, res) => {
+router.get('/auth/google/url', (_req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET
     const redirectUri =
         process.env.GOOGLE_REDIRECT_URI ||
-        'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+        (process.env.NODE_ENV === 'production'
+            ? 'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+            : 'http://localhost:3001/api/auth/google/callback')
 
     if (!clientId || !clientSecret) {
         return res.status(400).json({
@@ -1086,7 +1100,7 @@ router.get('/google/url', (_req, res) => {
 })
 
 // GET /api/auth/google/callback - Handle OAuth 2.0 callback and exchange code for refresh token
-router.get('/google/callback', async (req, res) => {
+router.get('/auth/google/callback', async (req, res) => {
     const code = req.query.code as string | undefined
 
     if (!code) {
@@ -1101,7 +1115,9 @@ router.get('/google/callback', async (req, res) => {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET
     const redirectUri =
         process.env.GOOGLE_REDIRECT_URI ||
-        'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+        (process.env.NODE_ENV === 'production'
+            ? 'https://sevenanime-vodw.onrender.com/api/auth/google/callback'
+            : 'http://localhost:3001/api/auth/google/callback')
 
     if (!clientId || !clientSecret) {
         return res

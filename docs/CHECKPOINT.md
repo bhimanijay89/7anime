@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Google Gmail API OAuth 2.0 Integration Complete
+Google Gmail OAuth 2.0 Route Path Prefix Fix Complete
 
 ## Current Task
 
-Implement Gmail API OAuth 2.0 transport in `backend/src/utils/mailer.ts` and add one-time OAuth authorization flow endpoints (`/api/auth/google/url`, `/api/auth/google/callback`) in `backend/src/routes/auth.ts`. Allow obtaining an offline `GMAIL_REFRESH_TOKEN` for `bricodz07@gmail.com` without exposing secrets or breaking existing password-reset routes.
+Fix Route Not Found (404) error on `GET /api/auth/google/url` by correcting route registration path prefixes in `backend/src/routes/auth.ts` to `/auth/google/url`, `/auth/google/callback`, and adding safe status diagnostic endpoint `/auth/google/status`.
 
 ## Status
 
@@ -14,47 +14,29 @@ COMPLETE
 
 ## Completed Work
 
-1. **Package Installation**:
-   - Installed `googleapis` Node SDK (`npm i googleapis`).
+1. **Root Cause Analysis**:
+   - Identified that `authRouter` is mounted at `/api` in `backend/src/server.ts` (`app.use('/api', authRouter)`).
+   - Because `authRouter` defined `/google/url` instead of `/auth/google/url`, Express matched `/api` + `/google/url` = `/api/google/url`, leaving `/api/auth/google/url` unmapped (HTTP 404).
 
-2. **OAuth 2.0 Authorization Flow**:
-   - Implemented `GET /api/auth/google/url` in `backend/src/routes/auth.ts` (scope `https://www.googleapis.com/auth/gmail.send`, `access_type: 'offline'`, `prompt: 'consent'`).
-   - Implemented `GET /api/auth/google/callback` to handle code exchange and display a secure one-time authorization page for copying `GMAIL_REFRESH_TOKEN` into Render environment secrets.
+2. **Route Prefix Fix**:
+   - Updated `backend/src/routes/auth.ts` route definitions:
+     - `router.get('/auth/google/url', ...)`
+     - `router.get('/auth/google/callback', ...)`
+     - `router.get('/auth/google/status', ...)` (safe diagnostic endpoint returning `gmailOAuthRoutes: true`).
 
-3. **Gmail API OAuth Mailer Transport**:
-   - Refactored `backend/src/utils/mailer.ts` to construct RFC 2822 Base64-URL safe MIME messages and dispatch them via `gmail.users.messages.send({ userId: 'me' })`.
-   - Maintained fallback support for Resend API (`RESEND_API_KEY`) if `GMAIL_REFRESH_TOKEN` is missing during setup.
-
-4. **Template & Attachment Preservation**:
-   - Preserved exact 7anime dark glass HTML UI design, 6-digit OTP layout, and 10-minute expiry warning.
-   - Logo is referenced exclusively via HTTPS URL (`https://7anime-tv.vercel.app/logo.png`) with **0 attachments**, **0 CID tags**, and **0 base64 payloads**.
-
-5. **Automated Verification**:
+3. **Automated Verification**:
    - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (22.33s)
+   - `npm run build`: PASS (7.97s)
    - `npm run build:backend`: PASS (tsc clean)
 
 ## Files Modified
 
-- `package.json` — Added `googleapis` dependency.
-- `backend/src/utils/mailer.ts` — Added Gmail API OAuth 2.0 email transport.
-- `backend/src/routes/auth.ts` — Added `/api/auth/google/url` and `/api/auth/google/callback` endpoints.
+- `backend/src/routes/auth.ts` — Fixed OAuth route paths to `/auth/google/*`.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
-- `docs/DEVELOPMENT_STATUS.md` — Updated development status.
-
-## Required Environment Variables
-
-```env
-GOOGLE_CLIENT_ID=<your_google_client_id>
-GOOGLE_CLIENT_SECRET=<your_google_client_secret>
-GOOGLE_REDIRECT_URI=https://sevenanime-vodw.onrender.com/api/auth/google/callback
-GMAIL_REFRESH_TOKEN=<obtained_via_oauth_flow>
-GMAIL_USER=bricodz07@gmail.com
-```
 
 ## Verification Results
 
-- Automated checks: `lint`, `build`, `build:backend` all PASS cleanly.
+- All local checks (`lint`, `build`, `build:backend`) PASS cleanly.
 
 ## Git State
 
@@ -63,4 +45,4 @@ Working tree: MODIFIED
 
 ## Exact Next Task
 
-Deploy backend to Render, authorize via `/api/auth/google/url`, set `GMAIL_REFRESH_TOKEN` in Render Environment.
+Commit and push the fix (`git add .`, `git commit -m "fix: correct OAuth route path prefixes to /api/auth/google/*"`, `git push origin main`), then trigger OAuth URL on Render.
