@@ -554,6 +554,7 @@ router.post(
 
 router.post(
     '/auth/forgot-password',
+    authLimiter,
     async (req: Request, res: Response) => {
         try {
             const { email } =
@@ -755,6 +756,7 @@ router.post(
 
 router.post(
     '/auth/verify-reset-code',
+    authLimiter,
     async (req: Request, res: Response) => {
         try {
             const {
@@ -950,6 +952,7 @@ router.post(
 
 router.post(
     '/auth/reset-password',
+    authLimiter,
     async (req: Request, res: Response) => {
         try {
             const {
