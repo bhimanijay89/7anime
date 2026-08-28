@@ -31,3 +31,7 @@ desktop.ini
 # Logs
 *.log
 npm-debug.log*
+
+# Extra test videos
+public/Video Project *.mp4
+

@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Password Reset Email System Debugging & SMTP Diagnostics Complete
+Production & Hosted Splash Video Asset Serving Fix Complete
 
 ## Overall Status
 
-Fully debugged, refactored, and verified the password-reset email system. Fixed local frontend API routing (`BACKEND_URL` fallback to `http://localhost:3001`), fixed `.env` `host` variable collision that prevented Express local binding, eliminated false-success reporting in `mailer.ts` and `auth.ts`, categorized Nodemailer SMTP errors (`NOT_CONFIGURED`, `EAUTH`, `ECONNECTION`, `ESEND`), and verified full end-to-end database code generation and password update flow. Empirically identified that Gmail SMTP is rejecting the current App Password (`535 5.7.8 BadCredentials`). All automated checks (`npm run lint`, `npm run build`, `npm run build:backend`) pass cleanly with 0 errors.
+Diagnosed and fixed the hosted/production splash video asset serving issue for `public/splash.mp4`. Identified that `SplashScreen.tsx` was previously using a JavaScript module import (`import splashVideo from '../../public/splash.mp4'`), causing Vite to bundle a hashed module URL (`dist/assets/splash-xxx.mp4`) while `index.html` preloaded `/splash.mp4`, leading to path mismatches and potential 404/MIME-type errors on production hosts. Resolved by enforcing a direct static public URL reference (`const videoMp4Src = '/splash.mp4'`) matching the root `dist/splash.mp4` static asset output. Added `vercel.json` to explicitly configure `Content-Type: video/mp4` and `Accept-Ranges: bytes` headers and exclude static assets from SPA index.html rewrites. All automated checks (`npm run lint` and `npm run build`) passed cleanly.
 
 ## Completed Phases
 
@@ -37,6 +37,7 @@ Fully debugged, refactored, and verified the password-reset email system. Fixed 
 - [x] UI/UX Fix — Player Controls Layout & Mobile Scroll Optimization
 - [x] 4-Server Video Provider System Completion
 - [x] Episode Range Horizontal Pagination UI Update
+- [x] Production & Hosted Splash Video Asset Serving Fix
 
 ## Current Blockers
 
@@ -48,8 +49,11 @@ Fully debugged, refactored, and verified the password-reset email system. Fixed 
 
 ## Last Updated
 
-2026-08-26
+2026-08-28
 
 ## Next Exact Action
 
 Phase complete. Await user instruction / next phase directive.
+
+
+

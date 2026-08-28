@@ -61,6 +61,8 @@ import {
   trendingAnime,
 } from '../data/anime'
 
+import { SplashScreen } from '../components/splash/SplashScreen'
+
 import './preview.css'
 
 const BACKEND_URL =
@@ -1686,8 +1688,13 @@ function Home() {
 ========================================================= */
 
 export function FoundationPreview() {
+  const [showSplash, setShowSplash] = useState(true)
+
   return (
     <ToastProvider>
+      {showSplash && (
+        <SplashScreen onComplete={() => setShowSplash(false)} />
+      )}
       <Home />
     </ToastProvider>
   )

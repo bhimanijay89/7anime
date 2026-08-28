@@ -1,0 +1,102 @@
+/* 7anime Premium Fullscreen Cinematic Splash Screen */
+.splash-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: auto;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+
+  /* 
+    7anime Dark Navy Atmospheric Background Layering:
+    - Base: #050914 (Rich deep navy)
+    - Center Navy Environment: #0a1428 -> #070e20
+    - Top Lighting: Soft Electric Blue (#55d8ff)
+    - Accents: Subtle Cyan (#00e5ff) & Soft Violet (#8b5cf6)
+  */
+  background-color: #050914;
+  background-image: 
+    /* Central smooth dark navy environment extending behind the video */
+    radial-gradient(ellipse 90% 70% at 50% 50%, #0a1428 0%, #070e20 50%, #050914 100%),
+    /* Soft electric blue top atmosphere */
+    radial-gradient(ellipse 70% 40% at 50% 15%, rgba(85, 216, 255, 0.09) 0%, transparent 75%),
+    /* Subtle cyan top-left lighting */
+    radial-gradient(circle at 18% 22%, rgba(0, 229, 255, 0.05) 0%, transparent 60%),
+    /* Subtle violet bottom-right lighting */
+    radial-gradient(circle at 82% 78%, rgba(139, 92, 246, 0.06) 0%, transparent 65%),
+    /* Subtle magenta depth accent */
+    radial-gradient(ellipse 60% 35% at 50% 95%, rgba(217, 70, 239, 0.035) 0%, transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.splash-overlay.splash-fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ambient dark navy halo layer blending video letterbox with surrounding environment */
+.splash-ambient-glow {
+  position: absolute;
+  inset: -5%;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(ellipse 70% 55% at 50% 50%, rgba(25, 55, 110, 0.3) 0%, rgba(12, 25, 55, 0.15) 50%, transparent 80%);
+  filter: blur(50px);
+  opacity: 0.9;
+}
+
+/* Splash Video Wrapper — Centered layout without frames, borders, or shadows */
+.splash-video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  overflow: hidden;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+  z-index: 2;
+}
+
+/* Video Element — Pure aspect ratio preservation, zero cropping, zero distortion */
+.splash-video {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent;
+  display: block;
+}
+
+

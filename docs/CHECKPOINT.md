@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Google Gmail OAuth 2.0 Route Path Prefix Fix Complete
+Production & Hosted Splash Video Asset Serving Fix Complete
 
 ## Current Task
 
-Fix Route Not Found (404) error on `GET /api/auth/google/url` by correcting route registration path prefixes in `backend/src/routes/auth.ts` to `/auth/google/url`, `/auth/google/callback`, and adding safe status diagnostic endpoint `/auth/google/status`.
+Diagnose and resolve production/hosted splash video asset resolution and MIME-type serving for `public/splash.mp4`.
 
 ## Status
 
@@ -14,35 +14,47 @@ COMPLETE
 
 ## Completed Work
 
-1. **Root Cause Analysis**:
-   - Identified that `authRouter` is mounted at `/api` in `backend/src/server.ts` (`app.use('/api', authRouter)`).
-   - Because `authRouter` defined `/google/url` instead of `/auth/google/url`, Express matched `/api` + `/google/url` = `/api/google/url`, leaving `/api/auth/google/url` unmapped (HTTP 404).
+1. **Asset Path Diagnosis & Static Reference Enforced**:
+   - Diagnosed JS module import (`import splashVideo from ...`) that caused Vite to bundle a duplicate hashed asset `dist/assets/splash-xxx.mp4` mismatching `index.html`'s `<link rel="preload" href="/splash.mp4">`.
+   - Updated `SplashScreen.tsx` to reference strictly static public URL `/splash.mp4` (`const videoMp4Src = '/splash.mp4'`).
+   - Confirmed `public/splash.mp4` copies directly to `dist/splash.mp4` (6,215,268 bytes) at root.
 
-2. **Route Prefix Fix**:
-   - Updated `backend/src/routes/auth.ts` route definitions:
-     - `router.get('/auth/google/url', ...)`
-     - `router.get('/auth/google/callback', ...)`
-     - `router.get('/auth/google/status', ...)` (safe diagnostic endpoint returning `gmailOAuthRoutes: true`).
+2. **Vercel & Production CDN Headers**:
+   - Created `vercel.json` defining `Content-Type: video/mp4` and `Accept-Ranges: bytes` headers for `/splash.mp4`.
+   - Configured SPA rewrite exclusions to ensure static video assets are served directly without returning HTML fallback responses.
 
 3. **Automated Verification**:
-   - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (7.97s)
-   - `npm run build:backend`: PASS (tsc clean)
+   - `npx eslint src/components/splash/SplashScreen.tsx`: PASS (0 errors)
+   - `npm run build`: PASS (`dist/splash.mp4` 6.2MB generated at root in 2.08s)
 
 ## Files Modified
 
-- `backend/src/routes/auth.ts` — Fixed OAuth route paths to `/auth/google/*`.
+- `src/components/splash/SplashScreen.tsx` — Switched from JS module import to static public URL `/splash.mp4`.
+- `vercel.json` — Added static asset MIME-type headers and rewrite rules.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
+- `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
 ## Verification Results
 
-- All local checks (`lint`, `build`, `build:backend`) PASS cleanly.
+- ESLint passed cleanly with 0 warnings/errors.
+- Vite production build succeeded cleanly.
 
 ## Git State
 
 Branch: main
 Working tree: MODIFIED
 
+## Recovery Instructions
+
+If work resumes in a new session:
+1. Read this file.
+2. Read docs/DEVELOPMENT_STATUS.md.
+3. Inspect git status.
+4. Continue from the first incomplete item.
+
 ## Exact Next Task
 
-Commit and push the fix (`git add .`, `git commit -m "fix: correct OAuth route path prefixes to /api/auth/google/*"`, `git push origin main`), then trigger OAuth URL on Render.
+Report diagnostic findings, exact fix, and build verification to user.
+
+
+
