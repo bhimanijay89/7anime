@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Production & Hosted Splash Video Asset Serving Fix Complete
+Master Production Security Hardening & Runtime Tamper Resistance Complete
 
 ## Current Task
 
-Diagnose and resolve production/hosted splash video asset resolution and MIME-type serving for `public/splash.mp4`.
+Harden production 7anime web application against source code exposure, API abuse, information leakage, and unauthenticated state tampering.
 
 ## Status
 
@@ -14,30 +14,44 @@ COMPLETE
 
 ## Completed Work
 
-1. **Asset Path Diagnosis & Static Reference Enforced**:
-   - Diagnosed JS module import (`import splashVideo from ...`) that caused Vite to bundle a duplicate hashed asset `dist/assets/splash-xxx.mp4` mismatching `index.html`'s `<link rel="preload" href="/splash.mp4">`.
-   - Updated `SplashScreen.tsx` to reference strictly static public URL `/splash.mp4` (`const videoMp4Src = '/splash.mp4'`).
-   - Confirmed `public/splash.mp4` copies directly to `dist/splash.mp4` (6,215,268 bytes) at root.
+1. **Source Map Protection**:
+   - Explicitly configured `build.sourcemap: false` in `vite.config.ts`.
+   - Audited `dist/` and confirmed zero `.js.map` or `.css.map` files exist.
 
-2. **Vercel & Production CDN Headers**:
-   - Created `vercel.json` defining `Content-Type: video/mp4` and `Accept-Ranges: bytes` headers for `/splash.mp4`.
-   - Configured SPA rewrite exclusions to ensure static video assets are served directly without returning HTML fallback responses.
+2. **Security Headers & Origin-Compatible CSP**:
+   - Added production headers to `vercel.json` and Express `server.ts` (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, `HSTS`).
+   - Defined compatible `Content-Security-Policy` allowing Google Fonts, AniList/Unsplash images, MegaPlay player iframes, Google OAuth, and Render API endpoints.
 
-3. **Automated Verification**:
-   - `npx eslint src/components/splash/SplashScreen.tsx`: PASS (0 errors)
-   - `npm run build`: PASS (`dist/splash.mp4` 6.2MB generated at root in 2.08s)
+3. **Server-Side Rate Limiting & Response Hardening**:
+   - Implemented sliding-window rate limiter in `backend/src/middleware/rateLimit.ts` on sensitive auth routes (`/api/auth/register`, `/api/auth/login`).
+   - Guaranteed production error responses emit generic messages without stack traces or database details.
+
+4. **Runtime Tamper Deterrence & Public Asset Audit**:
+   - Added lightweight, non-destructive security notice logger in `src/utils/security.ts`.
+   - Verified `public/` and `dist/` contain zero secrets or private credentials while preserving `public/splash.mp4`.
+
+5. **Automated Verification**:
+   - `npx eslint`: PASS (0 errors)
+   - `npm run build`: PASS (7.62s)
+   - `npm run build:backend`: PASS (tsc clean)
 
 ## Files Modified
 
-- `src/components/splash/SplashScreen.tsx` — Switched from JS module import to static public URL `/splash.mp4`.
-- `vercel.json` — Added static asset MIME-type headers and rewrite rules.
+- `vite.config.ts` — Disabled source maps (`sourcemap: false`).
+- `vercel.json` — Added HTTP security headers and CSP.
+- `backend/src/middleware/rateLimit.ts` — Created sliding window rate limiter.
+- `backend/src/utils/response.ts` — Added `TOO_MANY_REQUESTS` error code.
+- `backend/src/routes/auth.ts` — Attached `authLimiter` to sensitive routes.
+- `backend/src/server.ts` — Added security headers middleware.
+- `src/utils/security.ts` — Created security notice logger.
+- `src/main.tsx` — Initialized security notice.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
 - `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
 ## Verification Results
 
 - ESLint passed cleanly with 0 warnings/errors.
-- Vite production build succeeded cleanly.
+- Vite frontend build and TypeScript backend build succeeded cleanly.
 
 ## Git State
 
@@ -54,7 +68,8 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Report diagnostic findings, exact fix, and build verification to user.
+Report security hardening assessment to user and await next task directive.
+
 
 
 

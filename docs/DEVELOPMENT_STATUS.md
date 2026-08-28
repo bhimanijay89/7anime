@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Production & Hosted Splash Video Asset Serving Fix Complete
+Master Production Security Hardening & Runtime Tamper Resistance Complete
 
 ## Overall Status
 
-Diagnosed and fixed the hosted/production splash video asset serving issue for `public/splash.mp4`. Identified that `SplashScreen.tsx` was previously using a JavaScript module import (`import splashVideo from '../../public/splash.mp4'`), causing Vite to bundle a hashed module URL (`dist/assets/splash-xxx.mp4`) while `index.html` preloaded `/splash.mp4`, leading to path mismatches and potential 404/MIME-type errors on production hosts. Resolved by enforcing a direct static public URL reference (`const videoMp4Src = '/splash.mp4'`) matching the root `dist/splash.mp4` static asset output. Added `vercel.json` to explicitly configure `Content-Type: video/mp4` and `Accept-Ranges: bytes` headers and exclude static assets from SPA index.html rewrites. All automated checks (`npm run lint` and `npm run build`) passed cleanly.
+Completed comprehensive production security hardening for 7anime across frontend and backend. Disabled production source maps (`build.sourcemap: false`), preserving minified production assets in `dist/` without exposing original TypeScript source files. Added strict HTTP security headers (`nosniff`, `SAMEORIGIN`, `strict-origin-when-cross-origin`, `Permissions-Policy`, `HSTS`) and a fully compatible `Content-Security-Policy` covering Google Fonts, Unsplash/AniList/Kitsu images, MegaPlay player iframes, Google OAuth, and Render API endpoints. Implemented server-side rate limiting on Express authentication routes (`/api/auth/*`). Hardened API response envelopes to ensure production error responses emit generic safe error messages without exposing SQL strings, Prisma errors, stack traces, or filesystem paths. Added a lightweight, non-destructive security notice logger (`src/utils/security.ts`). All automated checks (`npm run lint`, `npm run build`, `npm run build:backend`) passed with 0 errors.
 
 ## Completed Phases
 
@@ -37,7 +37,7 @@ Diagnosed and fixed the hosted/production splash video asset serving issue for `
 - [x] UI/UX Fix — Player Controls Layout & Mobile Scroll Optimization
 - [x] 4-Server Video Provider System Completion
 - [x] Episode Range Horizontal Pagination UI Update
-- [x] Production & Hosted Splash Video Asset Serving Fix
+- [x] Master Production Security Hardening & Runtime Tamper Resistance
 
 ## Current Blockers
 
@@ -54,6 +54,7 @@ Diagnosed and fixed the hosted/production splash video asset serving issue for `
 ## Next Exact Action
 
 Phase complete. Await user instruction / next phase directive.
+
 
 
 

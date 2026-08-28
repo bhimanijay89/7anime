@@ -9,8 +9,11 @@ import {
     sendError,
     sendSuccess,
 } from '../utils/response.js'
+import { createRateLimiter } from '../middleware/rateLimit.js'
 
 const router = Router()
+const authLimiter = createRateLimiter(60 * 1000, 15)
+
 
 const SESSION_DAYS = 30
 
@@ -88,6 +91,7 @@ function isValidEmail(email: string): boolean {
 
 router.post(
     '/auth/register',
+    authLimiter,
     async (req: Request, res: Response) => {
         try {
             const {
@@ -293,6 +297,7 @@ router.post(
 
 router.post(
     '/auth/login',
+    authLimiter,
     async (req: Request, res: Response) => {
         try {
             const {

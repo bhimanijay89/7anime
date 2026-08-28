@@ -16,10 +16,12 @@ export const ErrorCode = {
     NOT_FOUND: 'NOT_FOUND',
     CONFLICT: 'CONFLICT',
     RATE_LIMITED: 'RATE_LIMITED',
+    TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
     INTERNAL_ERROR: 'INTERNAL_ERROR',
     SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
     ANIKOTO_NOT_FOUND: 'ANIKOTO_NOT_FOUND',
 } as const
+
 
 export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode] | string
 
