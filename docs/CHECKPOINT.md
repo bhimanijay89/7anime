@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-DevTools Detector Preservation & Player Integration Complete
+Player DevTools Security Event Chain Debugging & Verification Complete
 
 ## Current Task
 
-Restore original `src/utils/security.ts` detector logic while keeping single-source state broadcasting (`isDevToolsActive()`, `onDevToolsChange()`) for Home and Player decoy integration.
+Diagnose exact runtime behavior, polling latency, Chrome debugger execution freeze, and subscriber notification flow between `security.ts` and `FullPlayerView.tsx`.
 
 ## Status
 
@@ -14,28 +14,26 @@ COMPLETE
 
 ## Completed Work
 
-1. **Detector Preservation**:
-   - Restored original detection thresholds and polling interval in `src/utils/security.ts`.
-   - Maintained single source of truth for `isDevToolsActive()` and `onDevToolsChange()`.
+1. **Event Chain Verification**:
+   - Verified `[SECURITY] state changed: false -> true` and `[SECURITY] notifying listeners: true`.
+   - Verified `[PLAYER] initial isDevToolsActive` and `[PLAYER] onDevToolsChange received = true`.
+   - Verified `[PLAYER] rendering DevToolsDecoyView`.
 
-2. **Player & Home Decoy Integration**:
-   - `FullPlayerView.tsx` and `FoundationPreview.tsx` subscribe to detection state without duplicating security logic.
+2. **Chrome Execution Freeze & Latency Audit**:
+   - Polling interval latency: 1200ms (`setInterval(checkDevTools, 1200)`).
+   - Execution freeze: While Chrome displays "Paused in debugger", JavaScript execution is suspended. Upon script execution resume, `notifyListeners(true)` fires and `<DevToolsDecoyView />` replaces the player.
 
-3. **API & Embed URL Suppression**:
-   - `anilist.ts` and `videoResolver.ts` query `isDevToolsActive()` to block network calls during decoy mode.
+3. **Ignore List Impact**:
+   - Documented that Chrome's Ignore List skips `debugger` statement timing in undocked mode (`isDebuggerActive` = `false`), while docked DevTools mode (`isDocked` = `true`) continues detecting DevTools independently.
 
 4. **Automated Verification**:
-   - `npx eslint`: PASS (0 errors)
-   - `npm run build`: PASS (3.42s)
+   - `npm run lint`: PASS (0 errors)
+   - `npm run build`: PASS (6.99s)
 
 ## Files Modified
 
-- `src/utils/security.ts` — Restored detector structure with listener exports.
-- `src/components/player/FullPlayerView.tsx` — Subscribed to detection state for Player decoy.
-- `src/pages/FoundationPreview.tsx` — Subscribed to detection state for Home decoy.
-- `src/services/anilist.ts` — Added `isDevToolsActive()` request guard.
-- `src/services/videoResolver.ts` — Added `isDevToolsActive()` URL guard.
-- `vite.config.ts` — Configured sourcemap false and esbuild minification.
+- `src/utils/security.ts` — Added diagnostic event chain logs.
+- `src/components/player/FullPlayerView.tsx` — Added subscriber and decoy render logs.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
 - `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
@@ -59,7 +57,22 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Report DevTools Detector Preservation & Player Integration assessment to user and await next task directive.
+Report Player DevTools Security Event Chain Debugging assessment to user and await next task directive.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

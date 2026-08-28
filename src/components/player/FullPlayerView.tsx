@@ -132,13 +132,20 @@ export function FullPlayerView({
     'sub' | 'dub'
   >('sub')
 
+  const [isDescExpanded, setIsDescExpanded] = useState(false)
 
 
 
-  const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
+
+  const [isDecoyActive, setIsDecoyActive] = useState(() => {
+    const initial = isDevToolsActive()
+    console.log('[PLAYER] initial isDevToolsActive =', initial)
+    return initial
+  })
 
   useEffect(() => {
     return onDevToolsChange(detected => {
+      console.log('[PLAYER] onDevToolsChange received =', detected)
       setIsDecoyActive(detected)
     })
   }, [])
@@ -147,13 +154,6 @@ export function FullPlayerView({
     useRef<
       HTMLIFrameElement
     >(null)
-
-  if (isDecoyActive) {
-    if (!import.meta.env.PROD) {
-      console.log('[7anime security] player devToolsDetected: true — pre-initialization decoy active')
-    }
-    return <DevToolsDecoyView />
-  }
 
   /* =======================================================
      SYNC WATCHLIST
@@ -793,6 +793,15 @@ export function FullPlayerView({
     }
 
   /* =======================================================
+     DEVTOOLS DECOY OVERLAY
+  ======================================================== */
+
+  if (isDecoyActive) {
+    console.log('[PLAYER] rendering DevToolsDecoyView')
+    return <DevToolsDecoyView />
+  }
+
+  /* =======================================================
      NO EPISODE STATE
   ======================================================== */
 
@@ -859,6 +868,13 @@ export function FullPlayerView({
       className="cinema-player"
       aria-label="Cinema mode video player"
     >
+      {(anime.cover || anime.poster) && (
+        <div
+          className="cinema-player__bg-art"
+          style={{ backgroundImage: `url(${anime.cover || anime.poster})` }}
+          aria-hidden="true"
+        />
+      )}
       {/* =================================================
           TOP NAVIGATION BAR
       ================================================== */}
@@ -1120,6 +1136,48 @@ export function FullPlayerView({
                 }
               >
                 DUB
+              </button>
+            </div>
+
+            {/* Mobile-only unified playback actions */}
+            <div className="cinema-player__mobile-actions">
+              <label
+                className="cinema-player__autonext"
+                title="Automatically start next episode"
+              >
+                <input
+                  type="checkbox"
+                  checked={autoNext}
+                  onChange={event =>
+                    setAutoNext(
+                      event.target.checked,
+                    )
+                  }
+                />
+                <span>Auto Next</span>
+              </label>
+
+              <button
+                type="button"
+                className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
+                onClick={() => {
+                  setInList(value => !value)
+                  onToggleSave?.(anime)
+                }}
+                aria-label={inList ? 'Remove from List' : 'Add to List'}
+                title={inList ? 'In My List' : 'Add to List'}
+              >
+                {inList ? <Check size={16} /> : <Bookmark size={16} />}
+              </button>
+
+              <button
+                type="button"
+                className="cinema-player__control-btn icon-only"
+                onClick={requestFullscreen}
+                aria-label="Fullscreen player"
+                title="Fullscreen"
+              >
+                <Maximize size={16} />
               </button>
             </div>
           </div>
@@ -1398,11 +1456,21 @@ export function FullPlayerView({
               </div>
 
               {anime.synopsis && (
-                <p className="cinema-player__synopsis">
-                  {
-                    anime.synopsis
-                  }
-                </p>
+                <div className="cinema-player__synopsis-wrap">
+                  <p className={`cinema-player__synopsis ${isDescExpanded ? 'expanded' : ''}`}>
+                    {anime.synopsis}
+                  </p>
+                  {anime.synopsis.length > 100 && (
+                    <button
+                      type="button"
+                      className="cinema-player__synopsis-toggle"
+                      onClick={() => setIsDescExpanded(prev => !prev)}
+                      aria-expanded={isDescExpanded}
+                    >
+                      {isDescExpanded ? 'Show less' : 'View more'}
+                    </button>
+                  )}
+                </div>
               )}
 
               {anime.genres &&

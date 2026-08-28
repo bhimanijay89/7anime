@@ -1,5 +1,5 @@
-import { Check, ChevronLeft, ChevronRight, Play, Search, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Check, Play, Search, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import type { Episode } from '../../types/domain'
 import { Badge } from '../ui/Badge'
 import './player.css'
@@ -15,9 +15,6 @@ export function EpisodeSidebar({
 }) {
   const [query, setQuery] = useState('')
   const [activeRangeIndex, setActiveRangeIndex] = useState(0)
-  const rangeScrollRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
 
   const RANGE_SIZE = 100
 
@@ -246,53 +243,7 @@ export function EpisodeSidebar({
     effectiveRangeIndex
   ])
 
-  /*
-   * ---------------------------------------------------------
-   * Range scroll helpers & state
-   * ---------------------------------------------------------
-   */
 
-  const scrollEpisodeRanges = (direction: 'left' | 'right') => {
-    if (!rangeScrollRef.current) return
-
-    const amount = Math.max(
-      200,
-      rangeScrollRef.current.clientWidth * 0.7
-    )
-
-    rangeScrollRef.current.scrollBy({
-      left: direction === 'right' ? amount : -amount,
-      behavior: 'smooth'
-    })
-  }
-
-  const updateScrollButtons = useCallback(() => {
-    const el = rangeScrollRef.current
-    if (!el) return
-
-    setCanScrollLeft(el.scrollLeft > 1)
-    setCanScrollRight(
-      el.scrollLeft + el.clientWidth < el.scrollWidth - 1
-    )
-  }, [])
-
-  useEffect(() => {
-    const el = rangeScrollRef.current
-    if (!el) return
-
-    updateScrollButtons()
-
-    el.addEventListener('scroll', updateScrollButtons, { passive: true })
-    window.addEventListener('resize', updateScrollButtons)
-
-    const timer = setTimeout(updateScrollButtons, 100)
-
-    return () => {
-      el.removeEventListener('scroll', updateScrollButtons)
-      window.removeEventListener('resize', updateScrollButtons)
-      clearTimeout(timer)
-    }
-  }, [ranges, updateScrollButtons])
 
   /*
    * ---------------------------------------------------------
@@ -384,54 +335,25 @@ export function EpisodeSidebar({
 
       {ranges.length > 0 &&
         !query.trim() && (
-          <div className="player-sidebar__range-container flex w-full min-w-0 max-w-full items-center justify-between gap-1.5 px-3 mb-2.5 flex-nowrap shrink-0 overflow-hidden">
-            <button
-              type="button"
-              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
-              onClick={() => scrollEpisodeRanges('left')}
-              disabled={!canScrollLeft}
-              aria-label="Scroll episode ranges left"
-            >
-              <ChevronLeft size={14} />
-            </button>
-
-            <div
-              ref={rangeScrollRef}
-              className="player-sidebar__ranges flex-1 min-w-0 overflow-x-auto overflow-y-hidden whitespace-nowrap py-0.5"
-              aria-label="Episode ranges"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              <div className="player-sidebar__range-track flex flex-nowrap items-center gap-1.5 w-max min-w-0">
-                {ranges.map((range, index) => (
-                  <button
-                    key={range.label}
-                    type="button"
-                    className={`player-sidebar__range-btn shrink-0 whitespace-nowrap ${index === effectiveRangeIndex
-                      ? 'active'
-                      : ''
-                      }`}
-                    onClick={() =>
-                      handleRangeClick(index)
-                    }
-                    aria-pressed={
-                      index === effectiveRangeIndex
-                    }
-                  >
-                    {range.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="player-sidebar__range-nav-btn hidden md:flex shrink-0 items-center justify-center"
-              onClick={() => scrollEpisodeRanges('right')}
-              disabled={!canScrollRight}
-              aria-label="Scroll episode ranges right"
-            >
-              <ChevronRight size={14} />
-            </button>
+          <div className="player-sidebar__range-container">
+            {ranges.map((range, index) => (
+              <button
+                key={range.label}
+                type="button"
+                className={`player-sidebar__range-btn shrink-0 whitespace-nowrap ${index === effectiveRangeIndex
+                  ? 'active'
+                  : ''
+                  }`}
+                onClick={() =>
+                  handleRangeClick(index)
+                }
+                aria-pressed={
+                  index === effectiveRangeIndex
+                }
+              >
+                {range.label}
+              </button>
+            ))}
           </div>
         )}
 

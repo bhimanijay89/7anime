@@ -13,28 +13,43 @@ let currentDetectedState = false
 let debounceTimeoutId: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<DevToolsListener>()
 
+/**
+ * TEMPORARY DEV OVERRIDE FLAG
+ * Set to true to temporarily disable DevTools decoy activation during testing.
+ * Set to false to restore production security enforcement.
+ */
+const DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = false
+
 export function isDevToolsActive(): boolean {
+  if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) return false
   return currentDetectedState
 }
 
 export function onDevToolsChange(listener: DevToolsListener): () => void {
   listeners.add(listener)
-  listener(currentDetectedState)
+  listener(DISABLE_DEVTOOLS_DETECTION_FOR_TESTING ? false : currentDetectedState)
   return () => {
     listeners.delete(listener)
   }
 }
 
 export function initProductionSecurityNotice(): () => void {
+  if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) {
+    cleanupFn = () => { }
+    return cleanupFn
+  }
+
   if (cleanupFn) return cleanupFn
 
   if (typeof window === 'undefined') {
-    cleanupFn = () => {}
+    cleanupFn = () => { }
     return cleanupFn
   }
 
   function notifyListeners(nextState: boolean) {
     if (nextState === currentDetectedState) return
+
+    console.log(`[SECURITY] state changed: ${currentDetectedState} -> ${nextState}`)
 
     if (nextState) {
       if (debounceTimeoutId) {
@@ -42,12 +57,14 @@ export function initProductionSecurityNotice(): () => void {
         debounceTimeoutId = null
       }
       currentDetectedState = true
+      console.log('[SECURITY] notifying listeners: true')
       listeners.forEach(fn => fn(true))
     } else {
       if (!debounceTimeoutId) {
         debounceTimeoutId = setTimeout(() => {
           currentDetectedState = false
           debounceTimeoutId = null
+          console.log('[SECURITY] notifying listeners: false')
           listeners.forEach(fn => fn(false))
         }, 1000)
       }
@@ -71,13 +88,6 @@ export function initProductionSecurityNotice(): () => void {
     }
 
     const detected = isDocked || isDebuggerActive
-
-    if (!import.meta.env.PROD) {
-      console.log(
-        `[7anime security] devToolsDetected: ${detected}`
-      )
-    }
-
     notifyListeners(detected)
   }
 

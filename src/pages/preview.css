@@ -170,8 +170,28 @@
   }
 
   .home-quick {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+    gap: 0.75rem;
+    padding: var(--space-4);
+  }
+
+  .home-quick > span {
+    font-size: 0.95rem;
+  }
+
+  .home-quick > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .home-quick > div button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    white-space: nowrap;
   }
 
   .home-section-head {

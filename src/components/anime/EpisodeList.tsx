@@ -197,10 +197,6 @@ export function EpisodeList({
         </div>
 
         <div className="episode-section__header-actions">
-          <Badge tone="accent">
-            Season 1
-          </Badge>
-
           {totalPages > 1 && (
             <button
               type="button"

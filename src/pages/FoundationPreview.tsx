@@ -253,6 +253,7 @@ function Home() {
                   ...detail,
                   episode: `EP ${rec.episodeNumber}`,
                   progress: pct,
+                  lastWatchedEpisodeNumber: rec.episodeNumber,
                 }
               } catch {
                 return null
@@ -761,6 +762,43 @@ function Home() {
         setDetailLoading(false)
       }
     }
+
+  /* =========================================================
+     OPEN CONTINUE WATCHING PLAYER AT EXACT EPISODE
+  ========================================================= */
+
+  const openContinueWatchingPlayer = async (anime: Anime) => {
+    setDetailLoading(true)
+    try {
+      const fullAnime = await loadCompleteAnime(anime)
+      setSelectedAnime(fullAnime)
+
+      // Find exact target episode number saved in watch progress
+      const targetEpNum = (anime as Anime & { lastWatchedEpisodeNumber?: number }).lastWatchedEpisodeNumber ||
+        (anime.episode ? parseInt(anime.episode.replace(/\D/g, ''), 10) : undefined)
+
+      let targetEpisode: Episode | undefined
+      const epList = fullAnime.episodesList
+
+      if (targetEpNum && epList && epList.length > 0) {
+        targetEpisode = epList.find(ep => ep.number === targetEpNum)
+      }
+
+      if (!targetEpisode && epList && epList.length > 0) {
+        targetEpisode = epList[0]
+      }
+
+      setSelectedEpisode(targetEpisode)
+      navigateTo('player')
+    } catch (error) {
+      console.error('Failed to open continue watching player:', error)
+      setSelectedAnime(anime)
+      setSelectedEpisode(undefined)
+      navigateTo('player')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
 
 
   /* =========================================================
@@ -1288,7 +1326,7 @@ function Home() {
                       key={`continue-${anime.id}`}
                       isSaved={isSaved(anime.id)}
                       onToggleSave={handleToggleSave}
-                      onSelect={openDetail}
+                      onSelect={openContinueWatchingPlayer}
                     />
                   ))
                 ) : (
