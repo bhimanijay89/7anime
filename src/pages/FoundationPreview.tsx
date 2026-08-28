@@ -62,6 +62,8 @@ import {
 } from '../data/anime'
 
 import { SplashScreen } from '../components/splash/SplashScreen'
+import { onDevToolsChange } from '../utils/security'
+import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
 
 import './preview.css'
 
@@ -119,6 +121,14 @@ function Home() {
   const [homeError, setHomeError] =
     useState<string | null>(null)
 
+  const [isDecoyActive, setIsDecoyActive] = useState(false)
+
+  useEffect(() => {
+    return onDevToolsChange(detected => {
+      setIsDecoyActive(detected)
+    })
+  }, [])
+
   // Auth, Library & Progress State
   const [authUser, setAuthUser] = useState<AuthUser | null>(null)
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -142,6 +152,7 @@ function Home() {
   )
 
   const fetchUserProfile = useCallback(async () => {
+    if (isDecoyActive) return
     try {
       const res = await fetch(`${BACKEND_URL}/api/profile`, {
         headers: getAuthHeaders(),
@@ -176,6 +187,7 @@ function Home() {
   }, [])
 
   const fetchUserLibrary = useCallback(async () => {
+    if (isDecoyActive) return
     try {
       const res = await fetch(`${BACKEND_URL}/api/library`, {
         headers: getAuthHeaders(),
@@ -203,6 +215,7 @@ function Home() {
   }, [])
 
   const fetchUserProgress = useCallback(async () => {
+    if (isDecoyActive) return
     try {
       const res = await fetch(`${BACKEND_URL}/api/progress`, {
         headers: getAuthHeaders(),
@@ -268,6 +281,7 @@ function Home() {
       durationSeconds: number,
       completed?: boolean,
     ) => {
+      if (isDecoyActive) return
       const parsedId = Number(animeId)
       if (!Number.isInteger(parsedId) || parsedId <= 0) return
 
@@ -367,6 +381,14 @@ function Home() {
     setHomeLoading(true)
     setHomeError(null)
 
+    if (isDecoyActive) {
+      setTrendingData(trendingAnime)
+      setTopRatedData(previewAnime)
+      setUpcomingData(previewAnime.filter(a => a.status === 'Upcoming'))
+      setHomeLoading(false)
+      return
+    }
+
     try {
       const [
         trending,
@@ -404,7 +426,7 @@ function Home() {
     } finally {
       setHomeLoading(false)
     }
-  }, [notify])
+  }, [isDecoyActive, notify])
 
   useEffect(() => {
     loadHomeData()
@@ -996,6 +1018,23 @@ function Home() {
   /* =========================================================
      MAIN APPLICATION
   ========================================================= */
+
+  if (isDecoyActive) {
+    return (
+      <div className="preview-app">
+        <DesktopNavbar
+          onSearch={() => setSearch(true)}
+          onMenu={() => setDrawer(true)}
+          onNavigate={navigateTo}
+          onOpenAuthModal={() => setAuthModalOpen(true)}
+          onLogout={handleLogout}
+          authUser={authUser}
+          currentView={currentView}
+        />
+        <DevToolsDecoyView />
+      </div>
+    )
+  }
 
   return (
     <>

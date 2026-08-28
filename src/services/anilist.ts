@@ -5,6 +5,7 @@ import type {
 } from '../types/domain'
 
 import { resolveVideoEmbedUrl } from './videoResolver'
+import { isDevToolsActive } from '../utils/security'
 
 const ANILIST_ENDPOINT =
     'https://graphql.anilist.co'
@@ -453,6 +454,10 @@ async function aniListRequest<T>(
     query: string,
     variables: Record<string, unknown>,
 ): Promise<T> {
+    if (isDevToolsActive()) {
+        throw new Error('DevTools active — network API call suppressed for security decoy mode.')
+    }
+
     let response: Response
 
     try {

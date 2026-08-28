@@ -31,6 +31,8 @@ import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { ShareButton } from '../share/ShareButton'
 import { EpisodeSidebar } from './EpisodeSidebar'
+import { isDevToolsActive, onDevToolsChange } from '../../utils/security'
+import { DevToolsDecoyView } from '../security/DevToolsDecoyView'
 
 import './player.css'
 
@@ -133,10 +135,25 @@ export function FullPlayerView({
 
 
 
+  const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
+
+  useEffect(() => {
+    return onDevToolsChange(detected => {
+      setIsDecoyActive(detected)
+    })
+  }, [])
+
   const iframeRef =
     useRef<
       HTMLIFrameElement
     >(null)
+
+  if (isDecoyActive) {
+    if (!import.meta.env.PROD) {
+      console.log('[7anime security] player devToolsDetected: true — pre-initialization decoy active')
+    }
+    return <DevToolsDecoyView />
+  }
 
   /* =======================================================
      SYNC WATCHLIST
@@ -213,6 +230,8 @@ export function FullPlayerView({
         force = false,
       ) => {
         if (
+          isDecoyActive ||
+          isDevToolsActive() ||
           !anime.id ||
           episodeNumber <= 0
         ) {
@@ -471,7 +490,7 @@ export function FullPlayerView({
   ======================================================== */
 
   useEffect(() => {
-    if (!currentEpisode) {
+    if (isDecoyActive || isDevToolsActive() || !currentEpisode) {
       return
     }
 
@@ -649,16 +668,19 @@ export function FullPlayerView({
      STREAM URL
   ======================================================== */
 
-  const embedUrl =
-    currentEpisode
-      ? resolveVideoEmbedUrl({
-        server,
-        malId: currentEpisode.malId ?? anime.malId,
-        anilistId: anime.id,
-        episodeNumber: currentEpisode.number,
-        language,
-      })
-      : ''
+  const embedUrl = useMemo(() => {
+    if (isDecoyActive || isDevToolsActive() || !currentEpisode) {
+      return ''
+    }
+
+    return resolveVideoEmbedUrl({
+      server,
+      malId: currentEpisode.malId ?? anime.malId,
+      anilistId: anime.id,
+      episodeNumber: currentEpisode.number,
+      language,
+    })
+  }, [isDecoyActive, currentEpisode, server, anime.malId, anime.id, language])
 
   /* =======================================================
      PREVIOUS EPISODE

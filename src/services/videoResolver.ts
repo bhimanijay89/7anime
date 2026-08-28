@@ -35,6 +35,8 @@ export interface ResolveVideoEmbedOptions {
  *
  * There is NO automatic MAL ↔ AniList fallback.
  */
+import { isDevToolsActive } from '../utils/security'
+
 export function resolveVideoEmbedUrl({
     server = 'server1',
     malId,
@@ -42,6 +44,10 @@ export function resolveVideoEmbedUrl({
     episodeNumber,
     language = 'sub',
 }: ResolveVideoEmbedOptions): string {
+    if (isDevToolsActive()) {
+        return ''
+    }
+
     const safeEpisode = Math.max(
         1,
         Math.floor(Number(episodeNumber) || 1),

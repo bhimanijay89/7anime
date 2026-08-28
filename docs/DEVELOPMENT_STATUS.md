@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-7anime API Security Hardening & Session Authorization Complete
+DevTools Detector Preservation & Player Integration Complete
 
 ## Overall Status
 
-Completed end-to-end API security hardening across Express backend services. Enforced session-based `req.user.id` identity across all protected resources (`/api/library`, `/api/progress`, `/api/profile`), mitigating IDOR/BOLA vulnerabilities. Enforced strict input sanitization and prohibited mass assignment of protected Prisma model fields (`id`, `role`, `passwordHash`, `sessionToken`). Applied sliding window rate limiters across all authentication and password recovery endpoints (`/api/auth/*`). Guaranteed production error responses emit generic error payloads omitting internal stack traces, Prisma errors, or database details. All automated checks (`npm run lint`, `npm run build`, `npm run build:backend`) passed cleanly with 0 errors.
+Restored original detection logic in [src/utils/security.ts](file:///E:/7ANIME_CODEX/src/utils/security.ts), preserving standard detection thresholds and single-source state broadcasting (`isDevToolsActive()`, `onDevToolsChange()`). Player ([FullPlayerView.tsx](file:///E:/7ANIME_CODEX/src/components/player/FullPlayerView.tsx)) and Home ([FoundationPreview.tsx](file:///E:/7ANIME_CODEX/src/pages/FoundationPreview.tsx)) subscribe to the single detection authority. Network API queries (`src/services/anilist.ts`) and embed URLs (`src/services/videoResolver.ts`) are guarded during decoy mode. All automated lint (`npx eslint`) and production build (`npm run build`) checks passed cleanly with 0 errors.
 
 ## Completed Phases
 
@@ -39,6 +39,11 @@ Completed end-to-end API security hardening across Express backend services. Enf
 - [x] Episode Range Horizontal Pagination UI Update
 - [x] Master Production Security Hardening & Runtime Tamper Resistance
 - [x] 7anime API Security Hardening & Session Authorization
+- [x] DevTools Decoy Mode & API Suppression Resolution
+- [x] Master DevTools Decoy Mode & Player Protection
+- [x] Player-Only Pre-Initialization DevTools Decoy Mode
+- [x] Production Source Map & Source File Protection
+- [x] DevTools Detector Preservation & Player Integration
 
 ## Current Blockers
 
@@ -55,6 +60,11 @@ Completed end-to-end API security hardening across Express backend services. Enf
 ## Next Exact Action
 
 Phase complete. Await user instruction / next phase directive.
+
+
+
+
+
 
 
 
