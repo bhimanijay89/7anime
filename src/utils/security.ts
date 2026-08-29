@@ -101,10 +101,15 @@ export function initProductionSecurityNotice(): () => void {
   function checkDevTools() {
     const isMobile = isRealMobileDevice()
 
+    if (isMobile) {
+      notifyListeners(false)
+      return
+    }
+
     const widthDelta = Math.abs(window.outerWidth - window.innerWidth)
     const heightDelta = Math.abs(window.outerHeight - window.innerHeight)
 
-    const isDocked = !isMobile && (widthDelta > 160 || heightDelta > 160)
+    const isDocked = widthDelta > 160 || heightDelta > 160
 
     let isDebuggerActive = false
     try {

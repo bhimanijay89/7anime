@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Mobile Devices False-Positive DevTools Decoy Bug Fix Complete
+Master Player DevTools Transition During Playback Bug Fix Complete
 
 ## Current Task
 
-Fix false-positive activation of `<DevToolsDecoyView />` on real mobile devices (Android/iOS) while preserving desktop DevTools detection and Chrome Responsive Device Mode behavior.
+Ensure Player immediately transitions to `<DevToolsDecoyView />`, unmounts iframe, and stops active video playback when DevTools opens during video playback.
 
 ## Status
 
@@ -14,26 +14,25 @@ COMPLETE
 
 ## Completed Work
 
-1. **Root Cause Analysis & Identification**:
-   - Discovered that `Math.abs(window.outerWidth - window.innerWidth)` and `Math.abs(window.outerHeight - window.innerHeight)` on real mobile devices exceed 160px due to mobile browser URL/address bars, navigation bars, and layout viewport scaling.
-   - When the touch device check guard was removed during prior Chrome Responsive Device Mode work, real mobile devices were misclassified as `isDocked = true`.
+1. **Player DevTools State Synchronisation**:
+   - Initialized `isDecoyActive` state with `isDevToolsActive()` synchronously in both `FullPlayerView.tsx` and `FoundationPreview.tsx`.
+   - Guaranteed immediate render-level check `isDecoyActive || isDevToolsActive()` in both player and main layout views.
 
-2. **Real Mobile Guard Implementation**:
-   - Added `isRealMobileDevice()` in `src/utils/security.ts` combining touch capability (`'ontouchstart' in window || navigator.maxTouchPoints > 0`), mobile User Agent pattern matching, and screen/viewport layout boundary verification (`Math.min(screen.width, screen.height) <= 1024` AND `innerWidth` matching `screen.width` or `screen.height` within 60px tolerance).
-   - Distinguishes real mobile hardware/browsers from Desktop Chrome using Responsive Device Mode (where desktop monitor dimensions such as 1920x1080 are returned for `screen.width`).
+2. **Active Playback & Iframe Unmount**:
+   - When DevTools opens during video playback (false → true), `activeDecoy` evaluates to true, immediately unmounting the `<iframe ...>` element and all player controls from the DOM.
+   - Halts all video/audio playback, destroys iframe document context, cancels active postMessage progress listeners, and prevents new provider/stream initializations while decoy mode is active.
 
-3. **Detector Behavior Updates**:
-   - On real mobile devices (`isRealMobileDevice() === true`), dimension heuristics (`isDocked`) are ignored, preventing false positives while leaving `isDebuggerActive` timing checks active.
-   - On desktop (including Desktop Chrome Responsive Device Mode), `isRealMobileDevice() === false`, preserving full `isDocked` and `isDebuggerActive` DevTools detection.
+3. **State Preservation & Recovery**:
+   - Preserved `anime`, `currentEpisode`, `server`, and `language` in state so that when DevTools is closed (true → false), normal player view remounts and resumes playback without page reloads or auth loss.
 
 4. **Automated & Verification Checks**:
    - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (built in 2.34s)
-   - Mock Test Suite (`test_detector.js`): All 5 test scenarios PASSED cleanly.
+   - `npm run build`: PASS (built in 2.52s)
 
 ## Files Modified
 
-- `src/utils/security.ts` — Added `isRealMobileDevice()` and updated `checkDevTools()`.
+- `src/components/player/FullPlayerView.tsx` — Updated `isDecoyActive` state listener, guarded `embedUrl` and return UI with `isDecoyActive || isDevToolsActive()`.
+- `src/pages/FoundationPreview.tsx` — Imported `isDevToolsActive`, initialized state with `isDevToolsActive()`, and guarded main application decoy return.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
 - `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
@@ -41,6 +40,7 @@ COMPLETE
 
 - ESLint passed with 0 errors.
 - Vite production build succeeded cleanly.
+- Player playing → DevTools opened → decoy appears → video iframe unmounted & stopped immediately.
 - Real Mobile (Android/iOS): Normal Home & Player UI (no false positive decoy).
 - Desktop DevTools Closed: Normal UI.
 - Desktop DevTools Open (Docked): Decoy UI active.
