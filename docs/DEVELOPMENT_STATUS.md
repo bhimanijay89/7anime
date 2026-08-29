@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Player DevTools Security Event Chain Debugging & Verification Complete
+Mobile Devices False-Positive DevTools Decoy Bug Fix Complete
 
 ## Overall Status
 
-Diagnosed and verified the runtime event chain (`DETECTOR -> STATE -> SUBSCRIBER -> PLAYER RENDER`) using single source-of-truth detector [security.ts](file:///E:/7ANIME_CODEX/src/utils/security.ts) and [FullPlayerView.tsx](file:///E:/7ANIME_CODEX/src/components/player/FullPlayerView.tsx). Verified detector state transitions, listener notifications, synchronous mount checks, and decoy UI rendering. Documented Chrome's debugger execution pause dynamics and polling latency (1200ms). All automated lint (`npm run lint`) and build (`npm run build`) checks passed cleanly with 0 errors.
+Fixed false-positive DevTools decoy activation on real mobile devices (Android/iOS) by implementing `isRealMobileDevice()` in [security.ts](file:///E:/7ANIME_CODEX/src/utils/security.ts). Mobile devices bypass viewport dimension heuristics while maintaining `isDebuggerActive` timing checks. Desktop environments and Desktop Chrome in Responsive Device Mode retain existing `isDocked` and `isDebuggerActive` DevTools decoy protection. All automated lint (`npm run lint`) and build (`npm run build`) checks passed cleanly with 0 errors.
 
 ## Completed Phases
 
@@ -57,6 +57,7 @@ Diagnosed and verified the runtime event chain (`DETECTOR -> STATE -> SUBSCRIBER
 - [x] Final Player DevTools Decoy Behavior Fix
 - [x] Hard Runtime Gate Player Decoy Integration
 - [x] Player DevTools Security Event Chain Debugging & Verification
+- [x] Mobile Devices False-Positive DevTools Decoy Bug Fix
 
 ## Current Blockers
 
@@ -68,7 +69,7 @@ Diagnosed and verified the runtime event chain (`DETECTOR -> STATE -> SUBSCRIBER
 
 ## Last Updated
 
-2026-08-28
+2026-08-29
 
 ## Next Exact Action
 

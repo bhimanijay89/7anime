@@ -33,6 +33,37 @@ export function onDevToolsChange(listener: DevToolsListener): () => void {
   }
 }
 
+function isRealMobileDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+  const hasTouch =
+    'ontouchstart' in window ||
+    (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 0)
+
+  const isMobileUA =
+    /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    ) ||
+    Boolean(
+      (navigator as unknown as { userAgentData?: { mobile?: boolean } })
+        .userAgentData?.mobile,
+    )
+
+  if (!hasTouch || !isMobileUA) return false
+
+  // Desktop Chrome Responsive Device Mode emulates touch & mobile UA, but screen width/height is desktop display monitor.
+  // On real mobile devices (phones/tablets), innerWidth matches either physical screen width (portrait) or screen height (landscape).
+  const screenW = window.screen.width
+  const screenH = window.screen.height
+  const innerW = window.innerWidth
+
+  const matchesPortrait = Math.abs(screenW - innerW) < 60
+  const matchesLandscape = Math.abs(screenH - innerW) < 60
+  const isMobileScreenSize = Math.min(screenW, screenH) <= 1024
+
+  return (matchesPortrait || matchesLandscape) && isMobileScreenSize
+}
+
 export function initProductionSecurityNotice(): () => void {
   if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) {
     cleanupFn = () => { }
@@ -49,22 +80,18 @@ export function initProductionSecurityNotice(): () => void {
   function notifyListeners(nextState: boolean) {
     if (nextState === currentDetectedState) return
 
-    console.log(`[SECURITY] state changed: ${currentDetectedState} -> ${nextState}`)
-
     if (nextState) {
       if (debounceTimeoutId) {
         clearTimeout(debounceTimeoutId)
         debounceTimeoutId = null
       }
       currentDetectedState = true
-      console.log('[SECURITY] notifying listeners: true')
       listeners.forEach(fn => fn(true))
     } else {
       if (!debounceTimeoutId) {
         debounceTimeoutId = setTimeout(() => {
           currentDetectedState = false
           debounceTimeoutId = null
-          console.log('[SECURITY] notifying listeners: false')
           listeners.forEach(fn => fn(false))
         }, 1000)
       }
@@ -72,10 +99,12 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   function checkDevTools() {
+    const isMobile = isRealMobileDevice()
+
     const widthDelta = Math.abs(window.outerWidth - window.innerWidth)
     const heightDelta = Math.abs(window.outerHeight - window.innerHeight)
 
-    const isDocked = widthDelta > 160 || heightDelta > 160
+    const isDocked = !isMobile && (widthDelta > 160 || heightDelta > 160)
 
     let isDebuggerActive = false
     try {

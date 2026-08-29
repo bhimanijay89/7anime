@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Player DevTools Security Event Chain Debugging & Verification Complete
+Mobile Devices False-Positive DevTools Decoy Bug Fix Complete
 
 ## Current Task
 
-Diagnose exact runtime behavior, polling latency, Chrome debugger execution freeze, and subscriber notification flow between `security.ts` and `FullPlayerView.tsx`.
+Fix false-positive activation of `<DevToolsDecoyView />` on real mobile devices (Android/iOS) while preserving desktop DevTools detection and Chrome Responsive Device Mode behavior.
 
 ## Status
 
@@ -14,26 +14,26 @@ COMPLETE
 
 ## Completed Work
 
-1. **Event Chain Verification**:
-   - Verified `[SECURITY] state changed: false -> true` and `[SECURITY] notifying listeners: true`.
-   - Verified `[PLAYER] initial isDevToolsActive` and `[PLAYER] onDevToolsChange received = true`.
-   - Verified `[PLAYER] rendering DevToolsDecoyView`.
+1. **Root Cause Analysis & Identification**:
+   - Discovered that `Math.abs(window.outerWidth - window.innerWidth)` and `Math.abs(window.outerHeight - window.innerHeight)` on real mobile devices exceed 160px due to mobile browser URL/address bars, navigation bars, and layout viewport scaling.
+   - When the touch device check guard was removed during prior Chrome Responsive Device Mode work, real mobile devices were misclassified as `isDocked = true`.
 
-2. **Chrome Execution Freeze & Latency Audit**:
-   - Polling interval latency: 1200ms (`setInterval(checkDevTools, 1200)`).
-   - Execution freeze: While Chrome displays "Paused in debugger", JavaScript execution is suspended. Upon script execution resume, `notifyListeners(true)` fires and `<DevToolsDecoyView />` replaces the player.
+2. **Real Mobile Guard Implementation**:
+   - Added `isRealMobileDevice()` in `src/utils/security.ts` combining touch capability (`'ontouchstart' in window || navigator.maxTouchPoints > 0`), mobile User Agent pattern matching, and screen/viewport layout boundary verification (`Math.min(screen.width, screen.height) <= 1024` AND `innerWidth` matching `screen.width` or `screen.height` within 60px tolerance).
+   - Distinguishes real mobile hardware/browsers from Desktop Chrome using Responsive Device Mode (where desktop monitor dimensions such as 1920x1080 are returned for `screen.width`).
 
-3. **Ignore List Impact**:
-   - Documented that Chrome's Ignore List skips `debugger` statement timing in undocked mode (`isDebuggerActive` = `false`), while docked DevTools mode (`isDocked` = `true`) continues detecting DevTools independently.
+3. **Detector Behavior Updates**:
+   - On real mobile devices (`isRealMobileDevice() === true`), dimension heuristics (`isDocked`) are ignored, preventing false positives while leaving `isDebuggerActive` timing checks active.
+   - On desktop (including Desktop Chrome Responsive Device Mode), `isRealMobileDevice() === false`, preserving full `isDocked` and `isDebuggerActive` DevTools detection.
 
-4. **Automated Verification**:
+4. **Automated & Verification Checks**:
    - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (6.99s)
+   - `npm run build`: PASS (built in 2.34s)
+   - Mock Test Suite (`test_detector.js`): All 5 test scenarios PASSED cleanly.
 
 ## Files Modified
 
-- `src/utils/security.ts` — Added diagnostic event chain logs.
-- `src/components/player/FullPlayerView.tsx` — Added subscriber and decoy render logs.
+- `src/utils/security.ts` — Added `isRealMobileDevice()` and updated `checkDevTools()`.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
 - `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
@@ -41,6 +41,10 @@ COMPLETE
 
 - ESLint passed with 0 errors.
 - Vite production build succeeded cleanly.
+- Real Mobile (Android/iOS): Normal Home & Player UI (no false positive decoy).
+- Desktop DevTools Closed: Normal UI.
+- Desktop DevTools Open (Docked): Decoy UI active.
+- Desktop DevTools Responsive Device Mode: Decoy UI active.
 
 ## Git State
 
@@ -57,7 +61,7 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Report Player DevTools Security Event Chain Debugging assessment to user and await next task directive.
+Report Mobile Devices False-Positive DevTools Decoy Bug Fix completion to user and await next task directive.
 
 
 
