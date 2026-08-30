@@ -55,14 +55,10 @@ import { AuthModal } from '../components/auth/AuthModal'
 import type { AuthUser } from '../types/auth'
 import type { User } from '../types/domain'
 
-import {
-  guestUser,
-  previewAnime,
-  trendingAnime,
-} from '../data/anime'
+import { guestUser } from '../data/anime'
 
 import { SplashScreen } from '../components/splash/SplashScreen'
-import { onDevToolsChange } from '../utils/security'
+import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
 
 import './preview.css'
@@ -121,7 +117,7 @@ function Home() {
   const [homeError, setHomeError] =
     useState<string | null>(null)
 
-  const [isDecoyActive, setIsDecoyActive] = useState(false)
+  const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
 
   useEffect(() => {
     return onDevToolsChange(detected => {
@@ -382,10 +378,7 @@ function Home() {
     setHomeLoading(true)
     setHomeError(null)
 
-    if (isDecoyActive) {
-      setTrendingData(trendingAnime)
-      setTopRatedData(previewAnime)
-      setUpcomingData(previewAnime.filter(a => a.status === 'Upcoming'))
+    if (isDecoyActive || isDevToolsActive()) {
       setHomeLoading(false)
       return
     }
@@ -402,11 +395,11 @@ function Home() {
           getUpcomingAnime(1, 15),
         ])
 
-      const trendingList = trending.status === 'fulfilled' && trending.value.length > 0 ? trending.value : trendingAnime
-      const popularList = popular.status === 'fulfilled' && popular.value.length > 0 ? popular.value : previewAnime
+      const trendingList = trending.status === 'fulfilled' && trending.value.length > 0 ? trending.value : []
+      const popularList = popular.status === 'fulfilled' && popular.value.length > 0 ? popular.value : []
       const upcomingList = upcoming.status === 'fulfilled' && upcoming.value.length > 0
         ? upcoming.value.map(item => item.anime)
-        : previewAnime.filter(a => a.status === 'Upcoming')
+        : []
 
       setTrendingData(trendingList)
       setTopRatedData(popularList)
@@ -417,13 +410,13 @@ function Home() {
         popular.status === 'rejected' &&
         upcoming.status === 'rejected'
       ) {
-        notify('AniList API is temporarily offline. Showing pre-cached anime feed.', 'info')
+        notify('AniList API is temporarily offline.', 'info')
       }
     } catch (error) {
       console.error('Unexpected error loading home data:', error)
-      setTrendingData(trendingAnime)
-      setTopRatedData(previewAnime)
-      setUpcomingData(previewAnime.filter(a => a.status === 'Upcoming'))
+      setTrendingData([])
+      setTopRatedData([])
+      setUpcomingData([])
     } finally {
       setHomeLoading(false)
     }
@@ -1057,7 +1050,7 @@ function Home() {
      MAIN APPLICATION
   ========================================================= */
 
-  if (isDecoyActive) {
+  if (isDecoyActive || isDevToolsActive()) {
     return (
       <div className="preview-app">
         <DesktopNavbar

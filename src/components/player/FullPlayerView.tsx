@@ -137,15 +137,14 @@ export function FullPlayerView({
 
 
 
-  const [isDecoyActive, setIsDecoyActive] = useState(() => {
-    const initial = isDevToolsActive()
-    console.log('[PLAYER] initial isDevToolsActive =', initial)
-    return initial
-  })
+  const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
 
   useEffect(() => {
     return onDevToolsChange(detected => {
-      console.log('[PLAYER] onDevToolsChange received =', detected)
+      console.log('[7anime player security] DevTools state:', detected)
+      if (detected) {
+        console.log('[7anime player security] Switching active player → decoy')
+      }
       setIsDecoyActive(detected)
     })
   }, [])
@@ -235,6 +234,9 @@ export function FullPlayerView({
           !anime.id ||
           episodeNumber <= 0
         ) {
+          if (isDecoyActive || isDevToolsActive()) {
+            console.log('[7anime player security] Player initialization blocked')
+          }
           return
         }
 
@@ -330,6 +332,7 @@ export function FullPlayerView({
       [
         anime.id,
         onProgressUpdate,
+        isDecoyActive,
       ],
     )
 
@@ -491,6 +494,9 @@ export function FullPlayerView({
 
   useEffect(() => {
     if (isDecoyActive || isDevToolsActive() || !currentEpisode) {
+      if (isDecoyActive || isDevToolsActive()) {
+        console.log('[7anime player security] Player initialization blocked')
+      }
       return
     }
 
@@ -640,6 +646,7 @@ export function FullPlayerView({
     currentEpisode?.duration,
     extractProgressFromMessage,
     saveProgress,
+    isDecoyActive,
   ])
 
   /* =======================================================
@@ -670,6 +677,9 @@ export function FullPlayerView({
 
   const embedUrl = useMemo(() => {
     if (isDecoyActive || isDevToolsActive() || !currentEpisode) {
+      if (isDecoyActive || isDevToolsActive()) {
+        console.log('[7anime player security] Player initialization blocked')
+      }
       return ''
     }
 
@@ -796,8 +806,8 @@ export function FullPlayerView({
      DEVTOOLS DECOY OVERLAY
   ======================================================== */
 
-  if (isDecoyActive) {
-    console.log('[PLAYER] rendering DevToolsDecoyView')
+  if (isDecoyActive || isDevToolsActive()) {
+    console.log('[7anime player security] Player cleanup executed')
     return <DevToolsDecoyView />
   }
 

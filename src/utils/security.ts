@@ -20,14 +20,34 @@ const listeners = new Set<DevToolsListener>()
  */
 const DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = false
 
+function resetSecurityStateForMobile(): void {
+  if (debounceTimeoutId) {
+    clearTimeout(debounceTimeoutId)
+    debounceTimeoutId = null
+  }
+  if (currentDetectedState) {
+    currentDetectedState = false
+    listeners.forEach(fn => fn(false))
+  }
+}
+
 export function isDevToolsActive(): boolean {
   if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) return false
+  if (isRealMobileDevice()) {
+    resetSecurityStateForMobile()
+    return false
+  }
   return currentDetectedState
 }
 
 export function onDevToolsChange(listener: DevToolsListener): () => void {
   listeners.add(listener)
-  listener(DISABLE_DEVTOOLS_DETECTION_FOR_TESTING ? false : currentDetectedState)
+  if (isRealMobileDevice()) {
+    resetSecurityStateForMobile()
+    listener(false)
+  } else {
+    listener(DISABLE_DEVTOOLS_DETECTION_FOR_TESTING ? false : currentDetectedState)
+  }
   return () => {
     listeners.delete(listener)
   }
@@ -35,6 +55,22 @@ export function onDevToolsChange(listener: DevToolsListener): () => void {
 
 function isRealMobileDevice(): boolean {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+  // Desktop OS platforms (Windows, macOS, Linux desktop) must NEVER be classified as real mobile hardware,
+  // even when Chrome DevTools Responsive Device Mode or device emulation is enabled.
+  const platform = navigator.platform || ''
+  const uadPlatform = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform || ''
+
+  const isDesktopOS =
+    /Win32|Win64|Windows|WinCE/i.test(platform) ||
+    /Windows/i.test(uadPlatform) ||
+    /macOS/i.test(uadPlatform) ||
+    (uadPlatform === 'Linux' && !/Android/i.test(navigator.userAgent)) ||
+    (platform === 'MacIntel' && navigator.maxTouchPoints === 0)
+
+  if (isDesktopOS) {
+    return false
+  }
 
   const hasTouch =
     'ontouchstart' in window ||
@@ -51,11 +87,23 @@ function isRealMobileDevice(): boolean {
 
   if (!hasTouch || !isMobileUA) return false
 
-  // Desktop Chrome Responsive Device Mode emulates touch & mobile UA, but screen width/height is desktop display monitor.
-  // On real mobile devices (phones/tablets), innerWidth matches either physical screen width (portrait) or screen height (landscape).
+  // On Desktop Chrome (including DevTools Responsive Device Mode), outerWidth/outerHeight reflects the desktop window size.
+  // On real mobile devices (phones/tablets), outerWidth is either 0 (iOS) or matches innerWidth (Android).
+  const outerW = window.outerWidth
+  const outerH = window.outerHeight
+  const innerW = window.innerWidth
+  const innerH = window.innerHeight
+
+  const isDesktopWindowDelta =
+    (outerW > 0 && Math.abs(outerW - innerW) > 160) ||
+    (outerH > 0 && Math.abs(outerH - innerH) > 160)
+
+  if (isDesktopWindowDelta) {
+    return false
+  }
+
   const screenW = window.screen.width
   const screenH = window.screen.height
-  const innerW = window.innerWidth
 
   const matchesPortrait = Math.abs(screenW - innerW) < 60
   const matchesLandscape = Math.abs(screenH - innerW) < 60
@@ -70,6 +118,10 @@ export function initProductionSecurityNotice(): () => void {
     return cleanupFn
   }
 
+  if (isRealMobileDevice()) {
+    resetSecurityStateForMobile()
+  }
+
   if (cleanupFn) return cleanupFn
 
   if (typeof window === 'undefined') {
@@ -78,6 +130,11 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   function notifyListeners(nextState: boolean) {
+    if (isRealMobileDevice()) {
+      resetSecurityStateForMobile()
+      return
+    }
+
     if (nextState === currentDetectedState) return
 
     if (nextState) {
@@ -99,10 +156,8 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   function checkDevTools() {
-    const isMobile = isRealMobileDevice()
-
-    if (isMobile) {
-      notifyListeners(false)
+    if (isRealMobileDevice()) {
+      resetSecurityStateForMobile()
       return
     }
 
@@ -126,11 +181,13 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   const intervalId = setInterval(checkDevTools, 1200)
+  window.addEventListener('resize', checkDevTools)
 
   checkDevTools()
 
   cleanupFn = () => {
     clearInterval(intervalId)
+    window.removeEventListener('resize', checkDevTools)
     if (debounceTimeoutId) clearTimeout(debounceTimeoutId)
     cleanupFn = null
     notifyListeners(false)

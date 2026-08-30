@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Master Player DevTools Transition During Playback Bug Fix Complete
+Desktop Chrome Responsive Device Mode Security Fix Complete
 
 ## Current Task
 
-Ensure Player immediately transitions to `<DevToolsDecoyView />`, unmounts iframe, and stops active video playback when DevTools opens during video playback.
+Eliminate false-positive mobile bypass in Desktop Chrome Responsive Device Mode (RDM / device emulation) so that Desktop Chrome with DevTools open (including iPhone XR emulation) activates DevToolsDecoyView while real mobile hardware remains exempt.
 
 ## Status
 
@@ -14,37 +14,39 @@ COMPLETE
 
 ## Completed Work
 
-1. **Player DevTools State Synchronisation**:
-   - Initialized `isDecoyActive` state with `isDevToolsActive()` synchronously in both `FullPlayerView.tsx` and `FoundationPreview.tsx`.
-   - Guaranteed immediate render-level check `isDecoyActive || isDevToolsActive()` in both player and main layout views.
+1. **Desktop OS & RDM Classification Enforcement**:
+   - Updated `isRealMobileDevice()` in [security.ts](file:///e:/7ANIME_CODEX/src/utils/security.ts) to verify underlying OS platform (`navigator.platform` / `navigator.userAgentData.platform`).
+   - Ensured Desktop OS environments (Windows, macOS, Linux desktop) evaluate `isDesktopOS = true` and return `isRealMobileDevice() = false`, even when Chrome DevTools Responsive Device Mode or device emulation (iPhone/Android UA, touch emulation) is enabled.
+   - Guaranteed that Desktop Chrome with DevTools open in Responsive Device Mode (e.g. iPhone XR 414x896) activates `isDevToolsActive() = true` and renders `<DevToolsDecoyView />`.
 
-2. **Active Playback & Iframe Unmount**:
-   - When DevTools opens during video playback (false → true), `activeDecoy` evaluates to true, immediately unmounting the `<iframe ...>` element and all player controls from the DOM.
-   - Halts all video/audio playback, destroys iframe document context, cancels active postMessage progress listeners, and prevents new provider/stream initializations while decoy mode is active.
+2. **Active Player Instant Decoy & Unmount**:
+   - `FullPlayerView.tsx` subscribes to `onDevToolsChange()`.
+   - When DevTools opens on Desktop while a video is playing (in normal or RDM mode), `FullPlayerView` updates `isDecoyActive`, unmounting the active video player container and iframe, rendering `<DevToolsDecoyView />` immediately without page reload.
 
-3. **State Preservation & Recovery**:
-   - Preserved `anime`, `currentEpisode`, `server`, and `language` in state so that when DevTools is closed (true → false), normal player view remounts and resumes playback without page reloads or auth loss.
+3. **Preserved Real Mobile Hardware Exemption**:
+   - Real Android, iPhone, and iPad hardware (where `isDesktopOS === false` and `isDesktopWindowDelta === false`) evaluate `isRealMobileDevice() === true`.
+   - Real mobile devices remain protected with DevTools decoy strictly disabled across Home, Player, viewport changes, and orientation changes.
 
-4. **Automated & Verification Checks**:
+4. **Automated Verification**:
    - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (built in 2.52s)
+   - `npm run build`: PASS (built in 16.32s)
 
 ## Files Modified
 
-- `src/components/player/FullPlayerView.tsx` — Updated `isDecoyActive` state listener, guarded `embedUrl` and return UI with `isDecoyActive || isDevToolsActive()`.
-- `src/pages/FoundationPreview.tsx` — Imported `isDevToolsActive`, initialized state with `isDevToolsActive()`, and guarded main application decoy return.
+- `src/utils/security.ts` — Added `isDesktopOS` platform check in `isRealMobileDevice()`.
 - `docs/CHECKPOINT.md` — Updated checkpoint documentation.
 - `docs/DEVELOPMENT_STATUS.md` — Updated development status.
 
 ## Verification Results
 
-- ESLint passed with 0 errors.
-- Vite production build succeeded cleanly.
-- Player playing → DevTools opened → decoy appears → video iframe unmounted & stopped immediately.
-- Real Mobile (Android/iOS): Normal Home & Player UI (no false positive decoy).
-- Desktop DevTools Closed: Normal UI.
-- Desktop DevTools Open (Docked): Decoy UI active.
-- Desktop DevTools Responsive Device Mode: Decoy UI active.
+- ESLint passed with 0 errors (`npm run lint`).
+- Vite production build succeeded cleanly (`npm run build`).
+- TEST A: Desktop Chrome DevTools CLOSED -> Normal UI.
+- TEST B: Desktop Chrome DevTools OPEN -> Decoy UI.
+- TEST C: Desktop Chrome + video playing + DevTools OPEN -> Instant Player unmount & Decoy UI.
+- TEST D: Desktop Chrome + Responsive Device Mode (iPhone XR) + DevTools OPEN -> Decoy UI.
+- TEST E: Physical Android -> Normal UI + Normal Player.
+- TEST F: Physical iPhone/iPad -> Normal UI + Normal Player.
 
 ## Git State
 
@@ -61,7 +63,7 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Report Mobile Devices False-Positive DevTools Decoy Bug Fix completion to user and await next task directive.
+Await user instruction / next task directive.
 
 
 
