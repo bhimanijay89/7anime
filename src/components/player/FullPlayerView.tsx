@@ -141,10 +141,8 @@ export function FullPlayerView({
 
   useEffect(() => {
     return onDevToolsChange(detected => {
-      console.log('[7anime player security] DevTools state:', detected)
-      if (detected) {
-        console.log('[7anime player security] Switching active player → decoy')
-      }
+      console.log(`[PLAYER] security event=${detected}`)
+      console.log(`[PLAYER] isDecoyActive=${detected}`)
       setIsDecoyActive(detected)
     })
   }, [])
@@ -1012,144 +1010,12 @@ export function FullPlayerView({
               SERVERS & AUDIO SELECTOR (BELOW PLAYER)
           ============================================== */}
 
+          {/* ===============================================
+              SERVERS & AUDIO SELECTOR (BELOW PLAYER)
+          ============================================== */}
+
           <div className="cinema-player__servers glass">
-            <div className="cinema-player__server-group">
-              <span className="cinema-player__server-label">
-                SERVER
-              </span>
-
-              <button
-                type="button"
-                className={`cinema-player__server-chip ${server ===
-                    'server1'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setServer(
-                    'server1',
-                  )
-                }
-              >
-                <Sparkles
-                  size={13}
-                />
-
-                <span>
-                  Server 1
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className={`cinema-player__server-chip ${server ===
-                    'server2'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setServer(
-                    'server2',
-                  )
-                }
-              >
-                <Radio
-                  size={13}
-                />
-
-                <span>
-                  Server 2
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className={`cinema-player__server-chip ${server ===
-                    'server3'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setServer(
-                    'server3',
-                  )
-                }
-              >
-                <Sparkles
-                  size={13}
-                />
-
-                <span>
-                  Server 3
-                </span>
-              </button>
-
-              <button
-                type="button"
-                className={`cinema-player__server-chip ${server ===
-                    'server4'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setServer(
-                    'server4',
-                  )
-                }
-              >
-                <Radio
-                  size={13}
-                />
-
-                <span>
-                  Server 4
-                </span>
-              </button>
-            </div>
-
-            {/* =============================================
-                AUDIO SELECTOR
-            ============================================== */}
-
-            <div className="cinema-player__audio-group">
-              <span className="cinema-player__server-label">
-                AUDIO
-              </span>
-
-              <button
-                type="button"
-                className={`cinema-player__lang-chip ${language ===
-                    'sub'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setLanguage(
-                    'sub',
-                  )
-                }
-              >
-                SUB
-              </button>
-
-              <button
-                type="button"
-                className={`cinema-player__lang-chip ${language ===
-                    'dub'
-                    ? 'active'
-                    : ''
-                  }`}
-                onClick={() =>
-                  setLanguage(
-                    'dub',
-                  )
-                }
-              >
-                DUB
-              </button>
-            </div>
-
-            {/* Mobile-only unified playback actions */}
+            {/* Mobile-only unified playback actions (Top Utility Row) */}
             <div className="cinema-player__mobile-actions">
               <label
                 className="cinema-player__autonext"
@@ -1167,28 +1033,170 @@ export function FullPlayerView({
                 <span>Auto Next</span>
               </label>
 
-              <button
-                type="button"
-                className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
-                onClick={() => {
-                  setInList(value => !value)
-                  onToggleSave?.(anime)
-                }}
-                aria-label={inList ? 'Remove from List' : 'Add to List'}
-                title={inList ? 'In My List' : 'Add to List'}
-              >
-                {inList ? <Check size={16} /> : <Bookmark size={16} />}
-              </button>
+              <div className="cinema-player__mobile-utility-btns">
+                <button
+                  type="button"
+                  className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
+                  onClick={() => {
+                    setInList(value => !value)
+                    onToggleSave?.(anime)
+                  }}
+                  aria-label={inList ? 'Remove from List' : 'Add to List'}
+                  title={inList ? 'In My List' : 'Add to List'}
+                >
+                  {inList ? <Check size={16} /> : <Bookmark size={16} />}
+                </button>
 
-              <button
-                type="button"
-                className="cinema-player__control-btn icon-only"
-                onClick={requestFullscreen}
-                aria-label="Fullscreen player"
-                title="Fullscreen"
-              >
-                <Maximize size={16} />
-              </button>
+                <button
+                  type="button"
+                  className="cinema-player__control-btn icon-only"
+                  onClick={requestFullscreen}
+                  aria-label="Fullscreen player"
+                  title="Fullscreen"
+                >
+                  <Maximize size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div className="cinema-player__server-group">
+              <span className="cinema-player__server-label">
+                SERVER
+              </span>
+
+              <div className="cinema-player__server-grid">
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                      'server1'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setServer(
+                      'server1',
+                    )
+                  }
+                >
+                  <Sparkles
+                    size={13}
+                  />
+
+                  <span>
+                    Server 1
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                      'server2'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setServer(
+                      'server2',
+                    )
+                  }
+                >
+                  <Radio
+                    size={13}
+                  />
+
+                  <span>
+                    Server 2
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                      'server3'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setServer(
+                      'server3',
+                    )
+                  }
+                >
+                  <Sparkles
+                    size={13}
+                  />
+
+                  <span>
+                    Server 3
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                      'server4'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setServer(
+                      'server4',
+                    )
+                  }
+                >
+                  <Radio
+                    size={13}
+                  />
+
+                  <span>
+                    Server 4
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* =============================================
+                AUDIO SELECTOR
+            ============================================== */}
+
+            <div className="cinema-player__audio-group">
+              <span className="cinema-player__server-label">
+                AUDIO
+              </span>
+
+              <div className="cinema-player__audio-grid">
+                <button
+                  type="button"
+                  className={`cinema-player__lang-chip ${language ===
+                      'sub'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setLanguage(
+                      'sub',
+                    )
+                  }
+                >
+                  SUB
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__lang-chip ${language ===
+                      'dub'
+                      ? 'active'
+                      : ''
+                    }`}
+                  onClick={() =>
+                    setLanguage(
+                      'dub',
+                    )
+                  }
+                >
+                  DUB
+                </button>
+              </div>
             </div>
           </div>
 

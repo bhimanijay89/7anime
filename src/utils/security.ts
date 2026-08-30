@@ -20,30 +20,62 @@ const listeners = new Set<DevToolsListener>()
  */
 const DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = false
 
-function resetSecurityStateForMobile(): void {
-  if (debounceTimeoutId) {
-    clearTimeout(debounceTimeoutId)
-    debounceTimeoutId = null
+/**
+ * STABLE LIFETIME ENVIRONMENT CLASSIFICATION
+ * Evaluated ONCE per page lifecycle using stable OS and hardware signatures.
+ * Never uses innerWidth/innerHeight, outerWidth/outerHeight, or screen size math,
+ * preventing mobile address-bar shifts, keyboard events, or orientation changes
+ * from triggering state oscillation or false positives.
+ */
+function computeIsRealMobileDevice(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+  const platform = navigator.platform || ''
+  const uadPlatform = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform || ''
+  const ua = navigator.userAgent || ''
+
+  // Desktop OS platforms (Windows, macOS desktop, Linux desktop) must NEVER be classified as real mobile hardware,
+  // even when Chrome DevTools Responsive Device Mode (RDM) or mobile UA emulation is enabled.
+  const isWindowsDesktop = /Win32|Win64|Windows|WinCE/i.test(platform) || /Windows/i.test(uadPlatform)
+  const isMacDesktop = /macOS/i.test(uadPlatform) || (platform === 'MacIntel' && navigator.maxTouchPoints === 0)
+  const isLinuxDesktop = uadPlatform === 'Linux' && !/Android/i.test(ua)
+
+  if (isWindowsDesktop || isMacDesktop || isLinuxDesktop) {
+    return false
   }
-  if (currentDetectedState) {
-    currentDetectedState = false
-    listeners.forEach(fn => fn(false))
-  }
+
+  // Check for physical mobile OS / hardware signatures.
+  const isAndroid = /Android/i.test(ua) || uadPlatform === 'Android' || /Linux arm|Linux aarch/i.test(platform)
+  const isIOS = /iPhone|iPad|iPod/i.test(ua) || /iPhone|iPad|iPod/i.test(platform)
+  const isIPadOSDesktopMode = platform === 'MacIntel' && navigator.maxTouchPoints > 0 && !/Macintosh/i.test(uadPlatform)
+
+  const hasTouch =
+    'ontouchstart' in window ||
+    (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 0)
+
+  if (!hasTouch) return false
+
+  return isAndroid || isIOS || isIPadOSDesktopMode
+}
+
+const IS_REAL_MOBILE = computeIsRealMobileDevice()
+
+console.log(`[SECURITY] environment=${IS_REAL_MOBILE ? 'mobile' : 'desktop'}`)
+console.log(`[SECURITY] isRealMobileDevice=${IS_REAL_MOBILE}`)
+
+export function isRealMobileDevice(): boolean {
+  return IS_REAL_MOBILE
 }
 
 export function isDevToolsActive(): boolean {
+  if (IS_REAL_MOBILE) return false
   if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) return false
-  if (isRealMobileDevice()) {
-    resetSecurityStateForMobile()
-    return false
-  }
   return currentDetectedState
 }
 
 export function onDevToolsChange(listener: DevToolsListener): () => void {
   listeners.add(listener)
-  if (isRealMobileDevice()) {
-    resetSecurityStateForMobile()
+  if (IS_REAL_MOBILE) {
     listener(false)
   } else {
     listener(DISABLE_DEVTOOLS_DETECTION_FOR_TESTING ? false : currentDetectedState)
@@ -53,73 +85,10 @@ export function onDevToolsChange(listener: DevToolsListener): () => void {
   }
 }
 
-function isRealMobileDevice(): boolean {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
-
-  // Desktop OS platforms (Windows, macOS, Linux desktop) must NEVER be classified as real mobile hardware,
-  // even when Chrome DevTools Responsive Device Mode or device emulation is enabled.
-  const platform = navigator.platform || ''
-  const uadPlatform = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform || ''
-
-  const isDesktopOS =
-    /Win32|Win64|Windows|WinCE/i.test(platform) ||
-    /Windows/i.test(uadPlatform) ||
-    /macOS/i.test(uadPlatform) ||
-    (uadPlatform === 'Linux' && !/Android/i.test(navigator.userAgent)) ||
-    (platform === 'MacIntel' && navigator.maxTouchPoints === 0)
-
-  if (isDesktopOS) {
-    return false
-  }
-
-  const hasTouch =
-    'ontouchstart' in window ||
-    (navigator.maxTouchPoints !== undefined && navigator.maxTouchPoints > 0)
-
-  const isMobileUA =
-    /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    ) ||
-    Boolean(
-      (navigator as unknown as { userAgentData?: { mobile?: boolean } })
-        .userAgentData?.mobile,
-    )
-
-  if (!hasTouch || !isMobileUA) return false
-
-  // On Desktop Chrome (including DevTools Responsive Device Mode), outerWidth/outerHeight reflects the desktop window size.
-  // On real mobile devices (phones/tablets), outerWidth is either 0 (iOS) or matches innerWidth (Android).
-  const outerW = window.outerWidth
-  const outerH = window.outerHeight
-  const innerW = window.innerWidth
-  const innerH = window.innerHeight
-
-  const isDesktopWindowDelta =
-    (outerW > 0 && Math.abs(outerW - innerW) > 160) ||
-    (outerH > 0 && Math.abs(outerH - innerH) > 160)
-
-  if (isDesktopWindowDelta) {
-    return false
-  }
-
-  const screenW = window.screen.width
-  const screenH = window.screen.height
-
-  const matchesPortrait = Math.abs(screenW - innerW) < 60
-  const matchesLandscape = Math.abs(screenH - innerW) < 60
-  const isMobileScreenSize = Math.min(screenW, screenH) <= 1024
-
-  return (matchesPortrait || matchesLandscape) && isMobileScreenSize
-}
-
 export function initProductionSecurityNotice(): () => void {
-  if (DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) {
+  if (IS_REAL_MOBILE || DISABLE_DEVTOOLS_DETECTION_FOR_TESTING) {
     cleanupFn = () => { }
     return cleanupFn
-  }
-
-  if (isRealMobileDevice()) {
-    resetSecurityStateForMobile()
   }
 
   if (cleanupFn) return cleanupFn
@@ -130,10 +99,7 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   function notifyListeners(nextState: boolean) {
-    if (isRealMobileDevice()) {
-      resetSecurityStateForMobile()
-      return
-    }
+    if (IS_REAL_MOBILE) return
 
     if (nextState === currentDetectedState) return
 
@@ -142,11 +108,13 @@ export function initProductionSecurityNotice(): () => void {
         clearTimeout(debounceTimeoutId)
         debounceTimeoutId = null
       }
+      console.log(`[SECURITY] state changed: ${currentDetectedState} -> true`)
       currentDetectedState = true
       listeners.forEach(fn => fn(true))
     } else {
       if (!debounceTimeoutId) {
         debounceTimeoutId = setTimeout(() => {
+          console.log(`[SECURITY] state changed: ${currentDetectedState} -> false`)
           currentDetectedState = false
           debounceTimeoutId = null
           listeners.forEach(fn => fn(false))
@@ -156,10 +124,7 @@ export function initProductionSecurityNotice(): () => void {
   }
 
   function checkDevTools() {
-    if (isRealMobileDevice()) {
-      resetSecurityStateForMobile()
-      return
-    }
+    if (IS_REAL_MOBILE) return
 
     const widthDelta = Math.abs(window.outerWidth - window.innerWidth)
     const heightDelta = Math.abs(window.outerHeight - window.innerHeight)
@@ -177,6 +142,7 @@ export function initProductionSecurityNotice(): () => void {
     }
 
     const detected = isDocked || isDebuggerActive
+    console.log(`[SECURITY] checkDevTools=executed isDocked=${isDocked} isDebuggerActive=${isDebuggerActive} currentDetectedState=${currentDetectedState}`)
     notifyListeners(detected)
   }
 
