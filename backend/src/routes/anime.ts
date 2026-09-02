@@ -3,6 +3,10 @@ import { Router } from 'express'
 import {
     getAnimeById,
     getAiringSchedule,
+    getTrendingAnime,
+    getPopularAnime,
+    getUpcomingAnime,
+    searchAnime,
 } from '../services/anilist.js'
 
 import type {
@@ -18,66 +22,6 @@ import {
 
 const router = Router()
 
-/*
- * =========================================================
- * GET /api/anime/schedule
- * =========================================================
- *
- * Query AniList airing schedule data with Redis caching.
- * Optional query parameters:
- *   - start: Unix epoch timestamp in seconds (airingAt_greater)
- *   - end: Unix epoch timestamp in seconds (airingAt_lesser)
- *   - page: page number (default: 1)
- *   - perPage: items per page (default: 50)
- * =========================================================
- */
-
-router.get(
-    '/anime/schedule',
-    async (req, res) => {
-        try {
-            const start = req.query.start ? Number(req.query.start) : undefined
-            const end = req.query.end ? Number(req.query.end) : undefined
-            const page = req.query.page ? Number(req.query.page) : 1
-            const perPage = req.query.perPage ? Number(req.query.perPage) : 50
-
-            const schedules = await getAiringSchedule(start, end, page, perPage)
-
-            return sendSuccess(res, {
-                schedules,
-            })
-        } catch (error) {
-            console.error('[GET /api/anime/schedule]', error)
-            return sendError(
-                res,
-                'Unable to load airing schedule.',
-                ErrorCode.SERVICE_UNAVAILABLE,
-                502,
-            )
-        }
-    },
-)
-
-/*
- * =========================================================
- * Build canonical episode catalogue
- * =========================================================
- *
- * AniList is now the canonical anime source.
- *
- * We no longer use Anikoto to discover episode IDs,
- * episode streams, or episode availability.
- *
- * MegaPlay playback is resolved separately by the frontend
- * using:
- *
- *     AniList ID + Episode Number + Language
- *
- * Therefore the backend only needs to provide a stable
- * episode catalogue based on AniList's episode count.
- * =========================================================
- */
-
 function createEpisodeCatalogue(
     anilistId: number,
     totalEpisodes?: number,
@@ -90,358 +34,191 @@ function createEpisodeCatalogue(
         return []
     }
 
-    const count =
-        Math.floor(totalEpisodes)
+    const count = Math.floor(totalEpisodes)
 
     return Array.from(
-        {
-            length: count,
-        },
+        { length: count },
         (_, index) => {
-            const episodeNumber =
-                index + 1
-
+            const episodeNumber = index + 1
             return {
-                id:
-                    `anilist-${anilistId}-episode-${episodeNumber}`,
-
-                number:
-                    episodeNumber,
-
-                title:
-                    `Episode ${episodeNumber}`,
-
-                japaneseTitle:
-                    undefined,
-
+                id: '' + anilistId + '-' + episodeNumber,
+                number: episodeNumber,
+                title: 'Episode ' + episodeNumber,
                 provider: {
-                    name:
-                        'megaplay',
-
-                    episodeId:
-                        String(
-                            episodeNumber,
-                        ),
-
-                    embedId:
-                        undefined,
+                    name: 'megaplay' as const,
                 },
-
                 streams: {},
-
-                updatedAt:
-                    undefined,
             }
         },
     )
 }
 
-/*
- * =========================================================
- * GET /api/anime/:anilistId
- * =========================================================
- *
- * Canonical flow:
- *
- * AniList ID
- *     ↓
- * AniList metadata
- *     ↓
- * Canonical Anime
- *     ↓
- * Episode catalogue
- *
- * Playback is NOT resolved here.
- *
- * MegaPlay playback is handled by:
- *
- * AniList ID + Episode Number + Language
- * =========================================================
- */
+function mapAniListToUnified(aniListAnime: any): UnifiedAnime {
+    let status: 'Airing' | 'Completed' | 'Upcoming' | 'Unknown' = 'Unknown'
 
-router.get(
-    '/anime/:anilistId',
-    async (req, res) => {
-        try {
-            const anilistId =
-                Number(
-                    req.params.anilistId,
-                )
+    if (aniListAnime.status === 'RELEASING') {
+        status = 'Airing'
+    } else if (aniListAnime.status === 'FINISHED') {
+        status = 'Completed'
+    } else if (aniListAnime.status === 'NOT_YET_RELEASED') {
+        status = 'Upcoming'
+    }
 
-            /*
-             * ------------------------------------------------
-             * 1. Validate AniList ID
-             * ------------------------------------------------
-             */
+    const rating =
+        typeof aniListAnime.averageScore === 'number'
+            ? aniListAnime.averageScore / 10
+            : undefined
 
-            if (
-                !Number.isInteger(
-                    anilistId,
-                ) ||
-                anilistId <= 0
-            ) {
-                return sendError(
-                    res,
-                    'Invalid AniList anime ID.',
-                    ErrorCode.INVALID_ID,
-                    400,
-                )
-            }
+    let totalEpisodes: number | undefined = undefined
 
-            /*
-             * ------------------------------------------------
-             * 2. Get canonical metadata from AniList
-             * ------------------------------------------------
-             */
+    if (
+        typeof aniListAnime.episodes === 'number' &&
+        Number.isFinite(aniListAnime.episodes) &&
+        aniListAnime.episodes > 0
+    ) {
+        totalEpisodes = Math.floor(aniListAnime.episodes)
+    } else if (
+        typeof aniListAnime.nextAiringEpisode?.episode === 'number' &&
+        Number.isFinite(aniListAnime.nextAiringEpisode.episode) &&
+        aniListAnime.nextAiringEpisode.episode > 1
+    ) {
+        totalEpisodes = Math.floor(aniListAnime.nextAiringEpisode.episode - 1)
+    }
 
-            const aniListAnime =
-                await getAnimeById(
-                    anilistId,
-                )
+    const episodes = createEpisodeCatalogue(aniListAnime.id, totalEpisodes)
 
-            /*
-             * ------------------------------------------------
-             * 3. Normalize status
-             * ------------------------------------------------
-             */
+    return {
+        id: String(aniListAnime.id),
+        anilistId: aniListAnime.id,
+        title:
+            aniListAnime.title?.english ??
+            aniListAnime.title?.romaji ??
+            aniListAnime.title?.native ??
+            ('Anime ' + aniListAnime.id),
+        alternativeTitle: aniListAnime.title?.romaji ?? undefined,
+        nativeTitle: aniListAnime.title?.native ?? undefined,
+        poster:
+            aniListAnime.coverImage?.extraLarge ??
+            aniListAnime.coverImage?.large ??
+            aniListAnime.coverImage?.medium ??
+            '',
+        cover:
+            aniListAnime.coverImage?.extraLarge ??
+            aniListAnime.coverImage?.large ??
+            undefined,
+        banner: aniListAnime.bannerImage ?? undefined,
+        malId: aniListAnime.idMal ?? undefined,
+        status,
+        rating,
+        genres: aniListAnime.genres ?? [],
+        type: aniListAnime.format ?? undefined,
+        year: aniListAnime.seasonYear ?? undefined,
+        synopsis: aniListAnime.description ?? undefined,
+        studio: aniListAnime.studios?.nodes?.[0]?.name ?? undefined,
+        source: aniListAnime.source ?? undefined,
+        duration:
+            typeof aniListAnime.duration === 'number'
+                ? (aniListAnime.duration + 'm')
+                : undefined,
+        totalEpisodes,
+        availableEpisodes: episodes.length,
+        subEpisodes: episodes.length,
+        dubEpisodes: episodes.length,
+        episodes,
+    }
+}
 
-            let status:
-                | 'Airing'
-                | 'Completed'
-                | 'Upcoming'
-                | 'Unknown' =
-                'Unknown'
+/* GET /api/anime/schedule */
+router.get('/anime/schedule', async (req, res) => {
+    try {
+        const start = req.query.start ? Number(req.query.start) : undefined
+        const end = req.query.end ? Number(req.query.end) : undefined
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 50
 
-            if (
-                aniListAnime.status ===
-                'RELEASING'
-            ) {
-                status =
-                    'Airing'
-            } else if (
-                aniListAnime.status ===
-                'FINISHED'
-            ) {
-                status =
-                    'Completed'
-            } else if (
-                aniListAnime.status ===
-                'NOT_YET_RELEASED'
-            ) {
-                status =
-                    'Upcoming'
-            }
+        const schedules = await getAiringSchedule(start, end, page, perPage)
+        return sendSuccess(res, { schedules })
+    } catch (error) {
+        console.error('[GET /api/anime/schedule]', error)
+        return sendError(res, 'Unable to load airing schedule.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
 
-            /*
-             * ------------------------------------------------
-             * 4. Normalize rating
-             * ------------------------------------------------
-             */
+/* GET /api/anime/trending */
+router.get('/anime/trending', async (req, res) => {
+    try {
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 20
+        const list = await getTrendingAnime(page, perPage)
+        const animeList = list.map(mapAniListToUnified)
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/trending]', error)
+        return sendError(res, 'Unable to load trending anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
 
-            const rating =
-                typeof aniListAnime.averageScore ===
-                    'number'
-                    ? aniListAnime.averageScore /
-                    10
-                    : undefined
+/* GET /api/anime/popular */
+router.get('/anime/popular', async (req, res) => {
+    try {
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 20
+        const list = await getPopularAnime(page, perPage)
+        const animeList = list.map(mapAniListToUnified)
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/popular]', error)
+        return sendError(res, 'Unable to load popular anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
 
-            /*
-             * ------------------------------------------------
-             * 5. Resolve episode count from AniList
-             * ------------------------------------------------
-             */
+/* GET /api/anime/upcoming */
+router.get('/anime/upcoming', async (req, res) => {
+    try {
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 20
+        const list = await getUpcomingAnime(page, perPage)
+        const animeList = list.map(mapAniListToUnified)
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/upcoming]', error)
+        return sendError(res, 'Unable to load upcoming anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
 
-            const totalEpisodes =
-                typeof aniListAnime.episodes ===
-                    'number' &&
-                    Number.isFinite(
-                        aniListAnime.episodes,
-                    ) &&
-                    aniListAnime.episodes > 0
-                    ? Math.floor(
-                        aniListAnime.episodes,
-                    )
-                    : undefined
-
-            /*
-             * ------------------------------------------------
-             * 6. Build canonical episode catalogue
-             * ------------------------------------------------
-             *
-             * No Anikoto data is used here.
-             *
-             * Each episode is identified by:
-             *
-             *     AniList ID + episode number
-             *
-             * MegaPlay playback is resolved separately.
-             * ------------------------------------------------
-             */
-
-            const episodes:
-                UnifiedEpisode[] =
-                createEpisodeCatalogue(
-                    anilistId,
-                    totalEpisodes,
-                )
-
-            /*
-             * ------------------------------------------------
-             * 7. Build unified anime
-             * ------------------------------------------------
-             */
-
-            const anime:
-                UnifiedAnime =
-            {
-                id:
-                    String(
-                        aniListAnime.id,
-                    ),
-
-                anilistId:
-                    aniListAnime.id,
-
-                title:
-                    aniListAnime
-                        .title
-                        .english ??
-                    aniListAnime
-                        .title
-                        .romaji ??
-                    aniListAnime
-                        .title
-                        .native ??
-                    `Anime ${aniListAnime.id}`,
-
-                alternativeTitle:
-                    aniListAnime
-                        .title
-                        .romaji ??
-                    undefined,
-
-                nativeTitle:
-                    aniListAnime
-                        .title
-                        .native ??
-                    undefined,
-
-                poster:
-                    aniListAnime
-                        .coverImage
-                        ?.extraLarge ??
-                    aniListAnime
-                        .coverImage
-                        ?.large ??
-                    aniListAnime
-                        .coverImage
-                        ?.medium ??
-                    '',
-
-                cover:
-                    aniListAnime
-                        .coverImage
-                        ?.extraLarge ??
-                    aniListAnime
-                        .coverImage
-                        ?.large ??
-                    undefined,
-
-                banner:
-                    aniListAnime
-                        .bannerImage ??
-                    undefined,
-
-                malId:
-                    aniListAnime.idMal ??
-                    undefined,
-
-                status,
-
-                rating,
-
-                genres:
-                    aniListAnime.genres ??
-                    [],
-
-                type:
-                    aniListAnime.format ??
-                    undefined,
-
-                year:
-                    aniListAnime.seasonYear ??
-                    undefined,
-
-                synopsis:
-                    aniListAnime.description ??
-                    undefined,
-
-                studio:
-                    aniListAnime
-                        .studios
-                        ?.nodes?.[0]
-                        ?.name ??
-                    undefined,
-
-                source:
-                    aniListAnime.source ??
-                    undefined,
-
-                duration:
-                    typeof aniListAnime.duration ===
-                        'number'
-                        ? `${aniListAnime.duration}m`
-                        : undefined,
-
-                totalEpisodes,
-
-                availableEpisodes:
-                    episodes.length,
-
-                /*
-                 * AniList is the canonical source.
-                 *
-                 * We do not fabricate separate dub
-                 * availability from AniList metadata.
-                 */
-                subEpisodes:
-                    episodes.length,
-
-                dubEpisodes:
-                    episodes.length,
-
-                episodes,
-            }
-
-            /*
-             * ------------------------------------------------
-             * 8. Return standardized Phase 3 envelope
-             * ------------------------------------------------
-             */
-
-            const isCached = Boolean((aniListAnime as unknown as Record<string, unknown>)._cached)
-
-            return sendSuccess(
-                res,
-                anime,
-                {
-                    cached: isCached,
-                },
-            )
-        } catch (error) {
-            console.error(
-                '[GET /api/anime/:anilistId]',
-                error,
-            )
-
-            return sendError(
-                res,
-                'Unable to load anime data.',
-                ErrorCode.SERVICE_UNAVAILABLE,
-                502,
-            )
+/* GET /api/anime/search */
+router.get('/anime/search', async (req, res) => {
+    try {
+        const query = String(req.query.query || req.query.q || req.query.search || '')
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 20
+        if (!query.trim()) {
+            return sendSuccess(res, [])
         }
-    },
-)
+        const list = await searchAnime(query, page, perPage)
+        const animeList = list.map(mapAniListToUnified)
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/search]', error)
+        return sendError(res, 'Unable to search anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
+/* GET /api/anime/:anilistId */
+router.get('/anime/:anilistId', async (req, res) => {
+    try {
+        const anilistId = Number(req.params.anilistId)
+        if (!Number.isInteger(anilistId) || anilistId <= 0) {
+            return sendError(res, 'Invalid AniList anime ID.', ErrorCode.INVALID_ID, 400)
+        }
+        const aniListAnime = await getAnimeById(anilistId)
+        const anime = mapAniListToUnified(aniListAnime)
+        const isCached = Boolean((aniListAnime as unknown as Record<string, unknown>)._cached)
+        return sendSuccess(res, anime, { cached: isCached })
+    } catch (error) {
+        console.error('[GET /api/anime/:anilistId]', error)
+        return sendError(res, 'Unable to load anime data.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
 
 export default router
