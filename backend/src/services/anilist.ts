@@ -267,7 +267,7 @@ const UPCOMING_QUERY = `
             media(
                 type: ANIME
                 status: NOT_YET_RELEASED
-                sort: START_DATE_ASC
+                sort: POPULARITY_DESC
             ) {
                 id
                 idMal
