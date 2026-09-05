@@ -815,6 +815,16 @@ export async function getAiringSchedule(
     const safePage = Math.max(1, Math.floor(page))
     const safePerPage = Math.min(100, Math.max(1, Math.floor(perPage)))
 
+    if (typeof airingAtGreater !== 'number' || !Number.isFinite(airingAtGreater)) {
+        const now = Math.floor(Date.now() / 1000)
+        airingAtGreater = now - (3 * 86400)
+    }
+
+    if (typeof airingAtLesser !== 'number' || !Number.isFinite(airingAtLesser)) {
+        const now = Math.floor(Date.now() / 1000)
+        airingAtLesser = now + (7 * 86400)
+    }
+
     const cacheKey = `anime:schedule:${airingAtGreater || 0}:${airingAtLesser || 0}:${safePage}:${safePerPage}`
     const cached = await cache.get<AniListAiringScheduleItem[]>(cacheKey)
     if (cached) {
