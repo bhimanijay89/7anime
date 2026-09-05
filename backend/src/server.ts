@@ -1,3 +1,4 @@
+import { startCacheWarmer, getCacheHealthDiagnostics } from './services/warmer.js'
 import 'dotenv/config'
 
 import cors from 'cors'
@@ -204,6 +205,8 @@ app.get(
         const redisStatus =
             await getRedisStatus()
 
+        const cacheDiagnostics = getCacheHealthDiagnostics()
+
         return sendSuccess(
             res,
             {
@@ -221,6 +224,8 @@ app.get(
 
                 redis:
                     redisStatus,
+
+                cacheDiagnostics,
             },
         )
     },
@@ -441,6 +446,8 @@ app.listen(
         console.log(
             'Status: READY',
         )
+
+        startCacheWarmer()
 
         console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',

@@ -337,6 +337,41 @@ class AniListError extends Error {
     }
 }
 
+
+let cooldownUntil = 0
+let consecutiveFailures = 0
+const MAX_FAILURES_BEFORE_COOLDOWN = 3
+const COOLDOWN_DURATION_MS = 60_000
+
+export function isCooldownActive(): boolean {
+    return Date.now() < cooldownUntil
+}
+
+export function getCooldownRemainingMs(): number {
+    return Math.max(0, cooldownUntil - Date.now())
+}
+
+function recordUpstreamSuccess() {
+    if (consecutiveFailures > 0 || cooldownUntil > 0) {
+        console.log('[7anime-api] ANILIST_COOLDOWN_CLOSED Upstream request succeeded')
+    }
+    consecutiveFailures = 0
+    cooldownUntil = 0
+}
+
+function recordUpstreamFailure(status?: number) {
+    if (status === 403 || status === 429) {
+        cooldownUntil = Date.now() + COOLDOWN_DURATION_MS
+        console.warn(`[7anime-api] ANILIST_COOLDOWN_OPEN durationMs=${COOLDOWN_DURATION_MS} status=${status}`)
+        return
+    }
+
+    consecutiveFailures++
+    if (consecutiveFailures >= MAX_FAILURES_BEFORE_COOLDOWN) {
+        cooldownUntil = Date.now() + COOLDOWN_DURATION_MS
+        console.warn(`[7anime-api] ANILIST_COOLDOWN_OPEN durationMs=${COOLDOWN_DURATION_MS} failures=${consecutiveFailures}`)
+    }
+}
 async function aniListRequest<T>(
     query: string,
     variables: Record<
@@ -344,6 +379,14 @@ async function aniListRequest<T>(
         unknown
     > = {},
 ): Promise<T> {
+    if (isCooldownActive()) {
+        console.warn(`[7anime-api] ANILIST_COOLDOWN_ACTIVE remainingMs=${getCooldownRemainingMs()}`)
+        throw new AniListError(
+            'Upstream AniList service is in cooldown protection.',
+            502,
+            'COOLDOWN_ACTIVE'
+        )
+    }
     const controller =
         new AbortController()
 
@@ -437,6 +480,7 @@ async function aniListRequest<T>(
                     'API_UNAVAILABLE'
             }
 
+            recordUpstreamFailure(response.status)
             throw new AniListError(
                 message,
                 response.status,
@@ -478,6 +522,7 @@ async function aniListRequest<T>(
             )
         }
 
+        recordUpstreamSuccess()
         return payload.data
     } catch (error) {
         if (
@@ -756,56 +801,121 @@ export async function getUpcomingAnime(
     )
 }
 
+const LIST_STALE_CACHE_TTL = 86400 // 24 hours
+const pendingListRequests = new Map<string, Promise<AniListAnime[]>>()
+
 async function getPageAnime(
     query: string,
     categoryKey: string,
     page: number,
     perPage: number,
 ): Promise<AniListAnime[]> {
-    const safePage =
-        Math.max(
-            1,
-            Math.floor(page),
-        )
+    const safePage = Math.max(1, Math.floor(page))
+    const safePerPage = Math.min(50, Math.max(1, Math.floor(perPage)))
 
-    const safePerPage =
-        Math.min(
-            50,
-            Math.max(
-                1,
-                Math.floor(
-                    perPage,
-                ),
-            ),
-        )
+    const freshCacheKey = `anime:list:${categoryKey}:${safePage}:${safePerPage}`
+    const staleCacheKey = `anime:list:stale:${categoryKey}:${safePage}:${safePerPage}`
+    const requestKey = `${categoryKey}:${safePage}:${safePerPage}`
 
-    const cacheKey = `anime:list:${categoryKey}:${safePage}:${safePerPage}`
-    const cachedList = await cache.get<AniListAnime[]>(cacheKey)
-    if (cachedList) {
-        return cachedList
+    // 1. Check Fresh Redis Cache
+    const freshCached = await cache.get<AniListAnime[]>(freshCacheKey)
+    if (freshCached && freshCached.length > 0) {
+        console.log(`[7anime-api] LIST_CACHE_FRESH_HIT key="${freshCacheKey}" items=${freshCached.length}`)
+        return freshCached
     }
 
-    const data =
-        await aniListRequest<{
-            Page: {
-                media:
-                AniListAnime[]
+    console.log(`[7anime-api] LIST_CACHE_MISS key="${freshCacheKey}"`)
+
+    // 2. Check In-Flight Request Deduplication Map
+    const existingPromise = pendingListRequests.get(requestKey)
+    if (existingPromise) {
+        console.log(`[7anime-api] LIST_INFLIGHT_JOIN key="${requestKey}"`)
+        return existingPromise
+    }
+
+    // 3. Create fresh AniList fetch promise with single retry & stale fallback
+    console.log(`[7anime-api] LIST_INFLIGHT_START key="${requestKey}"`)
+    const fetchPromise = (async () => {
+        try {
+            console.log(`[7anime-api] LIST_UPSTREAM_START key="${requestKey}"`)
+            let data: { Page: { media: AniListAnime[] } } | null = null
+            let lastError: unknown = null
+
+            // Attempt 1: Upstream AniList request
+            try {
+                data = await aniListRequest<{
+                    Page: {
+                        media: AniListAnime[]
+                    }
+                }>(query, {
+                    page: safePage,
+                    perPage: safePerPage,
+                })
+            } catch (err) {
+                lastError = err
+                console.warn(
+                    `[7anime-api] LIST_UPSTREAM_RETRY key="${requestKey}" error=`,
+                    err instanceof Error ? err.message : err,
+                )
+
+                // Single bounded retry with short delay
+                await new Promise((resolve) => setTimeout(resolve, 500))
+
+                try {
+                    data = await aniListRequest<{
+                        Page: {
+                            media: AniListAnime[]
+                        }
+                    }>(query, {
+                        page: safePage,
+                        perPage: safePerPage,
+                    })
+                    lastError = null
+                } catch (retryErr) {
+                    lastError = retryErr
+                    console.error(
+                        `[7anime-api] LIST_UPSTREAM_FAILURE key="${requestKey}" error=`,
+                        retryErr instanceof Error ? retryErr.message : retryErr,
+                    )
+                }
             }
-        }>(
-            query,
-            {
-                page: safePage,
-                perPage:
-                    safePerPage,
-            },
-        )
 
-    const results = data.Page.media || []
-    if (results.length > 0) {
-        void cache.set(cacheKey, results, LIST_CACHE_TTL)
-    }
+            const results = data?.Page?.media || []
 
-    return results
+            if (data && !lastError && results.length > 0) {
+                console.log(`[7anime-api] LIST_UPSTREAM_SUCCESS key="${requestKey}" items=${results.length}`)
+                // Save payload to Fresh Cache (1h) and Stale Fallback Cache (24h)
+                void cache.set(freshCacheKey, results, LIST_CACHE_TTL)
+                void cache.set(staleCacheKey, results, LIST_STALE_CACHE_TTL)
+                return results
+            }
+
+            // Upstream failed or returned empty: Attempt Stale Fallback Cache
+            console.log(`[7anime-api] Attempting stale list fallback for key="${staleCacheKey}"`)
+            const staleCached = await cache.get<AniListAnime[]>(staleCacheKey)
+            if (staleCached && staleCached.length > 0) {
+                console.log(`[7anime-api] LIST_STALE_HIT key="${staleCacheKey}" items=${staleCached.length}`)
+                return staleCached
+            }
+
+            console.error(`[7anime-api] LIST_STALE_MISS key="${staleCacheKey}" - No fallback available`)
+            if (lastError instanceof Error) {
+                throw lastError
+            }
+
+            throw new AniListError(
+                `Unable to fetch ${categoryKey} anime from AniList and no stale fallback available.`,
+                502,
+                'SERVICE_UNAVAILABLE',
+            )
+        } finally {
+            pendingListRequests.delete(requestKey)
+            console.log(`[7anime-api] LIST_INFLIGHT_COMPLETE key="${requestKey}"`)
+        }
+    })()
+
+    pendingListRequests.set(requestKey, fetchPromise)
+    return fetchPromise
 }
 
 const SCHEDULE_QUERY = `
