@@ -3,6 +3,8 @@ import prisma from '../db/client.js'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth.js'
 import { ErrorCode, sendError, sendSuccess } from '../utils/response.js'
 import { recordUserActivity } from '../services/gamification.js'
+import { getAnimeById } from '../services/anilist.js'
+import { mapAniListToUnified } from './anime.js'
 
 const router = Router()
 
@@ -36,7 +38,28 @@ router.get(
         return true
       })
 
-      return sendSuccess(res, { progress })
+      // Hydrate each progress entry with anime details to eliminate client N+1 queries.
+      // Handled in parallel with safe try-catch so progress records never fail if upstream is down.
+      const hydratedProgress = await Promise.all(
+        progress.map(async (entry) => {
+          try {
+            const aniListAnime = await getAnimeById(entry.anilistId)
+            const anime = mapAniListToUnified(aniListAnime)
+            return {
+              ...entry,
+              anime,
+            }
+          } catch (err) {
+            console.warn(`[progress] Failed to hydrate anime ${entry.anilistId}:`, err)
+            return {
+              ...entry,
+              anime: null,
+            }
+          }
+        })
+      )
+
+      return sendSuccess(res, { progress: hydratedProgress })
     } catch (error) {
       console.error('[progress] Fetch error:', error)
       return sendError(

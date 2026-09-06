@@ -53,7 +53,7 @@ function createEpisodeCatalogue(
     )
 }
 
-function mapAniListToUnified(aniListAnime: any): UnifiedAnime {
+export function mapAniListToUnified(aniListAnime: any): UnifiedAnime {
     let status: 'Airing' | 'Completed' | 'Upcoming' | 'Unknown' = 'Unknown'
 
     if (aniListAnime.status === 'RELEASING') {
