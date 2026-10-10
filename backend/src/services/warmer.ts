@@ -1,5 +1,6 @@
 import { cache } from '../redis/cache.js'
 import {
+    getCurrentWeekDateRange,
     getAiringSchedule,
     getTrendingAnime,
     getPopularAnime,
@@ -38,9 +39,7 @@ let warmerTimer: NodeJS.Timeout | null = null
 let isWarmingCycleRunning = false
 
 export async function warmSchedule(): Promise<void> {
-    const now = Math.floor(Date.now() / 1000)
-    const airingAtGreater = now - (3 * 86400)
-    const airingAtLesser = now + (7 * 86400)
+    const { startOfWeek: airingAtGreater, endOfWeek: airingAtLesser } = getCurrentWeekDateRange()
     const page = 1
     const perPage = 50
 

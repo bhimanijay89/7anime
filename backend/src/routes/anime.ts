@@ -10,6 +10,7 @@ import {
 } from '../services/anilist.js'
 
 import type {
+    AniListAnime,
     UnifiedAnime,
     UnifiedEpisode,
 } from '../types.js'
@@ -53,7 +54,7 @@ function createEpisodeCatalogue(
     )
 }
 
-export function mapAniListToUnified(aniListAnime: any): UnifiedAnime {
+export function mapAniListToUnified(aniListAnime: AniListAnime): UnifiedAnime {
     let status: 'Airing' | 'Completed' | 'Upcoming' | 'Unknown' = 'Unknown'
 
     if (aniListAnime.status === 'RELEASING') {

@@ -110,7 +110,7 @@ export function FullPlayerView({
     server,
     setServer,
   ] = useState<
-    'server1' | 'server2' | 'server3' | 'server4' | string
+    'server1' | 'server2' | string
   >('server1')
 
   const [
@@ -1106,50 +1106,6 @@ export function FullPlayerView({
 
                   <span>
                     Server 2
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                      'server3'
-                      ? 'active'
-                      : ''
-                    }`}
-                  onClick={() =>
-                    setServer(
-                      'server3',
-                    )
-                  }
-                >
-                  <Sparkles
-                    size={13}
-                  />
-
-                  <span>
-                    Server 3
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                      'server4'
-                      ? 'active'
-                      : ''
-                    }`}
-                  onClick={() =>
-                    setServer(
-                      'server4',
-                    )
-                  }
-                >
-                  <Radio
-                    size={13}
-                  />
-
-                  <span>
-                    Server 4
                   </span>
                 </button>
               </div>

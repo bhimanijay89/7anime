@@ -2,22 +2,16 @@
    7ANIME — VIDEO RESOLVER SERVICE
    =========================================================
 
-   SERVER 1 — ani.megaplay.su + AniList ID
-     https://ani.megaplay.su/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}
-
-   SERVER 2 — megaplay.buzz + AniList ID
+   SERVER 1 — megaplay.buzz + AniList ID
      https://megaplay.buzz/stream/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}
 
-   SERVER 3 — ani.megaplay.su + MAL ID
-     https://ani.megaplay.su/mal/{MAL_ID}/{EPISODE}/{sub|dub}
-
-   SERVER 4 — megaplay.buzz + MAL ID
+   SERVER 2 — megaplay.buzz + MAL ID
      https://megaplay.buzz/stream/mal/{MAL_ID}/{EPISODE}/{sub|dub}
 
    ========================================================= */
 
 export interface ResolveVideoEmbedOptions {
-    server?: 'server1' | 'server2' | 'server3' | 'server4' | string
+    server?: 'server1' | 'server2' | string
     malId?: number | string | null
     anilistId: number | string
     episodeNumber: number
@@ -30,8 +24,10 @@ export interface ResolveVideoEmbedOptions {
  * No intermediate JSON request is performed.
  *
  * Server selection explicitly determines:
- * - Provider
- * - ID type
+ * - Provider: megaplay.buzz
+ * - ID type:
+ *     server1 -> AniList ID
+ *     server2 -> MAL ID
  *
  * There is NO automatic MAL ↔ AniList fallback.
  */
@@ -73,44 +69,20 @@ export function resolveVideoEmbedUrl({
     /*
      * ---------------------------------------------------------
      * SERVER 1
-     * ani.megaplay.su + AniList ID
-     * ---------------------------------------------------------
-     */
-    if (server === 'server1') {
-        return `https://ani.megaplay.su/ani/${safeAniId}/${safeEpisode}/${safeLang}?color=%237c5cfc`
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * SERVER 2
      * megaplay.buzz + AniList ID
      * ---------------------------------------------------------
      */
-    if (server === 'server2') {
+    if (server === 'server1') {
         return `https://megaplay.buzz/stream/ani/${safeAniId}/${safeEpisode}/${safeLang}`
     }
 
     /*
      * ---------------------------------------------------------
-     * SERVER 3
-     * ani.megaplay.su + MAL ID
-     * ---------------------------------------------------------
-     */
-    if (server === 'server3') {
-        if (!hasValidMalId) {
-            return ''
-        }
-
-        return `https://ani.megaplay.su/mal/${parsedMalId}/${safeEpisode}/${safeLang}?color=%237c5cfc`
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * SERVER 4
+     * SERVER 2 (also supports legacy server4 alias)
      * megaplay.buzz + MAL ID
      * ---------------------------------------------------------
      */
-    if (server === 'server4') {
+    if (server === 'server2' || server === 'server4') {
         if (!hasValidMalId) {
             return ''
         }

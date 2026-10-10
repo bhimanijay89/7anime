@@ -56,8 +56,6 @@ import type { AuthUser } from '../types/auth'
 import type { User } from '../types/domain'
 
 import { guestUser } from '../data/anime'
-
-import { SplashScreen } from '../components/splash/SplashScreen'
 import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
 
@@ -1758,13 +1756,8 @@ function Home() {
 ========================================================= */
 
 export function FoundationPreview() {
-  const [showSplash, setShowSplash] = useState(true)
-
   return (
     <ToastProvider>
-      {showSplash && (
-        <SplashScreen onComplete={() => setShowSplash(false)} />
-      )}
       <Home />
     </ToastProvider>
   )

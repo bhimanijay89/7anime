@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Mobile Player Header Title Overflow Fix Complete
+Splash Screen Removal & Server Streamlining Complete
 
 ## Current Task
 
-Fix horizontal title overflow in the mobile player header container on narrow screens (320px - 480px) for long anime titles (e.g., "BLEACH: Thousand-Year Blood War").
+Remove the initial splash screen and eliminate unreliable `ani.megaplay.su` servers across the video resolver and player UI.
 
 ## Status
 
@@ -14,51 +14,53 @@ COMPLETE
 
 ## Completed Work
 
-1. **Header Container & Flex Constraints (Mobile Only)**:
-   - Updated `.cinema-player__topbar` under `@media (max-width: 768px)` in [player.css](file:///e:/7ANIME_CODEX/src/components/player/player.css) to set `flex-wrap: nowrap; align-items: center; min-width: 0;`.
-   - Set `.cinema-player__title-group` and `.cinema-player__title-meta` to `flex: 1; min-width: 0;` ensuring flex children properly shrink to available header bounds next to the Back button.
+1. **Splash Screen Removal**:
+   - Removed `SplashScreen` import and `showSplash` conditional rendering from [FoundationPreview.tsx](file:///e:/7ANIME_CODEX/src/pages/FoundationPreview.tsx), enabling the app to load `<Home />` directly.
+   - Removed `/splash.mp4` video preload from [index.html](file:///e:/7ANIME_CODEX/index.html).
+   - Cleaned up `/splash.mp4` cache headers and rewrite exclusion in [vercel.json](file:///e:/7ANIME_CODEX/vercel.json).
 
-2. **Anime Title Overflow & 2-Line Clamp**:
-   - Styled `.cinema-player__title-meta h2` under `@media (max-width: 768px)` with:
-     ```css
-     max-width: 100%;
-     font-size: 0.95rem;
-     line-height: 1.25;
-     white-space: normal;
-     word-break: break-word;
-     overflow: hidden;
-     text-overflow: ellipsis;
-     display: -webkit-box;
-     -webkit-line-clamp: 2;
-     -webkit-box-orient: vertical;
-     ```
-   - Long anime titles wrap cleanly across up to 2 lines without expanding header height excessively or spilling outside the glass container box.
+2. **Removal of `ani.megaplay.su` Servers**:
+   - Removed all `ani.megaplay.su` endpoints in [videoResolver.ts](file:///e:/7ANIME_CODEX/src/services/videoResolver.ts).
+   - Streamlined available servers exclusively to `megaplay.buzz`:
+     - **Server 1**: `megaplay.buzz` + AniList ID (`https://megaplay.buzz/stream/ani/${safeAniId}/${safeEpisode}/${safeLang}`)
+     - **Server 2**: `megaplay.buzz` + MAL ID (`https://megaplay.buzz/stream/mal/${parsedMalId}/${safeEpisode}/${safeLang}`)
+     - Kept legacy `'server4'` alias mapped safely to Server 2.
+   - Updated [FullPlayerView.tsx](file:///e:/7ANIME_CODEX/src/components/player/FullPlayerView.tsx) to remove Server 3 and Server 4 buttons from the UI, presenting a clean 2-server selector.
+   - Removed `https://ani.megaplay.su` from CSP `frame-src` in [vercel.json](file:///e:/7ANIME_CODEX/vercel.json).
 
-3. **Episode Tag & Back Button Alignment**:
-   - Preserved Back button (`cinema-player__back-btn`) with `flex-shrink: 0`.
-   - Maintained `.cinema-player__ep-badge` and `.cinema-player__ep-title` below the title with `min-width: 0` and ellipsis handling.
+3. **Repository Hygiene**:
+   - Ignored archive files (`*.zip`) in [.gitignore](file:///e:/7ANIME_CODEX/.gitignore).
 
-4. **Automated Verification**:
-   - `npm run lint`: PASS (0 errors)
-   - `npm run build`: PASS (built in 16.03s)
+4. **Verification**:
+   - `npm run lint`: PASS (0 errors, 0 warnings).
+   - `npm run build`: PASS (TypeScript and Vite production bundles built successfully).
 
 ## Files Modified
 
-- `src/components/player/player.css` — Added responsive flex constraints and 2-line line-clamp rules for header title under `@media (max-width: 768px)`.
-- `docs/CHECKPOINT.md` — Updated checkpoint documentation.
-- `docs/DEVELOPMENT_STATUS.md` — Updated development status.
+- `src/pages/FoundationPreview.tsx`
+- `src/services/videoResolver.ts`
+- `src/components/player/FullPlayerView.tsx`
+- `index.html`
+- `vercel.json`
+- `.gitignore`
+- `backend/src/routes/anime.ts`
+- `backend/src/services/anilist.ts`
+- `backend/src/services/warmer.ts`
+- `src/utils/security.ts`
+- `docs/CHECKPOINT.md`
+- `docs/DEVELOPMENT_STATUS.md`
 
 ## Verification Results
 
 - ESLint passed with 0 errors (`npm run lint`).
-- Vite production build succeeded cleanly (`npm run build`).
-- Desktop UI (> 768px) -> 100% unchanged.
-- Mobile UI (320px - 480px) -> Long titles wrap cleanly within header bounds; 0 horizontal page overflow; Back button and episode badge perfectly aligned.
+- Production build succeeded cleanly (`npm run build`).
+- Homepage loads instantly with no splash overlay.
+- Player UI displays Server 1 and Server 2 backed by `megaplay.buzz`.
 
 ## Git State
 
 Branch: main
-Working tree: MODIFIED
+Working tree: Ready to commit and push
 
 ## Recovery Instructions
 
@@ -70,24 +72,4 @@ If work resumes in a new session:
 
 ## Exact Next Task
 
-Await user instruction / next task directive.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Push committed changes to GitHub as requested.

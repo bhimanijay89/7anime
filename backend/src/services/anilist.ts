@@ -1,3 +1,22 @@
+export function getCurrentWeekDateRange(): { startOfWeek: number; endOfWeek: number } {
+    const now = new Date()
+    const dayOfWeek = now.getDay() // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+
+    const monday = new Date(now)
+    monday.setDate(now.getDate() + diffToMonday)
+    monday.setHours(0, 0, 0, 0)
+
+    const nextMonday = new Date(monday)
+    nextMonday.setDate(monday.getDate() + 7)
+    nextMonday.setHours(0, 0, 0, 0)
+
+    return {
+        startOfWeek: Math.floor(monday.getTime() / 1000),
+        endOfWeek: Math.floor(nextMonday.getTime() / 1000),
+    }
+}
+
 import type {
     AniListAnime,
     AniListAiringScheduleItem,
@@ -990,14 +1009,14 @@ export async function getAiringSchedule(
     const safePage = Math.max(1, Math.floor(page))
     const safePerPage = Math.min(100, Math.max(1, Math.floor(perPage)))
 
+    const currentWeek = getCurrentWeekDateRange()
+
     if (typeof airingAtGreater !== 'number' || !Number.isFinite(airingAtGreater)) {
-        const now = Math.floor(Date.now() / 1000)
-        airingAtGreater = now - (3 * 86400)
+        airingAtGreater = currentWeek.startOfWeek
     }
 
     if (typeof airingAtLesser !== 'number' || !Number.isFinite(airingAtLesser)) {
-        const now = Math.floor(Date.now() / 1000)
-        airingAtLesser = now + (7 * 86400)
+        airingAtLesser = currentWeek.endOfWeek
     }
 
     const freshCacheKey = `anime:schedule:${airingAtGreater || 0}:${airingAtLesser || 0}:${safePage}:${safePerPage}`

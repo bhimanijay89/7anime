@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Mobile Player Header Title Overflow Fix Complete
+Desktop DevTools Closed False Positive Fix Complete
 
 ## Overall Status
 
-Fixed horizontal anime title overflow in the mobile player page header in player.css under @media (max-width: 768px). Applied flex: 1; min-width: 0; to .cinema-player__title-group and .cinema-player__title-meta, and styled .cinema-player__title-meta h2 with white-space: normal; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 0.95rem;. Long anime titles (e.g. "BLEACH: Thousand-Year Blood War") now wrap cleanly up to 2 lines within the available glass header width next to the Back button without overflowing horizontally or pushing episode information. Desktop layout and all functionality remain 100% untouched. Automated verification via npm run lint (0 errors) and npm run build (built in 16.03s) passed cleanly.
+Resolved false-positive DevTools decoy triggering on desktop browsers when DevTools is closed. The height delta threshold in [security.ts](file:///e:/7ANIME_CODEX/src/utils/security.ts) was updated from 160px to 250px to account for standard browser chrome height (window border, tab bar, URL bar, bookmarks bar) which naturally spans ~175px. Docked DevTools (260px–500px), Chrome Responsive Device Mode, and debugger timing checks remain fully functional. Automated verification via `npm run lint` (0 errors) and `npm run build` (built cleanly in 11.21s) passed cleanly.
 
 ## Completed Phases
 
@@ -68,6 +68,9 @@ Fixed horizontal anime title overflow in the mobile player page header in player
 - [x] Mobile Player Server & Audio Controls Redesign
 - [x] Permanent Mobile Security Flapping Bug Fix
 - [x] Mobile Player Header Title Overflow Fix
+- [x] MegaPlay Server Unwanted Redirect Elimination Fix
+- [x] Desktop DevTools Closed False Positive Fix
+- [x] Splash Screen Removal & Server Streamlining (Removed ani.megaplay.su)
 
 ## Current Blockers
 
@@ -79,9 +82,11 @@ Fixed horizontal anime title overflow in the mobile player page header in player
 
 ## Last Updated
 
-2026-08-30
+2026-10-10
 
 ## Next Exact Action
+
+Push changes to GitHub.
 
 
 

@@ -129,7 +129,9 @@ export function initProductionSecurityNotice(): () => void {
     const widthDelta = Math.abs(window.outerWidth - window.innerWidth)
     const heightDelta = Math.abs(window.outerHeight - window.innerHeight)
 
-    const isDocked = widthDelta > 160 || heightDelta > 160
+    // Standard desktop browser chrome (tabs + URL bar + bookmarks bar) spans 140px-200px.
+    // Docked DevTools panels are at least 250px-350px in size.
+    const isDocked = widthDelta > 220 || heightDelta > 250
 
     let isDebuggerActive = false
     try {
