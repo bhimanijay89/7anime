@@ -1,4 +1,5 @@
 import { Router, type Response } from 'express'
+import type { WatchProgress } from '@prisma/client'
 import prisma from '../db/client.js'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth.js'
 import { ErrorCode, sendError, sendSuccess } from '../utils/response.js'
@@ -32,7 +33,7 @@ router.get(
       // Records are already sorted by updatedAt desc, so the first
       // occurrence of each anilistId is the most recent.
       const seen = new Set<number>()
-      const progress = allProgress.filter((entry) => {
+      const progress = allProgress.filter((entry: WatchProgress) => {
         if (seen.has(entry.anilistId)) return false
         seen.add(entry.anilistId)
         return true
@@ -41,7 +42,7 @@ router.get(
       // Hydrate each progress entry with anime details to eliminate client N+1 queries.
       // Handled in parallel with safe try-catch so progress records never fail if upstream is down.
       const hydratedProgress = await Promise.all(
-        progress.map(async (entry) => {
+        progress.map(async (entry: WatchProgress) => {
           try {
             const aniListAnime = await getAnimeById(entry.anilistId)
             const anime = mapAniListToUnified(aniListAnime)

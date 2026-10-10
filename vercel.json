@@ -1,5 +1,7 @@
 {
   "framework": "vite",
+  "buildCommand": "tsc -b && vite build",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/(.*)",

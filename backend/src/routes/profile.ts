@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express'
+import type { LibraryEntry } from '@prisma/client'
 import prisma from '../db/client.js'
 import { getAuthUser } from '../middleware/auth.js'
 import {
@@ -79,10 +80,10 @@ router.get('/profile', async (req: Request, res: Response) => {
     })
 
     const libraryStats = {
-      watching: libraryEntries.filter(e => e.status === 'WATCHING').length,
-      completed: libraryEntries.filter(e => e.status === 'COMPLETED').length,
-      planning: libraryEntries.filter(e => e.status === 'PLANNING').length,
-      dropped: libraryEntries.filter(e => e.status === 'DROPPED').length,
+      watching: libraryEntries.filter((e: LibraryEntry) => e.status === 'WATCHING').length,
+      completed: libraryEntries.filter((e: LibraryEntry) => e.status === 'COMPLETED').length,
+      planning: libraryEntries.filter((e: LibraryEntry) => e.status === 'PLANNING').length,
+      dropped: libraryEntries.filter((e: LibraryEntry) => e.status === 'DROPPED').length,
       total: libraryEntries.length,
     }
 

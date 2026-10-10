@@ -71,6 +71,7 @@ Resolved false-positive DevTools decoy triggering on desktop browsers when DevTo
 - [x] MegaPlay Server Unwanted Redirect Elimination Fix
 - [x] Desktop DevTools Closed False Positive Fix
 - [x] Splash Screen Removal & Server Streamlining (Removed ani.megaplay.su)
+- [x] Vercel Frontend Deployment Build & Prisma Type Resolution Fix
 
 ## Current Blockers
 

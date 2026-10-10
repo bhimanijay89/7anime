@@ -8,8 +8,10 @@
     "dev:backend": "tsx backend/src/server.ts",
     "db:generate": "prisma generate --schema=backend/prisma/schema.prisma",
     "db:push": "prisma db push --schema=backend/prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=backend/prisma/schema.prisma",
     "build": "tsc -b && npm run build:backend && vite build",
-    "build:backend": "tsc -p backend/tsconfig.json",
+    "build:backend": "prisma generate --schema=backend/prisma/schema.prisma && tsc -p backend/tsconfig.json",
+    "build:render": "npm run build:backend",
     "lint": "eslint ."
   },
   "dependencies": {
