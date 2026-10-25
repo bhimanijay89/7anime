@@ -18,7 +18,7 @@ const listeners = new Set<DevToolsListener>()
  * Set to true to temporarily disable DevTools decoy activation during testing.
  * Set to false to restore production security enforcement.
  */
-const DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = true
+const DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = false
 
 /**
  * STABLE LIFETIME ENVIRONMENT CLASSIFICATION
