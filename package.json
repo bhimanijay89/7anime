@@ -12,6 +12,8 @@
     "build": "tsc -b && npm run build:backend && vite build",
     "build:backend": "prisma generate --schema=backend/prisma/schema.prisma && tsc -p backend/tsconfig.json",
     "build:render": "npm run build:backend",
+    "build:infinityfree": "npm run build && node scripts/package-infinityfree.mjs",
+    "package:infinityfree": "node scripts/package-infinityfree.mjs",
     "lint": "eslint ."
   },
   "dependencies": {

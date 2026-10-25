@@ -48,11 +48,17 @@ const HOST =
  * =========================================================
  */
 
+const envOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+    : []
+
 const allowedOrigins = [
     'https://7anime-tv.vercel.app',
     'https://7anime.vercel.app',
+    'https://7anime.ct.ws',
     'http://localhost:5173',
     'http://localhost:5174',
+    ...envOrigins,
 ]
 
 app.use(

@@ -72,6 +72,8 @@ Resolved false-positive DevTools decoy triggering on desktop browsers when DevTo
 - [x] Desktop DevTools Closed False Positive Fix
 - [x] Splash Screen Removal & Server Streamlining (Removed ani.megaplay.su)
 - [x] Vercel Frontend Deployment Build & Prisma Type Resolution Fix
+- [x] Dual-Hosting Architecture & InfinityFree Packaging (https://7anime.ct.ws)
+- [x] Complete Removal of `splash.mp4` & Lightweight UI Fallback
 
 ## Current Blockers
 
@@ -83,11 +85,11 @@ Resolved false-positive DevTools decoy triggering on desktop browsers when DevTo
 
 ## Last Updated
 
-2026-10-10
+2026-10-25
 
 ## Next Exact Action
 
-Push changes to GitHub.
+Upload the contents of `deployment/infinityfree/` to the `htdocs/` folder on InfinityFree via FTP and test live site at https://7anime.ct.ws.
 
 
 

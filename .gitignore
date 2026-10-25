@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 dist/
+deployment/infinityfree/*
+!deployment/infinityfree/.gitkeep
 
 # Environment variables
 .env
