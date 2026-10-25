@@ -1,0 +1,77 @@
+name: Deploy 7Anime to InfinityFree
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.vscode/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-infinityfree-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to InfinityFree
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🔍 Lint Source Code
+        run: npm run lint
+
+      - name: 🔬 Type Check Frontend
+        run: npx tsc -b
+
+      - name: 🔬 Type Check Backend
+        run: npx tsc -p backend/tsconfig.json
+
+      - name: 🏗️ Build & Package InfinityFree Bundle
+        run: npm run build:infinityfree
+
+      - name: 🛡️ Verify Packaging Integrity
+        run: |
+          test -f deployment/infinityfree/index.html || { echo "::error::deployment/infinityfree/index.html is missing!"; exit 1; }
+          test -f deployment/infinityfree/.htaccess || { echo "::error::deployment/infinityfree/.htaccess is missing!"; exit 1; }
+          test -d deployment/infinityfree/assets || { echo "::error::deployment/infinityfree/assets directory is missing!"; exit 1; }
+          echo "Packaging integrity verified successfully."
+
+      - name: 🔐 Validate FTP Secrets
+        run: |
+          if [ -z "${{ secrets.INFINITYFREE_FTP_SERVER }}" ] || [ -z "${{ secrets.INFINITYFREE_FTP_USERNAME }}" ] || [ -z "${{ secrets.INFINITYFREE_FTP_PASSWORD }}" ]; then
+            echo "::error::Missing required InfinityFree FTP secrets in GitHub Actions!"
+            echo "Please configure the following repository secrets under Settings > Secrets and variables > Actions:"
+            echo "  - INFINITYFREE_FTP_SERVER (e.g. ftpupload.net)"
+            echo "  - INFINITYFREE_FTP_USERNAME (e.g. epiz_xxxxxxx)"
+            echo "  - INFINITYFREE_FTP_PASSWORD"
+            exit 1
+          fi
+          echo "FTP credentials are present."
+
+      - name: 🚀 Deploy to InfinityFree via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
+          username: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
+          password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
+          server-dir: htdocs/
+          local-dir: ./deployment/infinityfree/
+          exclude: |
+            **/.git*
+            **/.git*/**

@@ -74,6 +74,7 @@ Resolved false-positive DevTools decoy triggering on desktop browsers when DevTo
 - [x] Vercel Frontend Deployment Build & Prisma Type Resolution Fix
 - [x] Dual-Hosting Architecture & InfinityFree Packaging (https://7anime.ct.ws)
 - [x] Complete Removal of `splash.mp4` & Lightweight UI Fallback
+- [x] Automated InfinityFree CI/CD Deployment via GitHub Actions
 
 ## Current Blockers
 

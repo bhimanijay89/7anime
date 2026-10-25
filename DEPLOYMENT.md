@@ -95,7 +95,19 @@ deployment/infinityfree/
     └── favicon-[hash].png    <-- Optimized bundled favicon
 ```
 
-### How to Upload to InfinityFree
+### Automated Deployment via GitHub Actions (CI/CD)
+
+The repository includes an automated workflow at [.github/workflows/deploy-infinityfree.yml](file:///E:/7ANIME_CODEX/.github/workflows/deploy-infinityfree.yml) that triggers on every push to `main` and via manual `workflow_dispatch`.
+
+#### Required GitHub Secrets
+To enable automated deployments, add these three secrets in your GitHub repository (**Settings > Secrets and variables > Actions > New repository secret**):
+- `INFINITYFREE_FTP_SERVER`: Your FTP server hostname (e.g. `ftpupload.net`)
+- `INFINITYFREE_FTP_USERNAME`: Your InfinityFree account username (e.g. `epiz_34567890`)
+- `INFINITYFREE_FTP_PASSWORD`: Your hosting account password
+
+When configured, every commit pushed to `main` runs linting, type-checking, builds `deployment/infinityfree/`, validates package integrity, and syncs the files directly to InfinityFree `htdocs/` via FTP!
+
+### Manual Upload to InfinityFree (Fallback)
 
 1. Open your FTP client (**FileZilla**, **WinSCP**) or log in to the InfinityFree Control Panel and open the **Monsta File Manager**.
 2. Connect using your InfinityFree FTP credentials:
