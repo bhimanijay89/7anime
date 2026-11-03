@@ -144,3 +144,37 @@ model AnimeMetadataCache {
 
   @@map("anime_metadata_cache")
 }
+
+model AnimeTmdbMapping {
+  anilistId Int      @id
+  tmdbId    Int
+  mediaType String   @default("tv")
+  season    Int      @default(1)
+  title     String?
+  source    String   @default("auto")
+  updatedAt DateTime @updatedAt
+
+  @@index([tmdbId])
+  @@map("anime_tmdb_mappings")
+}
+
+
+model AnimeTmdbLogo {
+  id          String   @id @default(uuid())
+  anilistId   Int      @unique
+  tmdbId      Int?
+  mediaType   String?
+  logoUrl     String?
+  aspectRatio Float?
+  width       Int?
+  height      Int?
+  language    String?
+  filePath    String?
+  notFound    Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([anilistId])
+  @@map("anime_tmdb_logos")
+}

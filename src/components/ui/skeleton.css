@@ -1,0 +1,634 @@
+/* =========================================================
+   7anime — Liquid Glass Skeleton Loading System
+   ========================================================= */
+
+/* ─── Base Shimmer Animation ─── */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* ─── Base Skeleton Atom ─── */
+.skeleton-box {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 35%,
+    rgba(85, 216, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.08) 65%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-box {
+    animation: skeleton-pulse 2s ease-in-out infinite;
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* ─── Variant Modifiers ─── */
+.skeleton-box--text {
+  height: 0.95rem;
+  border-radius: 4px;
+  margin-bottom: 0.4rem;
+}
+
+.skeleton-box--title {
+  height: 1.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.6rem;
+}
+
+.skeleton-box--badge {
+  height: 1.4rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.skeleton-box--circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-box--button {
+  height: 2.6rem;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-box--accent {
+  background: linear-gradient(
+    90deg,
+    rgba(85, 216, 255, 0.12) 0%,
+    rgba(85, 216, 255, 0.24) 50%,
+    rgba(85, 216, 255, 0.12) 100%
+  );
+  background-size: 250% 100%;
+  border-color: rgba(85, 216, 255, 0.25);
+}
+
+/* ─── Skeleton Text Stack ─── */
+.skeleton-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.skeleton-line {
+  height: 0.85rem;
+  border-radius: 4px;
+}
+
+.skeleton-line--short {
+  width: 35%;
+}
+
+.skeleton-line--medium {
+  width: 65%;
+}
+
+.skeleton-line--long {
+  width: 90%;
+}
+
+.skeleton-line--full {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON CARDS
+   ═══════════════════════════════════════════════ */
+
+/* ─── Poster Card Skeleton (2:3) ─── */
+.skeleton-card {
+  width: 11rem;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.skeleton-card__poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+}
+
+.skeleton-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.skeleton-card__badges {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+/* ─── Continue Watching Card Skeleton (16:10) ─── */
+.skeleton-card--continue {
+  width: 17rem;
+}
+
+.skeleton-card--continue .skeleton-card__poster {
+  aspect-ratio: 16 / 10;
+}
+
+.skeleton-card__progress-bar {
+  position: absolute;
+  left: 0.6rem;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON HERO (Top 10 Cinematic Carousel)
+   ═══════════════════════════════════════════════ */
+
+.skeleton-hero {
+  position: relative;
+  min-height: 36rem;
+  margin-top: var(--space-5);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-2);
+}
+
+.skeleton-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 75% 25%, rgba(85, 216, 255, 0.08) 0%, transparent 60%),
+              linear-gradient(to top, rgba(8, 10, 15, 0.98) 10%, rgba(8, 10, 15, 0.6) 50%, rgba(8, 10, 15, 0.2) 100%);
+  z-index: 1;
+}
+
+.skeleton-hero__main {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: flex-end;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  gap: var(--space-6);
+}
+
+.skeleton-hero__content {
+  max-width: 48rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.skeleton-hero__poster-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.skeleton-hero__poster {
+  width: 14rem;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    var(--shadow-2),
+    0 0 40px rgba(85, 216, 255, 0.08);
+}
+
+.skeleton-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.skeleton-hero__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.2rem 0;
+}
+
+.skeleton-hero__specs {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.skeleton-hero__synopsis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-width: 38rem;
+  margin: 0.4rem 0;
+}
+
+.skeleton-hero__actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.skeleton-hero__thumbnails {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 0.65rem;
+  padding: 0 clamp(1.5rem, 5vw, 4rem) 1.5rem;
+  overflow-x: hidden;
+}
+
+.skeleton-hero__thumb-pill {
+  width: 4.8rem;
+  height: 2.7rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON QUICK ACTIONS BAR
+   ═══════════════════════════════════════════════ */
+
+.skeleton-quick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.skeleton-quick__left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.skeleton-quick__right {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON RAIL
+   ═══════════════════════════════════════════════ */
+
+.skeleton-rail {
+  margin-top: var(--space-8);
+}
+
+.skeleton-rail__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-rail__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.skeleton-rail__items {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: hidden;
+  padding: 0.25rem 0 0.7rem;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON SECTION HEAD (Trending / Handpicked)
+   ═══════════════════════════════════════════════ */
+
+.skeleton-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: var(--space-10);
+  margin-bottom: var(--space-3);
+  gap: var(--space-4);
+}
+
+.skeleton-section-head__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON DISCOVERY CATALOG
+   ═══════════════════════════════════════════════ */
+
+.skeleton-discovery {
+  margin-top: var(--space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.skeleton-discovery__tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-glass);
+}
+
+.skeleton-discovery__genres {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: hidden;
+}
+
+.skeleton-discovery__genre-pill {
+  width: 5.5rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.skeleton-discovery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.skeleton-discovery__grid .skeleton-card {
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON ANIME DETAIL VIEW
+   ═══════════════════════════════════════════════ */
+
+.skeleton-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+.skeleton-detail__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-detail__hero {
+  position: relative;
+  min-height: 28rem;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-6);
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-2);
+}
+
+.skeleton-detail__backdrop {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(8,10,15,0.98) 0%, rgba(8,10,15,0.7) 45%, rgba(8,10,15,0.3) 100%);
+  z-index: 1;
+}
+
+.skeleton-detail__hero-content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: var(--space-6);
+  align-items: flex-end;
+  width: 100%;
+}
+
+.skeleton-detail__poster {
+  aspect-ratio: 2 / 3;
+  width: 12rem;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+
+.skeleton-detail__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skeleton-detail__tags {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.skeleton-detail__specs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.skeleton-detail__synopsis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-width: 46rem;
+  margin: 0.3rem 0;
+}
+
+.skeleton-detail__actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.skeleton-detail__episodes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.skeleton-detail__episode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.skeleton-detail__episode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-3);
+}
+
+.skeleton-detail__episode-card {
+  height: 4.5rem;
+  border-radius: var(--radius-md);
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON SEARCH RESULTS
+   ═══════════════════════════════════════════════ */
+
+.skeleton-search-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.skeleton-search-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-glass-border);
+  background: var(--color-glass);
+}
+
+.skeleton-search-thumb {
+  width: 3.5rem;
+  height: 4.8rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.skeleton-search-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.skeleton-search-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVENESS
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .skeleton-hero {
+    min-height: 28rem;
+  }
+
+  .skeleton-hero__main {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-hero__poster-wrap {
+    display: none;
+  }
+
+  .skeleton-detail__hero-content {
+    grid-template-columns: 9rem 1fr;
+    gap: var(--space-4);
+  }
+
+  .skeleton-detail__poster {
+    width: 9rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .skeleton-hero {
+    min-height: 25rem;
+  }
+
+  .skeleton-hero__content {
+    padding: var(--space-4);
+  }
+
+  .skeleton-quick {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .skeleton-detail__hero-content {
+    grid-template-columns: 1fr;
+    align-items: center;
+    text-align: center;
+  }
+
+  .skeleton-detail__poster {
+    width: 8rem;
+    margin: 0 auto;
+  }
+
+  .skeleton-detail__tags,
+  .skeleton-detail__specs,
+  .skeleton-detail__actions {
+    justify-content: center;
+  }
+
+  .skeleton-discovery__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .skeleton-card {
+    width: 8.5rem;
+  }
+
+  .skeleton-card--continue {
+    width: 14rem;
+  }
+
+  .skeleton-discovery__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

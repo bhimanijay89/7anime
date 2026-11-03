@@ -8,11 +8,13 @@ import {
     getUpcomingAnime,
     searchAnime,
 } from '../services/anilist.js'
+import { resolveTmdbMapping, resolveTmdbLogo } from '../services/tmdb.js'
 
 import type {
     AniListAnime,
     UnifiedAnime,
     UnifiedEpisode,
+    AnimeLogoResult,
 } from '../types.js'
 
 import {
@@ -205,6 +207,124 @@ router.get('/anime/search', async (req, res) => {
     }
 })
 
+/* GET /api/anime/logos */
+router.get('/anime/logos', async (req, res) => {
+    try {
+        const rawParam = req.query.ids
+        if (!rawParam || (typeof rawParam !== 'string' && !Array.isArray(rawParam))) {
+            return sendError(
+                res,
+                'Missing or empty "ids" parameter. Provide comma-separated positive integer AniList IDs.',
+                ErrorCode.BAD_REQUEST,
+                400,
+            )
+        }
+
+        const idStrings = (Array.isArray(rawParam) ? rawParam.join(',') : String(rawParam))
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+
+        if (idStrings.length === 0) {
+            return sendError(res, 'Missing or empty "ids" parameter.', ErrorCode.BAD_REQUEST, 400)
+        }
+
+        for (const token of idStrings) {
+            if (!/^\d+$/.test(token) || Number(token) <= 0) {
+                return sendError(
+                    res,
+                    `Invalid ID "${token}". All IDs must be positive integers.`,
+                    ErrorCode.INVALID_ID,
+                    400,
+                )
+            }
+        }
+
+        const uniqueIds = Array.from(new Set(idStrings.map(Number)))
+
+        const MAX_BATCH_SIZE = 20
+        if (uniqueIds.length > MAX_BATCH_SIZE) {
+            return sendError(
+                res,
+                `Batch size exceeds maximum limit of ${MAX_BATCH_SIZE} IDs.`,
+                ErrorCode.BAD_REQUEST,
+                400,
+            )
+        }
+
+        const CONCURRENCY_LIMIT = 10
+        const results: Record<string, AnimeLogoResult | null> = {}
+
+        for (let i = 0; i < uniqueIds.length; i += CONCURRENCY_LIMIT) {
+            const chunk = uniqueIds.slice(i, i + CONCURRENCY_LIMIT)
+            const chunkResults = await Promise.all(
+                chunk.map(async (id) => {
+                    try {
+                        const logo = await resolveTmdbLogo(id)
+                        return { id, logo }
+                    } catch (err) {
+                        console.warn(`[GET /api/anime/logos] Error resolving logo for ${id}:`, err)
+                        return { id, logo: null }
+                    }
+                })
+            )
+            for (const { id, logo } of chunkResults) {
+                results[String(id)] = logo
+            }
+        }
+
+        return sendSuccess(res, results)
+    } catch (error) {
+        console.error('[GET /api/anime/logos]', error)
+        return sendError(res, 'Failed to resolve anime logos.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
+/* GET /api/anime/:anilistId/mapping */
+router.get('/anime/:anilistId/mapping', async (req, res) => {
+    try {
+        const anilistId = Number(req.params.anilistId)
+        if (!Number.isInteger(anilistId) || anilistId <= 0) {
+            return sendError(res, 'Invalid AniList anime ID.', ErrorCode.INVALID_ID, 400)
+        }
+
+        let aniListAnime: AniListAnime | null = null
+        try {
+            aniListAnime = await getAnimeById(anilistId)
+        } catch {
+            aniListAnime = {
+                id: anilistId,
+                title: {
+                    english: req.query.title ? String(req.query.title) : undefined,
+                    romaji: req.query.romaji ? String(req.query.romaji) : undefined,
+                },
+                format: req.query.format ? String(req.query.format) : undefined,
+                seasonYear: req.query.year ? Number(req.query.year) : undefined,
+            }
+        }
+
+        const mapping = await resolveTmdbMapping(aniListAnime)
+        if (!mapping || !mapping.tmdbId) {
+            return sendSuccess(res, {
+                anilistId,
+                tmdbId: null,
+                mediaType: null,
+                season: 1,
+            })
+        }
+
+        return sendSuccess(res, {
+            anilistId,
+            tmdbId: mapping.tmdbId,
+            mediaType: mapping.mediaType,
+            season: mapping.season || 1,
+        })
+    } catch (error) {
+        console.error('[GET /api/anime/:anilistId/mapping]', error)
+        return sendError(res, 'Failed to resolve streaming server mapping.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
 /* GET /api/anime/:anilistId */
 router.get('/anime/:anilistId', async (req, res) => {
     try {
@@ -214,6 +334,18 @@ router.get('/anime/:anilistId', async (req, res) => {
         }
         const aniListAnime = await getAnimeById(anilistId)
         const anime = mapAniListToUnified(aniListAnime)
+
+        // Automatically resolve TMDB mapping for Server 1 playback
+        try {
+            const tmdbMapping = await resolveTmdbMapping(aniListAnime)
+            if (tmdbMapping) {
+                anime.tmdbId = tmdbMapping.tmdbId
+                anime.mediaType = tmdbMapping.mediaType
+            }
+        } catch (tmdbErr) {
+            console.warn('[GET /api/anime/:anilistId] TMDB resolution skipped:', tmdbErr)
+        }
+
         const isCached = Boolean((aniListAnime as unknown as Record<string, unknown>)._cached)
         return sendSuccess(res, anime, { cached: isCached })
     } catch (error) {

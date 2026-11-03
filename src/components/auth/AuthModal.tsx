@@ -13,6 +13,7 @@ import { useState, type FormEvent } from 'react'
 import type { AuthUser } from '../../types/auth'
 import logoImg from '../../public/logo.png'
 import { Modal } from '../ui/Overlay'
+import { BACKEND_URL } from '../../services/anilist'
 import './auth.css'
 
 export interface AuthModalProps {
@@ -23,10 +24,6 @@ export interface AuthModalProps {
 }
 
 type AuthMode = 'login' | 'register' | 'forgot-email' | 'forgot-otp' | 'forgot-reset'
-
-const BACKEND_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3001' : 'https://sevenanime-vodw.onrender.com')
 
 export function AuthModal({
   open,

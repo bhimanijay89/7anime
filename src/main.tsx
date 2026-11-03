@@ -8,3 +8,4 @@ import { initProductionSecurityNotice } from './utils/security'
 initProductionSecurityNotice()
 
 createRoot(document.getElementById('root')!).render(<StrictMode><FoundationPreview /></StrictMode>)
+

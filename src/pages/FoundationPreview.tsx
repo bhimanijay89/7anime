@@ -1,14 +1,14 @@
 import { ScheduleView } from '../components/schedule/ScheduleView'
 import {
   ArrowLeft,
-  LoaderCircle,
   Play,
   Plus,
   Sparkles,
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   Anime,
+  AnimeLogo,
   Episode,
 } from '../types/domain'
 
@@ -25,6 +25,7 @@ import { AnimeDetailHero } from '../components/anime/AnimeDetailHero'
 import { AnimeMetadataTabs } from '../components/anime/AnimeMetadataTabs'
 import { DiscoveryCatalog } from '../components/anime/DiscoveryCatalog'
 import { EpisodeList } from '../components/anime/EpisodeList'
+import { DetailSkeleton, HomeSkeleton } from '../components/ui/Skeleton'
 
 import { Top10Hero } from '../components/carousel/CinematicCarousel'
 import { ContentRail } from '../components/carousel/ContentRail'
@@ -58,12 +59,10 @@ import type { User } from '../types/domain'
 import { guestUser } from '../data/anime'
 import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
+import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos } from '../services/anilist'
+import { isMovieMediaType } from '../services/videoResolver'
 
 import './preview.css'
-
-const BACKEND_URL =
-  import.meta.env.VITE_API_URL ||
-  'https://sevenanime-vodw.onrender.com'
 
 function getAuthHeaders(extraHeaders?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = { ...extraHeaders }
@@ -129,6 +128,8 @@ function Home() {
   const [userProfile, setUserProfile] = useState<User>(guestUser)
   const [profileStats, setProfileStats] = useState<UserProfileStats | undefined>(undefined)
   const [continueWatchingList, setContinueWatchingList] = useState<Anime[]>([])
+  const [heroLogos, setHeroLogos] = useState<Record<string, AnimeLogo | null>>({})
+  const [upcomingLogos, setUpcomingLogos] = useState<Record<string, AnimeLogo | null>>({})
 
   const { notify } =
     useToast()
@@ -424,6 +425,23 @@ function Home() {
     loadHomeData()
   }, [loadHomeData])
 
+  const moviesData = useMemo(() => {
+    const combined = [...trendingData, ...topRatedData]
+    const seen = new Set<string>()
+    const movies: Anime[] = []
+    for (const anime of combined) {
+      if (isMovieMediaType(anime.type) && !seen.has(anime.id)) {
+        seen.add(anime.id)
+        movies.push(anime)
+      }
+    }
+    return movies
+  }, [trendingData, topRatedData])
+
+  const handleDirectPlay = useCallback(async (anime: Anime) => {
+    await openContinueWatchingPlayer(anime)
+  }, [])
+
 
   /* =========================================================
      PAGE TITLE
@@ -671,12 +689,35 @@ function Home() {
 
           /*
            * Make absolutely sure the returned object
-           * has the real AniList ID.
+           * has the real AniList ID and resolve TMDB mapping.
            */
           if (
             fullAnime &&
             fullAnime.id
           ) {
+            try {
+              const mapping = await fetchAnimeMapping(anilistId)
+              if (mapping && mapping.tmdbId) {
+                fullAnime.tmdbId = mapping.tmdbId
+                fullAnime.mediaType = mapping.mediaType || (isMovieMediaType(fullAnime.type) ? 'movie' : 'tv')
+                fullAnime.seasonNumber = mapping.season || 1
+              }
+            } catch (mappingErr) {
+              console.warn('[7anime] TMDB mapping skipped for', anilistId, mappingErr)
+            }
+
+            if (anime.logo) {
+              fullAnime.logo = anime.logo
+            } else {
+              try {
+                const logoMap = await fetchAnimeLogos([anilistId])
+                if (logoMap[anilistId]) {
+                  fullAnime.logo = logoMap[anilistId]!
+                }
+              } catch (logoErr) {
+                console.warn('[7anime] Logo fetch skipped for', anilistId, logoErr)
+              }
+            }
             return fullAnime
           }
         } catch (error) {
@@ -940,22 +981,103 @@ function Home() {
      DERIVED HOME DATA
   ========================================================= */
 
-  const heroAnime =
-    trendingData.slice(
-      0,
-      10,
+  const top10Ids = useMemo(() => {
+    return trendingData
+      .slice(0, 10)
+      .map(a => Number(a.id))
+      .filter(id => Number.isInteger(id) && id > 0)
+  }, [trendingData])
+
+  useEffect(() => {
+    if (top10Ids.length === 0 || isDecoyActive) return
+    let isCancelled = false
+
+    fetchAnimeLogos(top10Ids)
+      .then(logosMap => {
+        if (isCancelled) return
+        setHeroLogos(prev => {
+          const updated = { ...prev }
+          for (const [idStr, logo] of Object.entries(logosMap)) {
+            if (logo) {
+              updated[idStr] = logo
+            }
+          }
+          return updated
+        })
+      })
+      .catch(err => {
+        console.warn('[FoundationPreview] Could not fetch hero logos:', err)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [top10Ids, isDecoyActive])
+
+  const heroAnime = useMemo(() => {
+    return trendingData.slice(0, 10).map(anime => {
+      const logo = heroLogos[String(anime.id)]
+      return logo ? { ...anime, logo } : anime
+    })
+  }, [trendingData, heroLogos])
+
+  const upcomingIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        upcomingData
+          .map(anime => Number(anime.id))
+          .filter(id => Number.isInteger(id) && id > 0),
+      ),
     )
+  }, [upcomingData])
+
+  useEffect(() => {
+    if (upcomingIds.length === 0 || isDecoyActive) return
+    let isCancelled = false
+
+    const BATCH_SIZE = 20
+    const batches: number[][] = []
+    for (let i = 0; i < upcomingIds.length; i += BATCH_SIZE) {
+      batches.push(upcomingIds.slice(i, i + BATCH_SIZE))
+    }
+
+    Promise.all(batches.map(batch => fetchAnimeLogos(batch)))
+      .then(batchResults => {
+        if (isCancelled) return
+        setUpcomingLogos(prev => {
+          const updated = { ...prev }
+          for (const logosMap of batchResults) {
+            for (const [idStr, logo] of Object.entries(logosMap)) {
+              if (logo) {
+                updated[idStr] = logo
+              }
+            }
+          }
+          return updated
+        })
+      })
+      .catch(err => {
+        console.warn('[FoundationPreview] Could not fetch upcoming logos:', err)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [upcomingIds, isDecoyActive])
+
+  const upcomingAnime = useMemo(() => {
+    return upcomingData.map(anime => {
+      const logo = upcomingLogos[String(anime.id)]
+      return logo ? { ...anime, logo } : anime
+    })
+  }, [upcomingData, upcomingLogos])
 
 
   /* =========================================================
-     LOADING SCREEN
+     LOADING SKELETON SCREENS
   ========================================================= */
 
-  if (
-    detailLoading ||
-    (homeLoading &&
-      currentView === 'home')
-  ) {
+  if (detailLoading) {
     return (
       <>
         <DesktopNavbar
@@ -986,49 +1108,53 @@ function Home() {
           id="top"
           className="home"
         >
-          <div
-            style={{
-              minHeight:
-                '70vh',
+          <DetailSkeleton onBack={() => navigateTo('home')} />
+        </main>
 
-              display:
-                'flex',
+        <MobileNavigation
+          onNavigate={
+            navigateTo
+          }
+          currentView={
+            currentView
+          }
+        />
+      </>
+    )
+  }
 
-              alignItems:
-                'center',
+  if (homeLoading && currentView === 'home') {
+    return (
+      <>
+        <DesktopNavbar
+          onSearch={() =>
+            setSearch(true)
+          }
+          onMenu={() =>
+            setDrawer(true)
+          }
+          onNavigate={
+            navigateTo
+          }
+          onOpenAuthModal={() =>
+            setAuthModalOpen(true)
+          }
+          onLogout={
+            handleLogout
+          }
+          authUser={
+            authUser
+          }
+          currentView={
+            currentView
+          }
+        />
 
-              justifyContent:
-                'center',
-
-              flexDirection:
-                'column',
-
-              gap:
-                'var(--space-3)',
-            }}
-          >
-            <LoaderCircle
-              size={38}
-              className="spin"
-            />
-
-            <h2>
-              {detailLoading
-                ? 'Loading anime details...'
-                : 'Loading your anime feed...'}
-            </h2>
-
-            <p
-              style={{
-                color:
-                  'var(--color-text-muted)',
-              }}
-            >
-              {detailLoading
-                ? 'Fetching AniList information and episode catalogue...'
-                : 'Curating trending, top-rated, and upcoming anime...'}
-            </p>
-          </div>
+        <main
+          id="top"
+          className="home"
+        >
+          <HomeSkeleton />
         </main>
 
         <MobileNavigation
@@ -1332,56 +1458,60 @@ function Home() {
                   TRENDING
               ================================================ */}
 
-              <section
-                className="home-section-head"
-              >
-                <div>
-                  <p className="eyebrow">
-                    Handpicked today
-                  </p>
-
-                  <h2>
-                    Trending now
-                  </h2>
-                </div>
-
-                <p>
-                  Stories finding
-                  their audience
-                  right now.
-                </p>
-              </section>
-
-              {trendingData.length > 0 && (
-                <ContentRail
-                  title="Popular with 7anime viewers"
+              <div id="trending-rail">
+                <section
+                  className="home-section-head"
                 >
-                  {trendingData
-                    .slice(0, 10)
-                    .map(
-                      anime => (
-                        <AnimeCard
-                          anime={
-                            anime
-                          }
-                          key={
-                            anime.id
-                          }
-                          isSaved={
-                            isSaved(anime.id)
-                          }
-                          onToggleSave={
-                            handleToggleSave
-                          }
-                          onSelect={
-                            openDetail
-                          }
-                        />
-                      ),
-                    )}
-                </ContentRail>
-              )}
+                  <div>
+                    <p className="eyebrow">
+                      Handpicked today
+                    </p>
 
+                    <h2>
+                      Trending now
+                    </h2>
+                  </div>
+
+                  <p>
+                    Stories finding
+                    their audience
+                    right now.
+                  </p>
+                </section>
+
+                {trendingData.length > 0 && (
+                  <ContentRail
+                    title="Popular with 7anime viewers"
+                  >
+                    {trendingData
+                      .slice(0, 10)
+                      .map(
+                        anime => (
+                          <AnimeCard
+                            anime={
+                              anime
+                            }
+                            key={
+                              anime.id
+                            }
+                            isSaved={
+                              isSaved(anime.id)
+                            }
+                            onToggleSave={
+                              handleToggleSave
+                            }
+                            onSelect={
+                              openDetail
+                            }
+                            onPlay={
+                              handleDirectPlay
+                            }
+                          />
+                        ),
+                      )}
+                  </ContentRail>
+                )}
+              </div>
 
               {/* ===============================================
                   UPCOMING
@@ -1391,7 +1521,7 @@ function Home() {
                 0 && (
                   <UpcomingHero
                     anime={
-                      upcomingData
+                      upcomingAnime
                     }
                     onSelect={
                       openDetail
@@ -1399,66 +1529,102 @@ function Home() {
                   />
                 )}
 
-
               {/* ===============================================
-                  TOP RATED
+                  TOP RATED / MOST POPULAR
               ================================================ */}
 
-              {topRatedData.length > 0 && (
-                <ContentRail
-                  title="Top rated"
-                >
-                  {topRatedData
-                    .slice(0, 10)
-                    .map(
-                      (
-                        anime,
-                        index,
-                      ) => (
-                        <AnimeCard
-                          anime={
-                            anime
-                          }
-                          variant="ranked"
-                          rank={
-                            index +
-                            1
-                          }
-                          key={`${anime.id}-rated-${index}`}
-                          isSaved={
-                            isSaved(anime.id)
-                          }
-                          onToggleSave={
-                            handleToggleSave
-                          }
-                          onSelect={
-                            openDetail
-                          }
-                        />
-                      ),
-                    )}
-                </ContentRail>
-              )}
+              <div id="popular-section">
+                {topRatedData.length > 0 && (
+                  <ContentRail
+                    title="Top rated"
+                  >
+                    {topRatedData
+                      .slice(0, 10)
+                      .map(
+                        (
+                          anime,
+                          index,
+                        ) => (
+                          <AnimeCard
+                            anime={
+                              anime
+                            }
+                            variant="ranked"
+                            rank={
+                              index +
+                              1
+                            }
+                            key={`${anime.id}-rated-${index}`}
+                            isSaved={
+                              isSaved(anime.id)
+                            }
+                            onToggleSave={
+                              handleToggleSave
+                            }
+                            onSelect={
+                              openDetail
+                            }
+                            onPlay={
+                              handleDirectPlay
+                            }
+                          />
+                        ),
+                      )}
+                  </ContentRail>
+                )}
+              </div>
 
+              {/* ===============================================
+                  ANIME MOVIES
+              ================================================ */}
+
+              {moviesData.length > 0 && (
+                <div id="movies-rail">
+                  <ContentRail
+                    title="Anime Movies"
+                  >
+                    {moviesData
+                      .slice(0, 10)
+                      .map(
+                        (anime: Anime) => (
+                          <AnimeCard
+                            anime={anime}
+                            variant="landscape"
+                            key={`movie-${anime.id}`}
+                            isSaved={isSaved(anime.id)}
+                            onToggleSave={handleToggleSave}
+                            onSelect={openDetail}
+                            onPlay={handleDirectPlay}
+                          />
+                        ),
+                      )}
+                  </ContentRail>
+                </div>
+              )}
 
               {/* ===============================================
                   DISCOVERY
               ================================================ */}
 
-              <DiscoveryCatalog
-                anime={
-                  topRatedData
-                }
-                isSaved={
-                  isSaved
-                }
-                onToggleSave={
-                  handleToggleSave
-                }
-                onSelect={
-                  openDetail
-                }
-              />
+              <div id="discovery-catalog">
+                <DiscoveryCatalog
+                  anime={
+                    topRatedData
+                  }
+                  isSaved={
+                    isSaved
+                  }
+                  onToggleSave={
+                    handleToggleSave
+                  }
+                  onSelect={
+                    openDetail
+                  }
+                  onPlay={
+                    handleDirectPlay
+                  }
+                />
+              </div>
 
             </>
           )

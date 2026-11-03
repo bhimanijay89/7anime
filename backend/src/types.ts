@@ -162,6 +162,8 @@ export interface UnifiedAnime {
     genres: string[]
 
     type?: string
+    tmdbId?: number
+    mediaType?: 'movie' | 'tv'
 
     year?: number
 
@@ -198,6 +200,15 @@ export interface UnifiedAnime {
      */
 
     episodes: UnifiedEpisode[]
+}
+
+export interface AnimeLogoResult {
+    logoUrl: string
+    aspectRatio?: number
+    width?: number
+    height?: number
+    language?: string | null
+    filePath: string
 }
 
 export interface ApiMeta {

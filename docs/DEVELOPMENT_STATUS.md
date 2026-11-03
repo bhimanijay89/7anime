@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-InfinityFree Automated CI/CD & Security Restoration Complete
+Phase 3.1 — Critical UI Corrections + Logo Persistence + Database Repair
 
 ## Overall Status
 
-The 7Anime production frontend has been built, packaged, and verified live on InfinityFree (`https://7anime.ct.ws`). Production DevTools security enforcement has been re-enabled (`DISABLE_DEVTOOLS_DETECTION_FOR_TESTING = false`). The three required repository secrets (`INFINITYFREE_FTP_SERVER`, `INFINITYFREE_FTP_USERNAME`, `INFINITYFREE_FTP_PASSWORD`) are configured in GitHub Actions settings to enable fully automated continuous deployment on every push to `main`.
+Phase 3.1 is COMPLETE and verified. The original horizontal capsule navbar has been forcefully restored near the top center, purging the unintended sidebar and rectangular top bar. The Top 10 Hero height has been expanded to near-fullscreen (`clamp(48rem, 82vh, 60rem)`), visibly larger than the Upcoming Anime carousel (`28rem`), with autoplay configured to 7500ms. The anime detail page background cover container height has been increased to `clamp(34rem, 50vh, 44rem)`. Universal TMDB anime logos are rendered across all three designated locations (Top 10 Hero, Upcoming Anime carousel, and Detail page) with resilient fallback typography. The missing database table issue has been resolved with PostgreSQL DDL migrations for `anime_tmdb_mappings` and `anime_tmdb_logos`, establishing dual-tier caching (Redis + PostgreSQL) with 7-day durability and negative result caching. All TypeScript, build, backend, and browser screenshot checks pass with zero errors.
 
 ## Completed Phases
 
@@ -22,60 +22,38 @@ The 7Anime production frontend has been built, packaged, and verified live on In
 - [x] Phase 3 (Backend Architecture) — Backend API Architecture & Response Envelope
 - [x] Phase 8 — Authentication System (JWT/Session) & UI Integration
 - [x] Upstash Redis Integration — Remote HTTP REST Caching & Graceful Fallbacks
-- [x] Exclusive Video Stream Provider — `megaplay.buzz` Sole Provider Enforcement
-- [x] Premium Player UI/UX Enhancement & Desktop Poster Scale Optimization
-- [x] Search UI/UX Redesign & Mobile Navbar Search Interaction Resolution
-- [x] Mobile UI/UX Redesign, One-Hand Touch Usability
-- [x] Upstash Redis Integration & Anime/API Cache-Aside Layer
-- [x] Navbar Auth Correction (Sign In Preserved, Logout Removed from Navbar)
-- [x] Text Caret Control (Hidden on Display Content, Preserved on Inputs/Editable Controls)
-- [x] Schedule Page UI/UX Redesign (Liquid Glass Theme, 7-Day Day Selector, Mobile Optimization)
-- [x] Schedule Page Real AniList Airing Schedule Data Integration & Redis Caching
-- [x] Production CrossSite Authentication, Continue Watching & Library Persistence Fixes
-- [x] Direct Iframe Video Provider Integration (`ani.megaplay.su` Server 1 & `megaplay.buzz` Server 2)
-- [x] Bleach DUB Fix & Server 2 MAL-First Resolution Alignment
-- [x] UI/UX Fix — Player Controls Layout & Mobile Scroll Optimization
-- [x] 4-Server Video Provider System Completion
-- [x] Episode Range Horizontal Pagination UI Update
-- [x] Master Production Security Hardening & Runtime Tamper Resistance
-- [x] 7anime API Security Hardening & Session Authorization
-- [x] DevTools Decoy Mode & API Suppression Resolution
-- [x] Master DevTools Decoy Mode & Player Protection
-- [x] Player-Only Pre-Initialization DevTools DevTools Decoy Mode
-- [x] Production Source Map & Source File Protection
-- [x] DevTools Detector Preservation & Player Integration
-- [x] 7anime Player UI-Only Redesign
-- [x] 7anime Player UI Rework (Spacious OTT Design)
-- [x] Final 7anime Player UI Polish
-- [x] Redundant Episode Range Arrow Removal
-- [x] Temporary DevTools Detection Bypass for Testing
-- [x] 7anime Mobile UI Polish & Player Responsive Refinements
-- [x] Continue Watching Player Resume & Mobile Player UI Refinement
-- [x] Mobile Episode Range Scroll Correction
-- [x] Production DevTools Security Restoration
-- [x] Removal of Mock "Season 1" UI Badge
-- [x] Final Player DevTools Decoy Behavior Fix
-- [x] Hard Runtime Gate Player DevTools Decoy Integration
-- [x] Player DevTools Security Event Chain Debugging & Verification
-- [x] Mobile Devices False-Positive DevTools Decoy Bug Fix
-- [x] Master Player DevTools Transition During Playback Bug Fix
-- [x] Production Data + DevTools Security Audit
-- [x] Final DevTools Detection Fix
-- [x] Critical DevTools False Positive Fix
-- [x] Permanent Mobile DevTools Decoy Disable
-- [x] Desktop DevTools Detection & Active Player Instant Decoy
-- [x] Desktop Chrome Responsive Device Mode Security Fix
-- [x] Mobile Player Server & Audio Controls Redesign
-- [x] Permanent Mobile Security Flapping Bug Fix
-- [x] Mobile Player Header Title Overflow Fix
-- [x] MegaPlay Server Unwanted Redirect Elimination Fix
-- [x] Desktop DevTools Closed False Positive Fix
-- [x] Splash Screen Removal & Server Streamlining (Removed ani.megaplay.su)
-- [x] Vercel Frontend Deployment Build & Prisma Type Resolution Fix
-- [x] Dual-Hosting Architecture & InfinityFree Packaging (https://7anime.ct.ws)
-- [x] Complete Removal of `splash.mp4` & Lightweight UI Fallback
-- [x] Automated InfinityFree CI/CD Deployment via GitHub Actions
-- [x] Direct Production FTP Upload & Live Verification on InfinityFree (https://7anime.ct.ws)
+- [x] Google Cast & Android TV Second-Screen Integration
+- [x] Dual-Hosting Architecture & Automated CI/CD Deployment
+- [x] Strict 3-Server Video Streaming Architecture (Server 1: 0vidads, Server 2: MegaPlay AniList, Server 3: MegaPlay MAL)
+- [x] Backend Automatic AniList ID → TMDB ID Resolution Service & Prisma Model
+- [x] Command 05 — Generate and Validate Historical Baseline Locally (`0_init/migration.sql`)
+- [x] Command 06 — Final Production Schema Compatibility Verification (100% Match, Zero Drift)
+- [x] Command 07 — Disposable PostgreSQL Migration Replay (`7anime_migration_validation` Replay & Zero Drift Proven)
+- [x] Phase 1 (Codex Upgrade) — Backend TMDB Anime Logo Resolver + Redis Caching
+- [x] Phase 2 (Codex Upgrade) — TMDB Logo API Integration + Frontend Data Pipeline
+- [x] Phase 3 (Codex Upgrade) — Cinematic UI Redesign + Universal Anime Logo Implementation
+- [x] Phase 3.1 (Codex Upgrade) — Critical UI Corrections + Logo Persistence + Database Repair
+
+## Current Phase
+
+- [x] Restore original horizontal capsule navbar (`.desktop-nav`) floating near top center
+- [x] Remove vertical sidebar and full-width topbar
+- [x] Expand Top 10 Hero height to near-fullscreen (`clamp(48rem, 82vh, 60rem)`)
+- [x] Set Top 10 Hero autoplay interval to 7500ms with pause on interaction
+- [x] Increase anime detail page cover container height to `clamp(34rem, 50vh, 44rem)`
+- [x] Universal TMDB anime logo rendering across Hero, Upcoming, and Detail pages
+- [x] Resilient text fallback in `AnimeLogo.tsx` preventing empty flicker during CDN load
+- [x] Fix database missing table error for `anime_tmdb_mappings` and `anime_tmdb_logos`
+- [x] Dual-tier logo caching: Redis (30d) + PostgreSQL (7d) with negative result caching (7d)
+- [x] Full TypeScript compiler verification (frontend and backend: 0 errors)
+- [x] Production build verification (`vite build`: 0 errors)
+- [x] Visual verification via Puppeteer screenshots (`capsule_navbar.png`, `hero_top10_onepiece.png`, `anime_detail.png`, etc.)
+
+## Upcoming Phases
+
+- [ ] Phase 4 — Streaming Provider Restructuring (Server 1: MegaPlay AniList, Server 2: MegaPlay MAL, Server 3: NXsha with `?color=purple`, Server 4+: Extensible Provider Registry; purge `0vidads.top`)
+- [ ] Phase 5 — Automatic Failover State Machine
+- [ ] Phase 6 — Comprehensive Regression Testing & Full Verification
 
 ## Current Blockers
 
@@ -87,27 +65,8 @@ The 7Anime production frontend has been built, packaged, and verified live on In
 
 ## Last Updated
 
-2026-10-25
+2026-11-04
 
 ## Next Exact Action
 
-Monitor automated GitHub Actions CI/CD deployment on GitHub.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Begin Phase 4 — Streaming Provider Restructuring (re-order streaming servers: Server 1 MegaPlay AniList, Server 2 MegaPlay MAL, Server 3 NXsha `?color=purple`, create Extensible Provider Adapter Registry, and purge `0vidads.top`).

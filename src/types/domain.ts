@@ -90,9 +90,24 @@ export interface Anime {
      */
     totalEpisodes?: number
 
+    tmdbId?: number
+    mediaType?: 'movie' | 'tv'
+    seasonNumber?: number
+
     seasons?: Season[]
 
     characters?: Character[]
+
+    logo?: AnimeLogo
+}
+
+export interface AnimeLogo {
+    url: string
+    aspectRatio?: number
+    width?: number
+    height?: number
+    language?: string | null
+    filePath?: string
 }
 
 export interface WatchProgress {

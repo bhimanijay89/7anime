@@ -1,8 +1,12 @@
+import React from 'react'
 import { Bookmark, Check, Play, Star } from 'lucide-react'
-import type { Anime } from '../../types/domain'
+import { useEffect, useState } from 'react'
+import type { Anime, AnimeLogo as AnimeLogoType } from '../../types/domain'
+import { fetchAnimeLogos } from '../../services/anilist'
 import { ShareButton } from '../share/ShareButton'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
+import { AnimeLogo } from './AnimeLogo'
 import './detail.css'
 
 export function AnimeDetailHero({
@@ -16,6 +20,31 @@ export function AnimeDetailHero({
   onToggleSave?: (anime: Anime) => void
   onWatch: () => void
 }) {
+  const [activeLogo, setActiveLogo] = useState<AnimeLogoType | null | undefined>(anime.logo)
+
+  // Synchronize or lazily fetch logo if direct page refresh or navigation
+  useEffect(() => {
+    setActiveLogo(anime.logo)
+
+    if (!anime.logo && anime.id) {
+      const numId = Number(anime.id)
+      if (Number.isInteger(numId) && numId > 0) {
+        let isCurrent = true
+        fetchAnimeLogos([numId])
+          .then(result => {
+            if (isCurrent && result[numId]) {
+              setActiveLogo(result[numId])
+            }
+          })
+          .catch(() => {})
+
+        return () => {
+          isCurrent = false
+        }
+      }
+    }
+  }, [anime.id, anime.logo])
+
   return (
     <div
       className="detail-hero"
@@ -36,7 +65,15 @@ export function AnimeDetailHero({
             ))}
           </div>
 
-          <h1 className="detail-hero__title">{anime.title}</h1>
+          <div className="detail-hero__title-area">
+            <AnimeLogo
+              logo={activeLogo}
+              title={anime.title}
+              sizeVariant="detail"
+              className="detail-hero__logo"
+              priority
+            />
+          </div>
 
           <div className="detail-hero__specs">
             {anime.rating && (

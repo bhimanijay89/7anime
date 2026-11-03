@@ -86,7 +86,7 @@
 
 .hero-top10 {
   position: relative;
-  min-height: 36rem;
+  min-height: clamp(48rem, 82vh, 60rem);
   margin-top: var(--space-5);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -162,6 +162,12 @@
 
 .hero-top10__eyebrow span {
   color: var(--color-text-primary);
+}
+
+.hero-top10__title-area {
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
 }
 
 .hero-top10__title {

@@ -2,39 +2,67 @@
    7ANIME — VIDEO RESOLVER SERVICE
    =========================================================
 
-   SERVER 1 — megaplay.buzz + AniList ID
+   SERVER 1 — 0vidads + TMDB ID (Default Primary Server)
+     Movie: https://0vidads.top/embed/movie/{TMDB_ID}
+     TV:    https://0vidads.top/embed/tv/{TMDB_ID}/{SEASON}/{EPISODE}
+
+   SERVER 2 — megaplay.buzz + AniList ID
      https://megaplay.buzz/stream/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}
 
-   SERVER 2 — megaplay.buzz + MAL ID
+   SERVER 3 — megaplay.buzz + MAL ID
      https://megaplay.buzz/stream/mal/{MAL_ID}/{EPISODE}/{sub|dub}
 
    ========================================================= */
 
+import { isDevToolsActive } from '../utils/security'
+
 export interface ResolveVideoEmbedOptions {
-    server?: 'server1' | 'server2' | string
-    malId?: number | string | null
+    server?: 'server1' | 'server2' | 'server3' | string
+    tmdbId?: number | string | null
+    mediaType?: 'movie' | 'tv' | string | null
+    seasonNumber?: number | string | null
     anilistId: number | string
+    malId?: number | string | null
     episodeNumber: number
     language?: 'sub' | 'dub'
 }
 
 /**
+ * Case-insensitively determines if a media type or anime format string represents a movie.
+ * Handles 'MOVIE', 'Movie', 'movie'.
+ */
+export function isMovieMediaType(type?: string | null): boolean {
+    if (!type) return false
+    return String(type).trim().toLowerCase() === 'movie'
+}
+
+/**
+ * Normalizes media type string to 'movie' or 'tv'.
+ * Correctly recognizes 'MOVIE', 'Movie', 'movie'.
+ * Preserves 'tv' for TV series.
+ */
+export function normalizeMediaType(type?: string | null): 'movie' | 'tv' {
+    return isMovieMediaType(type) ? 'movie' : 'tv'
+}
+
+/**
  * Resolve direct video embed URL for 7anime player.
  *
- * No intermediate JSON request is performed.
+ * Server configuration:
+ * - Server 1: 0vidads (Primary / Default) -> TMDB ID only.
+ * - Server 2: MegaPlay -> AniList ID.
+ * - Server 3: MegaPlay -> MAL ID.
  *
- * Server selection explicitly determines:
- * - Provider: megaplay.buzz
- * - ID type:
- *     server1 -> AniList ID
- *     server2 -> MAL ID
- *
- * There is NO automatic MAL ↔ AniList fallback.
+ * Validation & Safety:
+ * - No sandbox attributes or breaking parameters.
+ * - Does not silently substitute identifiers across providers.
+ * - Preserves existing MegaPlay URL structures and parameters without modification.
  */
-import { isDevToolsActive } from '../utils/security'
-
 export function resolveVideoEmbedUrl({
     server = 'server1',
+    tmdbId,
+    mediaType,
+    seasonNumber = 1,
     malId,
     anilistId,
     episodeNumber,
@@ -66,23 +94,62 @@ export function resolveVideoEmbedUrl({
         Number.isInteger(parsedMalId) &&
         parsedMalId > 0
 
+    const parsedTmdbId =
+        typeof tmdbId === 'number'
+            ? tmdbId
+            : Number(tmdbId)
+
+    const hasValidTmdbId =
+        Number.isInteger(parsedTmdbId) &&
+        parsedTmdbId > 0
+
+    const safeSeason = Math.max(
+        1,
+        Math.floor(Number(seasonNumber) || 1),
+    )
+
+    const normalizedMediaType = normalizeMediaType(mediaType)
+
     /*
      * ---------------------------------------------------------
-     * SERVER 1
-     * megaplay.buzz + AniList ID
+     * SERVER 1 (Default)
+     * 0vidads + TMDB ID
+     * - Movies: https://0vidads.top/embed/movie/{TMDB_ID}
+     * - TV:     https://0vidads.top/embed/tv/{TMDB_ID}/{SEASON}/{EPISODE}
      * ---------------------------------------------------------
      */
     if (server === 'server1') {
+        if (!hasValidTmdbId) {
+            return ''
+        }
+
+        if (normalizedMediaType === 'movie') {
+            return `https://0vidads.top/embed/movie/${parsedTmdbId}`
+        }
+
+        return `https://0vidads.top/embed/tv/${parsedTmdbId}/${safeSeason}/${safeEpisode}`
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * SERVER 2
+     * megaplay.buzz + AniList ID
+     * ---------------------------------------------------------
+     */
+    if (server === 'server2') {
+        if (!safeAniId || safeAniId === 'undefined' || safeAniId === 'null') {
+            return ''
+        }
         return `https://megaplay.buzz/stream/ani/${safeAniId}/${safeEpisode}/${safeLang}`
     }
 
     /*
      * ---------------------------------------------------------
-     * SERVER 2 (also supports legacy server4 alias)
+     * SERVER 3 (also supports legacy server4 alias)
      * megaplay.buzz + MAL ID
      * ---------------------------------------------------------
      */
-    if (server === 'server2' || server === 'server4') {
+    if (server === 'server3' || server === 'server4') {
         if (!hasValidMalId) {
             return ''
         }
@@ -94,7 +161,6 @@ export function resolveVideoEmbedUrl({
      * ---------------------------------------------------------
      * UNKNOWN SERVER
      * ---------------------------------------------------------
-     *
      * Return an empty URL rather than silently selecting
      * another provider or ID type.
      */

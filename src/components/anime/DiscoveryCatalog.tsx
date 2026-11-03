@@ -13,11 +13,13 @@ export function DiscoveryCatalog({
   isSaved,
   onToggleSave,
   onSelect,
+  onPlay,
 }: {
   anime: Anime[]
   isSaved?: (id: string | number) => boolean
   onToggleSave?: (anime: Anime) => void
   onSelect?: (anime: Anime) => void
+  onPlay?: (anime: Anime) => void
 }) {
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState('All')
@@ -37,6 +39,7 @@ export function DiscoveryCatalog({
             isSaved={isSaved?.(item.id)}
             onToggleSave={onToggleSave}
             onSelect={onSelect}
+            onPlay={onPlay}
           />
         ))}
       </div>

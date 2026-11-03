@@ -1,3 +1,4 @@
+import React from 'react'
 import {
     ChevronLeft,
     ChevronRight,
@@ -11,6 +12,7 @@ import {
 import type { Anime } from '../../types/domain'
 import { Badge } from '../ui/Badge'
 import { IconButton } from '../ui/Button'
+import { AnimeLogo } from '../anime/AnimeLogo'
 import './upcomingHero.css'
 
 type UpcomingHeroProps = {
@@ -146,20 +148,15 @@ export function UpcomingHero({
                         <span>UPCOMING ANIME</span>
                     </div>
 
-                    {(() => {
-                        const len = currentAnime.title.length
-                        const titleClass =
-                            len > 60
-                                ? 'upcoming-hero__title upcoming-hero__title--long-xl'
-                                : len > 35
-                                    ? 'upcoming-hero__title upcoming-hero__title--long'
-                                    : 'upcoming-hero__title'
-                        return (
-                            <h2 className={titleClass}>
-                                {currentAnime.title}
-                            </h2>
-                        )
-                    })()}
+                    <div className="upcoming-hero__title-area">
+                        <AnimeLogo
+                            logo={currentAnime.logo}
+                            title={currentAnime.title}
+                            sizeVariant="upcoming"
+                            className="upcoming-hero__logo"
+                            priority
+                        />
+                    </div>
 
                     <div className="upcoming-hero__meta">
                         {currentAnime.type && (

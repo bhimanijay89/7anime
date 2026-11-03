@@ -13,7 +13,7 @@
         { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com https://s4.anilist.co https://media.kitsu.app https://lh3.googleusercontent.com; media-src 'self' blob: https:; frame-src 'self' https://megaplay.buzz https://*.megaplay.buzz https://accounts.google.com; connect-src 'self' https://sevenanime-vodw.onrender.com http://localhost:3001 https://graphql.anilist.co https://api.jikan.moe;"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://images.unsplash.com https://s4.anilist.co https://media.kitsu.app https://lh3.googleusercontent.com https://www.gstatic.com; media-src 'self' blob: https:; frame-src 'self' https://0vidads.top https://*.0vidads.top https://megaplay.buzz https://*.megaplay.buzz https://accounts.google.com https://www.gstatic.com; connect-src 'self' https://sevenanime-vodw.onrender.com http://localhost:3001 https://graphql.anilist.co https://api.jikan.moe https://www.gstatic.com;"
         }
       ]
     }

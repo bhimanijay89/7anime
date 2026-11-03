@@ -1,0 +1,167 @@
+/* ============================================================
+   7ANIME — UNIVERSAL ANIME LOGO SYSTEM
+   ============================================================ */
+
+.anime-logo__container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  max-width: 100%;
+}
+
+.anime-logo__img {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: left center;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 0.28s var(--ease-out),
+    transform 0.28s var(--ease-out);
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.7));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.anime-logo__img--loaded {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Size Variants
+   ────────────────────────────────────────────────────────── */
+
+/* 1. Top 10 Hero Variant */
+.anime-logo--hero {
+  height: clamp(4.5rem, 9.5vw, 8rem);
+  max-width: clamp(16rem, 36vw, 30rem);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.anime-logo--hero .anime-logo__img {
+  max-height: clamp(4.5rem, 9.5vw, 8rem);
+}
+
+/* 2. Detail Page Variant */
+.anime-logo--detail {
+  height: clamp(4.2rem, 8.5vw, 7.2rem);
+  max-width: clamp(15rem, 34vw, 28rem);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.anime-logo--detail .anime-logo__img {
+  max-height: clamp(4.2rem, 8.5vw, 7.2rem);
+}
+
+/* 3. Upcoming Carousel Variant */
+.anime-logo--upcoming {
+  height: clamp(3.2rem, 6.5vw, 5.5rem);
+  max-width: clamp(13rem, 28vw, 24rem);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.anime-logo--upcoming .anime-logo__img {
+  max-height: clamp(3.2rem, 6.5vw, 5.5rem);
+}
+
+/* ──────────────────────────────────────────────────────────
+   Fallback Typography
+   (Matches existing styled title text when logo is unavailable)
+   ────────────────────────────────────────────────────────── */
+
+.anime-logo__text {
+  font-weight: var(--font-weight-heavy);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  margin: 0;
+  color: var(--color-text-primary);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.7);
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.anime-logo__text.anime-logo--hero {
+  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
+  line-height: 1.04;
+  height: auto;
+}
+
+.anime-logo__text.anime-logo--detail {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  line-height: 1.15;
+  height: auto;
+}
+
+.anime-logo__text.anime-logo--upcoming {
+  font-size: clamp(1.5rem, 3.2vw, 2.5rem);
+  line-height: 1.1;
+  height: auto;
+}
+
+.anime-logo__text--lg {
+  font-size: clamp(1.35rem, 3vw, 2.2rem) !important;
+}
+
+.anime-logo__text--xl {
+  font-size: clamp(1.15rem, 2.2vw, 1.7rem) !important;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Accessibility Utility
+   ────────────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ──────────────────────────────────────────────────────────
+   Responsive Layout Adjustments
+   ────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .anime-logo--hero {
+    height: clamp(3.6rem, 11vw, 5.2rem);
+    max-width: 100%;
+  }
+
+  .anime-logo--hero .anime-logo__img {
+    max-height: clamp(3.6rem, 11vw, 5.2rem);
+  }
+
+  .anime-logo--detail {
+    height: clamp(3.4rem, 10vw, 4.8rem);
+    max-width: 100%;
+  }
+
+  .anime-logo--detail .anime-logo__img {
+    max-height: clamp(3.4rem, 10vw, 4.8rem);
+  }
+
+  .anime-logo--upcoming {
+    height: clamp(2.8rem, 8vw, 4.2rem);
+    max-width: 100%;
+  }
+
+  .anime-logo--upcoming .anime-logo__img {
+    max-height: clamp(2.8rem, 8vw, 4.2rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .anime-logo__img {
+    object-position: left center;
+  }
+}
+

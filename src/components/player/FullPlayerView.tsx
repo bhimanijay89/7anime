@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Bookmark,
+  Cast,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -24,13 +25,20 @@ import type {
 } from '../../types/domain'
 
 import {
+  isMovieMediaType,
   resolveVideoEmbedUrl,
 } from '../../services/videoResolver'
+
+import {
+  fetchAnimeMapping,
+} from '../../services/anilist'
 
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { ShareButton } from '../share/ShareButton'
 import { EpisodeSidebar } from './EpisodeSidebar'
+import { CastModal } from './CastModal'
+import { PlayerLoadingOverlay, type PlayerLoadingState } from './PlayerLoadingOverlay'
 import { isDevToolsActive, onDevToolsChange } from '../../utils/security'
 import { DevToolsDecoyView } from '../security/DevToolsDecoyView'
 
@@ -110,8 +118,89 @@ export function FullPlayerView({
     server,
     setServer,
   ] = useState<
-    'server1' | 'server2' | string
+    'server1' | 'server2' | 'server3' | string
   >('server1')
+
+  const [tmdbData, setTmdbData] = useState<{
+    tmdbId?: number | null
+    mediaType?: 'movie' | 'tv' | null
+    season?: number
+  }>({
+    tmdbId: anime.tmdbId,
+    mediaType: anime.mediaType || (isMovieMediaType(anime.type) ? 'movie' : 'tv'),
+    season: anime.seasonNumber || 1,
+  })
+
+  const [mappingLoading, setMappingLoading] = useState<boolean>(!anime.tmdbId)
+  const [mappingError, setMappingError] = useState<string | null>(null)
+  const [isIframeLoaded, setIsIframeLoaded] = useState(false)
+  const [iframeTimedOut, setIframeTimedOut] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
+
+  useEffect(() => {
+    if (anime.tmdbId) {
+      setTmdbData({
+        tmdbId: anime.tmdbId,
+        mediaType: anime.mediaType || (isMovieMediaType(anime.type) ? 'movie' : 'tv'),
+        season: anime.seasonNumber || 1,
+      })
+      setMappingLoading(false)
+      setMappingError(null)
+      return
+    }
+
+    let isMounted = true
+    setMappingLoading(true)
+    setMappingError(null)
+
+    fetchAnimeMapping(anime.id)
+      .then(data => {
+        if (!isMounted) return
+        if (data.tmdbId) {
+          setTmdbData({
+            tmdbId: data.tmdbId,
+            mediaType: data.mediaType || (isMovieMediaType(anime.type) ? 'movie' : 'tv'),
+            season: data.season || 1,
+          })
+          setMappingError(null)
+        } else {
+          setMappingError(
+            'Server 1 (0vidads) mapping is not available for this title. Please switch to Server 2 or Server 3.',
+          )
+        }
+      })
+      .catch(err => {
+        if (!isMounted) return
+        console.warn('[FullPlayerView] Failed to fetch TMDB mapping:', err)
+        const errMsg = err instanceof Error ? err.message : String(err)
+        if (errMsg.includes('404')) {
+          setMappingError(
+            'Stream mapping route was not found on the server. Please switch to Server 2 or Server 3.',
+          )
+        } else if (errMsg.includes('500') || errMsg.includes('502')) {
+          setMappingError(
+            'Stream mapping service encountered an error. Please switch to Server 2 or Server 3.',
+          )
+        } else if (errMsg.includes('JSON')) {
+          setMappingError(
+            'Received an invalid response from stream resolver. Please switch to Server 2 or Server 3.',
+          )
+        } else {
+          setMappingError(
+            'Streaming resolver is currently unreachable. Please switch to Server 2 or Server 3.',
+          )
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setMappingLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [anime.id, anime.tmdbId, anime.mediaType, anime.seasonNumber, anime.type])
 
   const [
     autoNext,
@@ -133,9 +222,7 @@ export function FullPlayerView({
   >('sub')
 
   const [isDescExpanded, setIsDescExpanded] = useState(false)
-
-
-
+  const [isCastModalOpen, setIsCastModalOpen] = useState(false)
 
   const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
 
@@ -557,6 +644,9 @@ export function FullPlayerView({
         return
       }
 
+      setIsIframeLoaded(true)
+      setIframeTimedOut(false)
+
       const progress =
         extractProgressFromMessage(
           event,
@@ -683,12 +773,111 @@ export function FullPlayerView({
 
     return resolveVideoEmbedUrl({
       server,
+      tmdbId: tmdbData.tmdbId,
+      mediaType: tmdbData.mediaType,
+      seasonNumber: tmdbData.season,
       malId: currentEpisode.malId ?? anime.malId,
       anilistId: anime.id,
       episodeNumber: currentEpisode.number,
       language,
     })
-  }, [isDecoyActive, currentEpisode, server, anime.malId, anime.id, language])
+  }, [
+    isDecoyActive,
+    currentEpisode,
+    server,
+    tmdbData.tmdbId,
+    tmdbData.mediaType,
+    tmdbData.season,
+    anime.malId,
+    anime.id,
+    language,
+  ])
+
+  /* =======================================================
+     IFRAME LIFECYCLE & LOADING TIMEOUT
+  ======================================================== */
+
+  useEffect(() => {
+    setIsIframeLoaded(false)
+    setIframeTimedOut(false)
+
+    if (!embedUrl) return
+
+    // 24-second timeout before switching to actionable fallback state
+    const timer = setTimeout(() => {
+      setIsIframeLoaded(loaded => {
+        if (!loaded) {
+          setIframeTimedOut(true)
+        }
+        return loaded
+      })
+    }, 24000)
+
+    return () => clearTimeout(timer)
+  }, [embedUrl, retryKey])
+
+  const playerLoaderState: PlayerLoadingState = useMemo(() => {
+    if (server === 'server1' && mappingLoading) {
+      return 'resolving_metadata'
+    }
+    if (server === 'server1' && mappingError) {
+      return 'error'
+    }
+    if (iframeTimedOut && !isIframeLoaded) {
+      return 'error'
+    }
+    if (!embedUrl) {
+      return 'error'
+    }
+    if (!isIframeLoaded) {
+      return 'loading_stream'
+    }
+    return 'ready'
+  }, [server, mappingLoading, mappingError, iframeTimedOut, isIframeLoaded, embedUrl])
+
+  const playerErrorMessage = useMemo(() => {
+    if (server === 'server1' && mappingError) {
+      return mappingError
+    }
+    if (iframeTimedOut && !isIframeLoaded) {
+      return 'Streaming connection timed out while loading the player. Please try again or switch to an alternate server.'
+    }
+    if (!embedUrl) {
+      return `Stream route unavailable on ${server === 'server1' ? 'Server 1' : server === 'server2' ? 'Server 2' : 'Server 3'}. Please switch to another server.`
+    }
+    return null
+  }, [server, mappingError, iframeTimedOut, isIframeLoaded, embedUrl])
+
+  const handleRetryStream = useCallback(() => {
+    setIsIframeLoaded(false)
+    setIframeTimedOut(false)
+    setRetryKey(k => k + 1)
+    if (server === 'server1' && mappingError) {
+      setMappingLoading(true)
+      setMappingError(null)
+      fetchAnimeMapping(anime.id)
+        .then(data => {
+          if (data.tmdbId) {
+            setTmdbData({
+              tmdbId: data.tmdbId,
+              mediaType: data.mediaType || (isMovieMediaType(anime.type) ? 'movie' : 'tv'),
+              season: data.season || 1,
+            })
+            setMappingError(null)
+          } else {
+            setMappingError(
+              'Server 1 (0vidads) mapping is not available for this title. Please switch to Server 2 or Server 3.',
+            )
+          }
+        })
+        .catch(() => {
+          setMappingError('Failed to reconnect to stream resolver. Please switch to Server 2 or Server 3.')
+        })
+        .finally(() => {
+          setMappingLoading(false)
+        })
+    }
+  }, [server, mappingError, anime.id, anime.type])
 
   /* =======================================================
      PREVIOUS EPISODE
@@ -995,20 +1184,34 @@ export function FullPlayerView({
               aria-hidden="true"
             />
 
-            <iframe
-              key={`${embedUrl}`}
-              ref={iframeRef}
-              src={embedUrl}
-              title={`${anime.title} Episode ${currentEpisode.number}`}
-              className="cinema-player__iframe"
-              allowFullScreen
-              allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            {embedUrl && (
+              <iframe
+                key={`${embedUrl}-${retryKey}`}
+                ref={iframeRef}
+                src={embedUrl}
+                title={`${anime.title} Episode ${currentEpisode?.number ?? 1}`}
+                className="cinema-player__iframe"
+                allowFullScreen
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                onLoad={() => {
+                  setIsIframeLoaded(true)
+                  setIframeTimedOut(false)
+                }}
+              />
+            )}
+
+            {/* Premium Cinematic Loading & Error Transition Screen */}
+            <PlayerLoadingOverlay
+              state={playerLoaderState}
+              anime={anime}
+              currentEpisode={currentEpisode}
+              server={server}
+              errorMessage={playerErrorMessage}
+              onRetry={handleRetryStream}
+              onSelectServer={setServer}
+              onBack={onBack}
             />
           </div>
-
-          {/* ===============================================
-              SERVERS & AUDIO SELECTOR (BELOW PLAYER)
-          ============================================== */}
 
           {/* ===============================================
               SERVERS & AUDIO SELECTOR (BELOW PLAYER)
@@ -1050,6 +1253,16 @@ export function FullPlayerView({
                 <button
                   type="button"
                   className="cinema-player__control-btn icon-only"
+                  onClick={() => setIsCastModalOpen(true)}
+                  aria-label="Cast to Android TV / Chromecast"
+                  title="Cast to TV"
+                >
+                  <Cast size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  className="cinema-player__control-btn icon-only"
                   onClick={requestFullscreen}
                   aria-label="Fullscreen player"
                   title="Fullscreen"
@@ -1068,15 +1281,16 @@ export function FullPlayerView({
                 <button
                   type="button"
                   className={`cinema-player__server-chip ${server ===
-                      'server1'
-                      ? 'active'
-                      : ''
+                    'server1'
+                    ? 'active'
+                    : ''
                     }`}
                   onClick={() =>
                     setServer(
                       'server1',
                     )
                   }
+                  title="Server 1 (Default)"
                 >
                   <Sparkles
                     size={13}
@@ -1090,15 +1304,16 @@ export function FullPlayerView({
                 <button
                   type="button"
                   className={`cinema-player__server-chip ${server ===
-                      'server2'
-                      ? 'active'
-                      : ''
+                    'server2'
+                    ? 'active'
+                    : ''
                     }`}
                   onClick={() =>
                     setServer(
                       'server2',
                     )
                   }
+                  title="Server 2"
                 >
                   <Radio
                     size={13}
@@ -1106,6 +1321,29 @@ export function FullPlayerView({
 
                   <span>
                     Server 2
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                    'server3'
+                    ? 'active'
+                    : ''
+                    }`}
+                  onClick={() =>
+                    setServer(
+                      'server3',
+                    )
+                  }
+                  title="Server 3"
+                >
+                  <Radio
+                    size={13}
+                  />
+
+                  <span>
+                    Server 3
                   </span>
                 </button>
               </div>
@@ -1120,39 +1358,47 @@ export function FullPlayerView({
                 AUDIO
               </span>
 
-              <div className="cinema-player__audio-grid">
-                <button
-                  type="button"
-                  className={`cinema-player__lang-chip ${language ===
+              {server === 'server1' ? (
+                <div className="cinema-player__audio-grid">
+                  <span className="cinema-player__lang-chip active" style={{ cursor: 'default' }}>
+                    Multi-Audio (In-Player)
+                  </span>
+                </div>
+              ) : (
+                <div className="cinema-player__audio-grid">
+                  <button
+                    type="button"
+                    className={`cinema-player__lang-chip ${language ===
                       'sub'
                       ? 'active'
                       : ''
-                    }`}
-                  onClick={() =>
-                    setLanguage(
-                      'sub',
-                    )
-                  }
-                >
-                  SUB
-                </button>
+                      }`}
+                    onClick={() =>
+                      setLanguage(
+                        'sub',
+                      )
+                    }
+                  >
+                    SUB
+                  </button>
 
-                <button
-                  type="button"
-                  className={`cinema-player__lang-chip ${language ===
+                  <button
+                    type="button"
+                    className={`cinema-player__lang-chip ${language ===
                       'dub'
                       ? 'active'
                       : ''
-                    }`}
-                  onClick={() =>
-                    setLanguage(
-                      'dub',
-                    )
-                  }
-                >
-                  DUB
-                </button>
-              </div>
+                      }`}
+                    onClick={() =>
+                      setLanguage(
+                        'dub',
+                      )
+                    }
+                  >
+                    DUB
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1285,8 +1531,8 @@ export function FullPlayerView({
               <button
                 type="button"
                 className={`cinema-player__control-btn icon-only ${inList
-                    ? 'active'
-                    : ''
+                  ? 'active'
+                  : ''
                   }`}
                 onClick={() => {
                   setInList(
@@ -1317,6 +1563,16 @@ export function FullPlayerView({
                     size={16}
                   />
                 )}
+              </button>
+
+              <button
+                type="button"
+                className="cinema-player__control-btn icon-only"
+                onClick={() => setIsCastModalOpen(true)}
+                aria-label="Cast to Android TV / Chromecast"
+                title="Cast to TV"
+              >
+                <Cast size={16} />
               </button>
 
               <button
@@ -1490,6 +1746,13 @@ export function FullPlayerView({
           }
         />
       </div>
+
+      <CastModal
+        open={isCastModalOpen}
+        onClose={() => setIsCastModalOpen(false)}
+        animeTitle={anime.title}
+        episodeNumber={currentEpisode?.number}
+      />
     </section>
   )
 }

@@ -1,0 +1,447 @@
+/* =========================================================
+   7ANIME — PREMIUM CINEMATIC PLAYER LOADING SCREEN
+   ========================================================= */
+
+.player-loader {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #050814;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 450ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              visibility 450ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.player-loader--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------
+   1. CINEMATIC BACKDROP & ATMOSPHERIC LIGHTING
+   --------------------------------------------------------- */
+
+.player-loader__backdrop {
+  position: absolute;
+  inset: -8%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(28px) brightness(0.22) saturate(1.3);
+  transform: scale(1.08);
+  opacity: 0.55;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.player-loader__gradient-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: 
+    /* Center atmosphere deepening towards edges */
+    radial-gradient(ellipse 85% 70% at 50% 50%, rgba(10, 18, 36, 0.72) 0%, rgba(5, 8, 20, 0.94) 80%, #050814 100%),
+    /* Soft electric blue aura from top center */
+    radial-gradient(ellipse 65% 45% at 50% 20%, rgba(85, 216, 255, 0.12) 0%, transparent 70%),
+    /* Soft violet aura from bottom center */
+    radial-gradient(ellipse 65% 45% at 50% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+}
+
+.player-loader__ambient-glow {
+  position: absolute;
+  inset: 5%;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(circle at 50% 50%, rgba(85, 216, 255, 0.08) 0%, rgba(139, 92, 246, 0.06) 50%, transparent 75%);
+  filter: blur(40px);
+  animation: playerAmbientPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes playerAmbientPulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* ---------------------------------------------------------
+   2. CENTERED CONTENT COMPOSITION
+   --------------------------------------------------------- */
+
+.player-loader__content {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  gap: 1.25rem;
+  animation: playerContentEnter 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes playerContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------------------------------------------------------
+   3. BRANDING
+   --------------------------------------------------------- */
+
+.player-loader__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.player-loader__logo {
+  max-width: 120px;
+  height: auto;
+  filter: drop-shadow(0 0 20px rgba(85, 216, 255, 0.35))
+          drop-shadow(0 0 40px rgba(139, 92, 246, 0.25));
+  user-select: none;
+}
+
+/* ---------------------------------------------------------
+   4. ELEGANT ANIMATED INDICATOR
+   --------------------------------------------------------- */
+
+.player-loader__indicator-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  width: 64px;
+  margin: 0.25rem 0;
+}
+
+.player-loader__spinner {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-loader__spinner-ring {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.player-loader__spinner-ring--outer {
+  inset: 0;
+  border: 2px solid transparent;
+  border-top-color: #55d8ff;
+  border-right-color: rgba(85, 216, 255, 0.3);
+  animation: playerSpinnerRotate 1.1s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(85, 216, 255, 0.45));
+}
+
+.player-loader__spinner-ring--inner {
+  inset: 7px;
+  border: 2px solid transparent;
+  border-bottom-color: #a78bfa;
+  border-left-color: rgba(167, 139, 250, 0.3);
+  animation: playerSpinnerRotateReverse 1.4s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.4));
+}
+
+.player-loader__spinner-core {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff, #55d8ff);
+  box-shadow: 0 0 12px #55d8ff, 0 0 20px rgba(139, 92, 246, 0.6);
+  animation: playerCorePulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes playerSpinnerRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes playerSpinnerRotateReverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes playerCorePulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.player-loader__error-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.2);
+}
+
+.player-loader__error-icon {
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4));
+}
+
+/* ---------------------------------------------------------
+   5. STATUS TYPOGRAPHY
+   --------------------------------------------------------- */
+
+.player-loader__typography {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.player-loader__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.player-loader__subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #94a3b8;
+  max-width: 420px;
+}
+
+/* ---------------------------------------------------------
+   6. METADATA & SERVER PILL
+   --------------------------------------------------------- */
+
+.player-loader__meta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  max-width: 90%;
+}
+
+.player-loader__anime-name {
+  color: #ffffff;
+  font-weight: 650;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-loader__separator {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.75rem;
+}
+
+.player-loader__ep-text {
+  color: #cbd5e1;
+}
+
+.player-loader__server-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #55d8ff;
+  font-weight: 600;
+}
+
+.player-loader__server-icon {
+  color: #55d8ff;
+}
+
+/* ---------------------------------------------------------
+   7. ERROR & TIMEOUT ACTIONS
+   --------------------------------------------------------- */
+
+.player-loader__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.player-loader__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.player-loader__server-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.player-loader__server-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.9rem;
+  background: rgba(30, 41, 59, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.player-loader__server-btn:hover {
+  background: rgba(51, 65, 85, 0.8) !important;
+  border-color: rgba(85, 216, 255, 0.4) !important;
+  color: #55d8ff !important;
+}
+
+.player-loader__back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  transition: color 200ms ease;
+}
+
+.player-loader__back-btn:hover {
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------
+   8. RESPONSIVE OPTIMIZATIONS
+   --------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .player-loader__logo {
+    max-width: 95px;
+  }
+
+  .player-loader__spinner {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-loader__indicator-wrap {
+    height: 48px;
+    width: 48px;
+  }
+
+  .player-loader__title {
+    font-size: 1.05rem;
+  }
+
+  .player-loader__subtitle {
+    font-size: 0.8rem;
+    max-width: 300px;
+  }
+
+  .player-loader__meta-pill {
+    font-size: 0.74rem;
+    padding: 0.3rem 0.7rem;
+    gap: 0.35rem;
+  }
+
+  .player-loader__anime-name {
+    max-width: 130px;
+  }
+
+  .player-loader__server-switches {
+    gap: 0.4rem;
+  }
+
+  .player-loader__server-btn {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+  }
+}
+
+/* ---------------------------------------------------------
+   9. ACCESSIBILITY / PREFERS-REDUCED-MOTION
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .player-loader {
+    transition: opacity 150ms ease-out;
+  }
+
+  .player-loader__ambient-glow {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  .player-loader__content {
+    animation: none;
+  }
+
+  .player-loader__spinner-ring--outer,
+  .player-loader__spinner-ring--inner {
+    animation: none;
+    border-color: #55d8ff;
+  }
+
+  .player-loader__spinner-core {
+    animation: none;
+  }
+}

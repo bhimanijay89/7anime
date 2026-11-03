@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Anime } from '../../types/domain'
 import { Badge } from '../ui/Badge'
 import { Button, IconButton } from '../ui/Button'
+import { AnimeLogo } from '../anime/AnimeLogo'
 import './rail.css'
 
 interface Top10HeroProps {
@@ -93,7 +95,7 @@ export function Top10Hero({
 
     const timer = window.setInterval(() => {
       goTo(activeIndex + 1)
-    }, 5000)
+    }, 7500)
 
     return () => {
       window.clearInterval(timer)
@@ -209,20 +211,15 @@ export function Top10Hero({
             <span>#{rank} THIS WEEK</span>
           </p>
 
-          {(() => {
-            const len = current.title.length
-            const titleClass =
-              len > 60
-                ? 'hero-top10__title hero-top10__title--long-xl'
-                : len > 35
-                  ? 'hero-top10__title hero-top10__title--long'
-                  : 'hero-top10__title'
-            return (
-              <h1 className={titleClass}>
-                {current.title}
-              </h1>
-            )
-          })()}
+          <div className="hero-top10__title-area">
+            <AnimeLogo
+              logo={current.logo}
+              title={current.title}
+              sizeVariant="hero"
+              className="hero-top10__logo"
+              priority
+            />
+          </div>
 
           <div className="hero-top10__specs">
             {current.rating && (
@@ -619,20 +616,15 @@ export function UpcomingHero({
             <span>UPCOMING · COMING SOON</span>
           </p>
 
-          {(() => {
-            const len = current.title.length
-            const titleClass =
-              len > 60
-                ? 'hero-top10__title hero-top10__title--long-xl'
-                : len > 35
-                  ? 'hero-top10__title hero-top10__title--long'
-                  : 'hero-top10__title'
-            return (
-              <h2 className={titleClass}>
-                {current.title}
-              </h2>
-            )
-          })()}
+          <div className="hero-top10__title-area">
+            <AnimeLogo
+              logo={current.logo}
+              title={current.title}
+              sizeVariant="upcoming"
+              className="hero-top10__logo"
+              priority
+            />
+          </div>
 
           <div className="hero-top10__meta">
             {current.type && (

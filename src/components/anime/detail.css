@@ -8,7 +8,7 @@
 
 .detail-hero {
   position: relative;
-  min-height: 28rem;
+  min-height: clamp(34rem, 50vh, 44rem);
   border-radius: var(--radius-xl);
   overflow: hidden;
   display: flex;
@@ -61,6 +61,12 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
+}
+
+.detail-hero__title-area {
+  display: flex;
+  align-items: center;
+  min-height: 3.5rem;
 }
 
 .detail-hero__title {

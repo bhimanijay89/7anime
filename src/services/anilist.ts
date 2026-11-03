@@ -1,5 +1,6 @@
 import type {
     Anime,
+    AnimeLogo,
     Character,
     Episode,
 } from '../types/domain'
@@ -1348,12 +1349,115 @@ export async function getUpcomingAnime(
 }
 
 /* =========================================================
-   AIRING SCHEDULE
+   BACKEND API & AIRING SCHEDULE
    ========================================================= */
 
-const BACKEND_URL =
-    (import.meta.env.VITE_API_URL as string | undefined) ||
-    (import.meta.env.DEV ? 'http://localhost:3001' : 'https://sevenanime-vodw.onrender.com')
+export const BACKEND_URL =
+    (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+        ? `${window.location.protocol}//${window.location.hostname}:3001`
+        : (((import.meta as any).env?.VITE_API_URL as string | undefined) || 'https://sevenanime-vodw.onrender.com')
+
+export interface AnimeMappingData {
+    anilistId: number
+    tmdbId?: number | null
+    mediaType?: 'movie' | 'tv' | null
+    season?: number
+    confidence?: string
+    source?: string
+}
+
+export async function fetchAnimeMapping(anilistId: number | string): Promise<AnimeMappingData> {
+    const id = Number(anilistId)
+    if (!Number.isInteger(id) || id <= 0) {
+        throw new Error('Invalid AniList ID provided for mapping')
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/anime/${id}/mapping`)
+    if (!response.ok) {
+        throw new Error(`Mapping service returned HTTP ${response.status}`)
+    }
+
+    let json: any
+    try {
+        json = await response.json()
+    } catch {
+        throw new Error('Invalid JSON received from mapping service')
+    }
+
+    if (!json || typeof json !== 'object' || !json.ok || !json.data) {
+        throw new Error(json?.error?.message || 'Invalid mapping response payload')
+    }
+
+    return json.data as AnimeMappingData
+}
+
+/**
+ * Fetches official anime logos from TMDB via the backend batch endpoint.
+ * Accepts an array of AniList IDs and returns a map keyed by AniList ID.
+ * Gracefully handles failures without throwing, returning a safe partial or empty record.
+ */
+export async function fetchAnimeLogos(
+    anilistIds: number[],
+): Promise<Record<number, AnimeLogo | null>> {
+    const validIds = Array.from(
+        new Set(
+            (anilistIds || [])
+                .map(id => Number(id))
+                .filter(id => Number.isInteger(id) && id > 0),
+        ),
+    )
+
+    if (validIds.length === 0) {
+        return {}
+    }
+
+    try {
+        const query = validIds.join(',')
+        const response = await fetch(`${BACKEND_URL}/api/anime/logos?ids=${encodeURIComponent(query)}`)
+        if (!response.ok) {
+            console.warn(`[fetchAnimeLogos] Backend returned HTTP ${response.status}`)
+            return {}
+        }
+
+        const json = await response.json()
+        if (!json || (!json.ok && !json.success) || !json.data) {
+            return {}
+        }
+
+        const rawData = json.data as Record<string, {
+            logoUrl: string
+            aspectRatio?: number
+            width?: number
+            height?: number
+            language?: string | null
+            filePath?: string
+        } | null>
+
+        const result: Record<number, AnimeLogo | null> = {}
+        for (const [idStr, logoItem] of Object.entries(rawData)) {
+            const numId = Number(idStr)
+            if (!Number.isInteger(numId) || numId <= 0) continue
+
+            if (!logoItem || !logoItem.logoUrl) {
+                result[numId] = null
+            } else {
+                result[numId] = {
+                    url: logoItem.logoUrl,
+                    aspectRatio: logoItem.aspectRatio,
+                    width: logoItem.width,
+                    height: logoItem.height,
+                    language: logoItem.language ?? null,
+                    filePath: logoItem.filePath,
+                }
+            }
+        }
+
+        return result
+    } catch (err) {
+        console.warn('[fetchAnimeLogos] Failed to fetch logos:', err)
+        return {}
+    }
+}
 
 export interface AiringScheduleEntry {
     id: string
@@ -1687,9 +1791,15 @@ export function getAnimeStreamEmbedUrl(
     episodeNumber: number,
     language: 'sub' | 'dub' = 'sub',
     malId?: number | string | null,
+    tmdbId?: number | string | null,
+    mediaType?: 'movie' | 'tv' | string | null,
+    seasonNumber?: number | string | null,
 ): string {
     return resolveVideoEmbedUrl({
         server,
+        tmdbId,
+        mediaType,
+        seasonNumber,
         malId,
         anilistId: animeId,
         episodeNumber,

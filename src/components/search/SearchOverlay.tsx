@@ -1,7 +1,6 @@
 import {
     ChevronRight,
     Clock3,
-    LoaderCircle,
     Search,
     Sparkles,
     Star,
@@ -24,6 +23,7 @@ import {
 import {
     Modal,
 } from '../ui/Overlay'
+import { SearchSkeleton } from '../ui/Skeleton'
 
 import './search.css'
 
@@ -321,25 +321,21 @@ export function SearchOverlay({
                 ) : loading ? (
 
                     /* =====================================================
-                       LOADING
+                       LOADING SKELETON
                     ====================================================== */
 
-                    <div className="search-empty">
-                        <div className="search-empty__icon">
-                            <LoaderCircle className="spinner" size={26} />
+                    <div className="search-results" aria-busy="true">
+                        <div className="search-section-heading">
+                            <div>
+                                <span>
+                                    SEARCHING CATALOG
+                                </span>
+                                <h3>
+                                    Searching for &ldquo;{query.trim()}&rdquo;...
+                                </h3>
+                            </div>
                         </div>
-
-                        <h3>
-                            Searching...
-                        </h3>
-
-                        <p>
-                            Looking for anime matching
-                            <strong>
-                                {' '}
-                                "{query.trim()}"
-                            </strong>
-                        </p>
+                        <SearchSkeleton count={5} />
                     </div>
 
                 ) : error ? (

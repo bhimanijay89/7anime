@@ -193,6 +193,12 @@
    Title
    ========================================================= */
 
+.upcoming-hero__title-area {
+  display: flex;
+  align-items: center;
+  min-height: 3.5rem;
+}
+
 .upcoming-hero__title {
     margin: 0;
     max-width: 42rem;
