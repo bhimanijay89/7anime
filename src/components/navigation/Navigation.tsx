@@ -19,6 +19,7 @@ import './navigation.css'
 
 export type ViewMode =
   | 'home'
+  | 'movies'
   | 'detail'
   | 'player'
   | 'library'
@@ -145,10 +146,12 @@ export function DesktopNavbar({
 
         {/* Movies */}
         <a
+          className={currentView === 'movies' ? 'active' : ''}
           href="#movies"
+          aria-current={currentView === 'movies' ? 'page' : undefined}
           onClick={e => {
             e.preventDefault()
-            handleScrollTo('discovery-catalog')
+            onNavigate?.('movies')
           }}
         >
           <Film size={16} aria-hidden="true" />

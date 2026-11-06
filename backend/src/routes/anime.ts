@@ -6,6 +6,7 @@ import {
     getTrendingAnime,
     getPopularAnime,
     getUpcomingAnime,
+    getAnimeMovies,
     searchAnime,
 } from '../services/anilist.js'
 import {
@@ -205,6 +206,20 @@ router.get('/anime/upcoming', async (req, res) => {
     } catch (error) {
         console.error('[GET /api/anime/upcoming]', error)
         return sendError(res, 'Unable to load upcoming anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
+/* GET /api/anime/movies */
+router.get('/anime/movies', async (req, res) => {
+    try {
+        const page = req.query.page ? Number(req.query.page) : 1
+        const perPage = req.query.perPage ? Number(req.query.perPage) : 25
+        const list = await getAnimeMovies(page, perPage)
+        const animeList = list.map(mapAniListToUnified)
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/movies]', error)
+        return sendError(res, 'Unable to load anime movies.', ErrorCode.SERVICE_UNAVAILABLE, 502)
     }
 })
 

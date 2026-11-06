@@ -336,6 +336,58 @@ const UPCOMING_QUERY = `
     }
 `
 
+const MOVIES_QUERY = `
+    query (
+        $page: Int
+        $perPage: Int
+    ) {
+        Page(
+            page: $page
+            perPage: $perPage
+        ) {
+            media(
+                type: ANIME
+                format: MOVIE
+                sort: POPULARITY_DESC
+            ) {
+                id
+                idMal
+
+                title {
+                    romaji
+                    english
+                    native
+                }
+
+                coverImage {
+                    medium
+                    large
+                    extraLarge
+                }
+
+                bannerImage
+                description
+                status
+                averageScore
+                episodes
+                duration
+                genres
+                format
+                seasonYear
+                source
+
+                studios(
+                    isMain: true
+                ) {
+                    nodes {
+                        name
+                    }
+                }
+            }
+        }
+    }
+`
+
 class AniListError extends Error {
     status: number
 
@@ -815,6 +867,18 @@ export async function getUpcomingAnime(
     return getPageAnime(
         UPCOMING_QUERY,
         'upcoming',
+        page,
+        perPage,
+    )
+}
+
+export async function getAnimeMovies(
+    page = 1,
+    perPage = 25,
+): Promise<AniListAnime[]> {
+    return getPageAnime(
+        MOVIES_QUERY,
+        'movies',
         page,
         perPage,
     )

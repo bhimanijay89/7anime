@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 3.2.1 — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
+Bug Fix — Movies Navigation & Dedicated Movies View
 
 ## Overall Status
 
-Phase 3.2.1 is COMPLETE and fully verified. The unwanted black gap above the Hero carousel has been completely eliminated by positioning the original horizontal rounded capsule navbar as a fixed overlay (`position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 50`), allowing the Hero background artwork to extend all the way to the top of the viewport (`top: 0`) edge-to-edge behind the navbar. All Top 10 ranking elements ("TOP 10", "#06 THIS WEEK", poster rank badges, thumbnail rank numbers) have been removed from the Hero carousel, transforming it into a clean, curated cinematic showcase. The root cause of the missing official logos was identified (property naming mismatch `logoUrl` vs `url`) and fixed across the entire pipeline with aspect-ratio skeleton shimmer loading and zero-layout-shift containment. The synopsis text rendering bug displaying literal `<br><br>` tags was resolved by implementing HTML sanitization and entity decoding in both frontend and backend. All 10 curated anime logos are permanently stored in PostgreSQL (`status = 'verified'`, `expiresAt = null`). All TypeScript checks, production builds, database tests, and browser screenshot visual verifications pass cleanly.
+The Movies navigation issue is completely RESOLVED and fully verified. Clicking "Movies" in the floating capsule navbar now immediately opens a dedicated anime movies catalogue instead of scrolling to the home discovery section. The implementation includes a backend endpoint (`GET /api/anime/movies`) querying AniList with `format: MOVIE` and caching responses via Redis, a frontend client service with direct GraphQL fallback, and a dedicated `MoviesView` component styled in Liquid Glass with a spotlight presentation card, real-time search, genre filtering pills, and sorting dropdown. URL hash routing (`/#movies`) is synchronized with browser history (`pushState`, `popstate`, `hashchange`) ensuring that page refreshes and browser Back/Forward navigation preserve the active view seamlessly without breaking Home, Discover, Trending, Schedule, or My List navigation.
 
 ## Completed Phases
 
@@ -35,21 +35,26 @@ Phase 3.2.1 is COMPLETE and fully verified. The unwanted black gap above the Her
 - [x] Phase 3.1 (Codex Upgrade) — Critical UI Corrections + Logo Persistence + Database Repair
 - [x] Phase 3.2 (Codex Upgrade) — Fixed Curated Hero Collection & Permanent Logo Storage
 - [x] Phase 3.2.1 (Codex Upgrade) — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
+- [x] Bug Fix — Movies Navigation & Dedicated Movies View
 
 ## Current Phase Details
 
-- [x] Remove black space above Hero: Hero background extends to top of viewport behind floating navbar
-- [x] Position original capsule navbar as fixed overlay floating near top center
-- [x] Complete removal of ALL Top 10 ranking labels ("TOP 10", "#06 THIS WEEK", poster rank badges, thumbnail rank numbers)
-- [x] Keep polished right-side poster artwork card without ranking badge
-- [x] Root cause analysis and resolution for official TMDB anime logos (resolved `logoUrl` vs `url` property mismatch)
-- [x] Pure skeleton shimmer loading state in `AnimeLogo.tsx` — never displays plain title simply because logo is downloading
-- [x] Resilient text fallback ONLY when logo is genuinely missing or broken
-- [x] Clean synopsis rendering — stripped literal `<br><br>` tags and decoded HTML entities
-- [x] Permanent PostgreSQL storage verified for all 10 curated anime (`expiresAt = null`, `status = 'verified'`)
+- [x] Traced `src/components/navigation/Navigation.tsx` click handler and fixed routing
+- [x] Added `'movies'` to `ViewMode` union type
+- [x] Active state indicator in capsule navbar for Movies
+- [x] Backend endpoint `GET /api/anime/movies` with `format: MOVIE` AniList query and Redis caching
+- [x] Frontend `getAnimeMovies()` service in `src/services/anilist.ts` with backend API and GraphQL fallback
+- [x] Dedicated `MoviesView` component with header banner, movie count, spotlight movie feature card, search, genre filter pills, and sort dropdown
+- [x] Responsive movie grid using unified `AnimeCard` component
+- [x] Top spacing clearance in `src/pages/preview.css` (`padding-top: 5.5rem;`) for `.movies-view`
+- [x] URL hash routing (`/#movies`) and browser Back/Forward navigation support (`pushState`, `hashchange`, `popstate`)
+- [x] Direct browser refresh on `/#movies` preserves Movies view
+- [x] Clicking movie cards opens the anime detail view
+- [x] Verified Home, Discover, Trending, Schedule, and My List navigation unaffected
 - [x] Full TypeScript compiler checks: PASS (frontend and backend: 0 errors)
 - [x] Production build verification (`npm run build`): PASS
-- [x] Visual verification via Puppeteer screenshots of One Piece, Naruto, Bleach, Demon Slayer, Jujutsu Kaisen, Death Note, mobile viewport, and capsule navbar
+- [x] Automated Puppeteer test suite (`test-movies-navigation.mjs`): PASS (6/6 tests passed)
+- [x] Visual verification via Puppeteer screenshots (`docs/screenshots/movies_page.png` and `docs/screenshots/movies_grid.png`)
 
 ## Upcoming Phases
 

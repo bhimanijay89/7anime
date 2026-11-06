@@ -1,0 +1,324 @@
+/* =========================================================
+   7ANIME — DEDICATED MOVIES VIEW STYLES
+   Liquid Glass Cinematic Movie Catalogue
+   ========================================================= */
+
+.movies-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-bottom: var(--space-12);
+  width: min(calc(100% - 2rem), 88rem);
+  margin: 0 auto;
+}
+
+/* ─── Header ─── */
+.movies-view__header {
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border-radius: var(--radius-2xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(85, 216, 255, 0.15), transparent 45%),
+    linear-gradient(135deg, rgba(20, 26, 38, 0.85) 0%, rgba(11, 15, 25, 0.95) 100%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-2);
+}
+
+.movies-view__header-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 48rem;
+}
+
+.movies-view__header h1 {
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--color-text-primary);
+}
+
+.movies-view__header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+  line-height: 1.5;
+}
+
+.movies-view__header-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.movies-view__header-stat strong {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 900;
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+.movies-view__header-stat span {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* ─── Spotlight Movie ─── */
+.movies-spotlight {
+  position: relative;
+  min-height: clamp(22rem, 36vw, 30rem);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background-size: cover;
+  background-position: center 30%;
+  border: 1px solid var(--color-glass-border);
+  box-shadow: var(--shadow-2);
+  isolation: isolate;
+}
+
+.movies-spotlight__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 10, 15, 0.95) 0%, rgba(8, 10, 15, 0.8) 45%, rgba(8, 10, 15, 0.35) 100%),
+    linear-gradient(0deg, rgba(8, 10, 15, 0.9) 0%, transparent 50%);
+  z-index: 1;
+}
+
+.movies-spotlight__content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: var(--space-6);
+  align-items: flex-end;
+  max-width: 65rem;
+}
+
+.movies-spotlight__poster {
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-2), 0 0 25px rgba(85, 216, 255, 0.12);
+  border: 1px solid var(--color-glass-border);
+  display: block;
+}
+
+.movies-spotlight__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.movies-spotlight__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.movies-spotlight__badges {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.movies-spotlight__details h2 {
+  font-size: clamp(1.8rem, 3.8vw, 2.75rem);
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+}
+
+.movies-spotlight__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.movies-spotlight__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #ffd77e;
+  font-weight: 700;
+}
+
+.movies-spotlight__synopsis {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-width: 48rem;
+}
+
+.movies-spotlight__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ─── Filter & Search Bar ─── */
+.movies-toolbar {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+}
+
+.movies-toolbar__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.movies-toolbar__search {
+  position: relative;
+  flex: 1;
+  min-width: 16rem;
+  display: flex;
+  align-items: center;
+}
+
+.movies-toolbar__search svg {
+  position: absolute;
+  left: 1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.movies-toolbar__search input {
+  width: 100%;
+  padding: 0.65rem 1rem 0.65rem 2.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.movies-toolbar__search input:focus {
+  border-color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 16px rgba(85, 216, 255, 0.15);
+}
+
+.movies-toolbar__sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.movies-toolbar__sort select {
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  outline: none;
+}
+
+.movies-toolbar__genres {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 0.2rem;
+}
+
+.movies-toolbar__genres::-webkit-scrollbar {
+  display: none;
+}
+
+.movies-toolbar__genres button {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.movies-toolbar__genres button:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.movies-toolbar__genres button.active {
+  background: var(--color-accent);
+  color: #071019;
+  font-weight: 600;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 14px rgba(85, 216, 255, 0.25);
+}
+
+/* ─── Results Summary ─── */
+.movies-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  padding: 0 0.5rem;
+}
+
+/* ─── Grid ─── */
+.movies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-5);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .movies-spotlight__content {
+    grid-template-columns: 1fr;
+  }
+
+  .movies-spotlight__poster {
+    display: none;
+  }
+
+  .movies-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--space-3);
+  }
+
+  .movies-view__header-stat {
+    display: none;
+  }
+}

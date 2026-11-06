@@ -1,4 +1,5 @@
 import { ScheduleView } from '../components/schedule/ScheduleView'
+import { MoviesView } from '../components/movies/MoviesView'
 import {
   ArrowLeft,
   Play,
@@ -73,9 +74,19 @@ function getAuthHeaders(extraHeaders?: Record<string, string>): Record<string, s
   return headers
 }
 
+function getInitialView(): ViewMode {
+  if (typeof window === 'undefined') return 'home'
+  const hash = window.location.hash.toLowerCase().replace(/^#/, '')
+  if (hash === 'movies') return 'movies'
+  if (hash === 'schedule') return 'schedule'
+  if (hash === 'library' || hash === 'mylist') return 'library'
+  if (hash === 'profile') return 'profile'
+  return 'home'
+}
+
 function Home() {
   const [currentView, setCurrentView] =
-    useState<ViewMode>('home')
+    useState<ViewMode>(getInitialView)
 
   const [selectedAnime, setSelectedAnime] =
     useState<Anime | null>(
@@ -464,6 +475,9 @@ function Home() {
       home:
         '7anime — Premium Anime Streaming',
 
+      movies:
+        'Anime Movies & Films — 7anime',
+
       schedule:
         'Schedule — 7anime',
 
@@ -505,8 +519,51 @@ function Home() {
         top: 0,
         behavior: 'smooth',
       })
+      const targetHash = view === 'home' ? '#home' : `#${view}`
+      if (window.location.hash !== targetHash) {
+        window.history.pushState(null, '', targetHash)
+      }
     }
   }
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase().replace(/^#/, '')
+      if (hash === 'movies') {
+        setCurrentView('movies')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === 'schedule') {
+        setCurrentView('schedule')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === 'library' || hash === 'mylist') {
+        setCurrentView('library')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === 'profile') {
+        setCurrentView('profile')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === 'home' || hash === 'top' || hash === '') {
+        setCurrentView('home')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === 'discover') {
+        setCurrentView('home')
+        setTimeout(() => {
+          document.getElementById('discovery-catalog')?.scrollIntoView({ behavior: 'smooth' })
+        }, 80)
+      } else if (hash === 'trending') {
+        setCurrentView('home')
+        setTimeout(() => {
+          document.getElementById('trending-rail')?.scrollIntoView({ behavior: 'smooth' })
+        }, 80)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    window.addEventListener('popstate', handleHashChange)
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+      window.removeEventListener('popstate', handleHashChange)
+    }
+  }, [])
 
 
   /* =========================================================
@@ -1191,6 +1248,21 @@ function Home() {
           />
 
         ) : currentView ===
+          'movies' ? (
+
+          /* =================================================
+             MOVIES
+          ================================================== */
+
+          <MoviesView
+            initialMovies={moviesData}
+            isSaved={id => isSaved(String(id))}
+            onToggleSave={handleToggleSave}
+            onSelectAnime={openDetail}
+            onPlayAnime={handleDirectPlay}
+          />
+
+        ) : currentView ===
           'schedule' ? (
 
           /* =================================================
@@ -1794,6 +1866,16 @@ function Home() {
                 variant="glass"
                 onClick={() => {
                   setDrawer(false)
+                  navigateTo('movies')
+                }}
+              >
+                Anime Movies & Films
+              </Button>
+
+              <Button
+                variant="glass"
+                onClick={() => {
+                  setDrawer(false)
                   handleLogout()
                 }}
               >
@@ -1819,6 +1901,16 @@ function Home() {
                 }}
               >
                 My Library ({savedLibrary.length})
+              </Button>
+
+              <Button
+                variant="glass"
+                onClick={() => {
+                  setDrawer(false)
+                  navigateTo('movies')
+                }}
+              >
+                Anime Movies & Films
               </Button>
             </>
           )}

@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 3.2.1 — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
+Bug Fix — Movies Navigation & Dedicated Movies View
 
 ## Current Task
 
-Elimination of black space above Hero, positioning floating capsule navbar over full-bleed Hero, complete removal of Top 10 ranking UI from Hero carousel, root-cause resolution of TMDB anime logo loading pipeline, and HTML-clean synopsis rendering.
+Resolve issue where clicking "Movies" button in capsule navbar changed URL to `/#movies` but displayed the home catalog view instead of the dedicated Movies page. Implement dedicated Movies view, backend API endpoint, client service, and browser history synchronization.
 
 ## Status
 
@@ -14,101 +14,89 @@ COMPLETE
 
 ## Completed Work
 
-- **Task 1 — Eliminated Black Space Above Hero & Floating Navbar Overlay:**
-  - Repositioned original horizontal capsule navbar (`.desktop-nav`) with `position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 50; margin: 0;`.
-  - Removed navbar from normal document flow, allowing the main Hero section to occupy the absolute top of the viewport (`top: 0`) edge-to-edge full-bleed (`width: 100%`).
-  - Hero background artwork now seamlessly extends behind the floating liquid glass capsule navbar.
-  - Added subtle top dark vignette in `.hero-top10__overlay` (`linear-gradient(180deg, rgba(8, 10, 15, 0.75) 0%, rgba(8, 10, 15, 0.25) 15%, transparent 35%, rgba(8, 10, 15, 0.95) 100%)`) providing optimal contrast and legibility for navbar links and brand icon while showcasing background art.
-  - Added `padding-top: 5.5rem;` to non-hero views (`.anime-detail`, `.schedule-view`, `.library-view`, `.profile-view`) ensuring content headers never collide with the floating navbar.
-  - Fully responsive on mobile (`@media (max-width: 900px)`) with compact top capsule and bottom navigation bar.
+- **Task 1 — Root Cause Investigation & Navigation Routing Fix:**
+  - Traced `src/components/navigation/Navigation.tsx`: Discovered `onClick` previously executed `handleScrollTo('discovery-catalog')`, and `ViewMode` was missing `'movies'`.
+  - Added `'movies'` to `ViewMode` type in `Navigation.tsx`.
+  - Updated desktop navbar link: `className={currentView === 'movies' ? 'active' : ''}`, `aria-current={currentView === 'movies' ? 'page' : undefined}`, and `onClick={() => onNavigate?.('movies')}`.
+  - Added "Anime Movies & Films" button to mobile drawer menu in `FoundationPreview.tsx`.
 
-- **Task 2 — Complete Removal of ALL Top 10 Ranking UI From Hero:**
-  - Removed "TOP 10 · #... THIS WEEK" eyebrow element from the Hero content hierarchy.
-  - Removed `#{rank}` badge from the right-side anime poster artwork card. The poster now presents as a clean, glass-framed anime artwork card with subtle glow.
-  - Removed all ranking number badges (`.hero-top10__thumb-rank`) from the thumbnail strip. Thumbnails now render as pure, sleek poster previews with active cyan borders and glow.
-  - Updated carousel `aria-label` to `"Featured curated anime collection"` and thumbnail labels to `aria-label={item.title}`.
-  - Preserved ranking badges and information on unrelated pages and sections (e.g. Upcoming carousel, Discover).
+- **Task 2 — Backend Movies API & Caching:**
+  - Added `MOVIES_QUERY` in `backend/src/services/anilist.ts` requesting `format: MOVIE, sort: POPULARITY_DESC`.
+  - Exported `getAnimeMovies(page, perPage)` utilizing in-memory inflight deduplication and Redis caching (`LIST_CACHE_FRESH_HIT`).
+  - Added route `GET /api/anime/movies` in `backend/src/routes/anime.ts` returning unified anime list with `mapAniListToUnified`.
 
-- **Task 3 & 4 — Root-Cause Investigation & Fix for Official Anime Logos:**
-  - Traced complete logo pipeline: PostgreSQL -> Backend `/api/anime/curated-hero` & `/api/anime/logos` -> Frontend API client -> `AnimeLogo` component -> Hero slide.
-  - Identified root cause: Property naming mismatch between backend response (`logoUrl`) and frontend domain interface/component (`url`), causing `logoUrl` in `AnimeLogo.tsx` to evaluate to `undefined` and prematurely trigger plain text fallback.
-  - Normalized logo property contract: both `url` and `logoUrl` are now populated and accepted across `AnimeLogoResult` (backend), `UnifiedAnime.logo`, `AnimeLogo` domain interface, `fetchCuratedHeroAnime()`, `fetchAnimeLogos()`, and `AnimeLogo.tsx`.
-  - Upgraded `AnimeLogo.tsx` fallback & loading behavior:
-    - Never displays plain title simply because logo is loading.
-    - Displays smooth aspect-ratio-constrained skeleton shimmer (`.anime-logo__skeleton`) while the image downloads, preventing layout shifts.
-    - Image loads eagerly with `decoding="async"`, `object-fit: contain`, drop shadow, and smooth fade-in (`opacity: 1`).
-    - Only falls back to styled title text if `!logoUrl` (genuinely unavailable) or after genuine network error (`onError`).
-  - Confirmed all 10 curated anime logos permanently stored in PostgreSQL `anime_tmdb_logos` with `status = 'verified'` and `expiresAt = null`.
+- **Task 3 — Frontend Movies Data Service:**
+  - Added `ANIME_MOVIES_QUERY` and exported `getAnimeMovies(page, perPage, sort)` in `src/services/anilist.ts`.
+  - Connects to backend `/api/anime/movies` with automatic fallback to direct AniList GraphQL query if backend is unreachable.
 
-- **Task 5 — Clean Synopsis Rendering:**
-  - Implemented `cleanSynopsis` and `cleanSynopsisText` helpers in frontend (`CinematicCarousel.tsx`, `AnimeDetailHero.tsx`, `anilist.ts`) and backend (`anime.ts`).
-  - Strips `<br>` tags, raw HTML tags, decodes HTML entities (`&amp;`, `&quot;`, `&#039;`, `&lt;`, `&gt;`), and collapses redundant whitespace.
-  - Fixed synopsis rendering in Hero carousel and Detail hero so literal `<br><br>` tags never appear in the UI.
+- **Task 4 — Dedicated Movies View Component (`MoviesView.tsx`):**
+  - Built `src/components/movies/MoviesView.tsx` and `src/components/movies/movies.css` matching 7anime Liquid Glass styling.
+  - Header banner with "Feature Presentations" eyebrow badge and live count of available films (e.g. 35 films).
+  - Spotlight feature banner showcasing the top-rated movie (*A Silent Voice*) with backdrop art, poster, year, duration, rating, genres, synopsis, "Watch Movie" and "+ Add to List" buttons.
+  - Interactive toolbar with live title search input, genre filter pills (`All`, `Action`, `Adventure`, `Drama`, `Fantasy`, `Mystery`, `Romance`, `Sci-Fi`, `Supernatural`), and sort dropdown (`Most Popular`, `Highest Rated`, `Latest Release`).
+  - Responsive movie grid rendering standard `AnimeCard` components with poster, title, rating, and status badges.
+  - Empty state with reset button when no results match search or genre filters.
 
-- **Task 6 — Design System Preservation:**
-  - Preserved existing 7Anime branding and logo.
-  - Preserved horizontal rounded capsule navbar floating at top center.
-  - Preserved 7500ms autoplay with pause on hover/interaction.
-  - Preserved Upcoming Anime carousel and Detail page functionality.
-  - Zero rectangular sidebars or full-width rectangular topbars introduced.
+- **Task 5 — URL Hash Routing & Browser History Support:**
+  - Initialized `currentView` in `FoundationPreview.tsx` using `getInitialView()`, which checks `window.location.hash` (`#movies` -> `'movies'`). Preserves Movies view on direct link access or browser refresh.
+  - Added `hashchange` and `popstate` event listeners in `FoundationPreview.tsx` for seamless browser Back/Forward navigation.
+  - Updated `navigateTo` to push browser history using `window.history.pushState(null, '', targetHash)`.
+  - Added clearance in `src/pages/preview.css` with `padding-top: 5.5rem;` for `.movies-view` below the floating capsule navbar.
+  - Dynamically updates `document.title` to `'Anime Movies & Films — 7anime'` when Movies view is active.
 
 ## Files Created
 
-- `backend/src/scripts/test-phase3-2-curated-db.ts`
-- `docs/screenshots/hero_fullbleed_desktop.png`
-- `docs/screenshots/hero_curated_onepiece.png`
-- `docs/screenshots/hero_curated_naruto.png`
-- `docs/screenshots/hero_curated_jujutsukaisen.png`
-- `docs/screenshots/hero_curated_deathnote.png`
-- `docs/screenshots/mobile_hero.png`
+- `src/components/movies/MoviesView.tsx`
+- `src/components/movies/movies.css`
+- `scripts/test-movies-navigation.mjs`
+- `docs/screenshots/movies_page.png`
+- `docs/screenshots/movies_grid.png`
 
 ## Files Modified
 
-- `backend/prisma/schema.prisma`
 - `backend/src/routes/anime.ts`
-- `backend/src/server.ts`
-- `backend/src/services/tmdb.ts`
-- `docs/screenshots/capsule_navbar.png`
-- `scripts/capture-screenshots.mjs`
-- `src/components/anime/AnimeDetailHero.tsx`
-- `src/components/anime/AnimeLogo.tsx`
-- `src/components/anime/animeLogo.css`
-- `src/components/carousel/CinematicCarousel.tsx`
-- `src/components/carousel/rail.css`
-- `src/components/navigation/navigation.css`
+- `backend/src/services/anilist.ts`
+- `src/components/navigation/Navigation.tsx`
 - `src/pages/FoundationPreview.tsx`
 - `src/pages/preview.css`
 - `src/services/anilist.ts`
-- `src/types/domain.ts`
 
 ## Files Deleted
 
-- `scripts/migrate-phase3-2.mjs` (temporary DDL migration script)
-- `scripts/verify-10-curated.mjs` (temporary verification script)
+- None.
 
 ## Architecture Decisions
 
-- **Floating Capsule Navbar Overlay:** Positioned with `position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 50;`. This eliminates top layout gaps and allows the Hero background artwork to extend behind the navbar, while maintaining legibility via a top dark vignette and backdrop blur.
-- **Dual Property Compatibility (`url` & `logoUrl`):** Unified the logo representation across all layers of the stack so that either property accesses the valid TMDB image URL, eliminating consumer-side property mismatches.
-- **Zero-Flicker Logo Loading:** Replaced premature text title rendering during image loading with an aspect-ratio-constrained skeleton shimmer. The text title is reserved exclusively as a true fallback for missing or broken assets.
-- **Permanent Curated Logos:** Curated Hero anime records in PostgreSQL maintain `expiresAt = null` and `status = 'verified'`, surviving Redis flushes and cold restarts without redundant upstream calls.
+- **Dedicated View Mode:** Added `'movies'` directly to `ViewMode` union type, elevating Movies to a first-class view alongside `home`, `schedule`, `library`, and `profile`.
+- **Hash-Based Routing with Full History Support:** Maintained single-page application performance without introducing heavy external routing libraries, utilizing native `pushState`, `hashchange`, and `popstate` handlers.
+- **Backend-Driven Movie Catalog:** Extended the AniList backend service and Redis caching with `format: MOVIE` filtering to deliver genuine theatrical anime features (*A Silent Voice*, *Your Name.*, *Mugen Train*, *Spirited Away*, *Jujutsu Kaisen 0*).
+- **Reusable Component Composition:** Reused existing `AnimeCard` and `Badge` components in `MoviesView.tsx` to maintain unified interaction models and visual consistency.
 
 ## Tests / Checks
 
 - TypeScript Frontend (`npx tsc -b`): PASS (0 errors)
 - TypeScript Backend (`npx tsc -p backend/tsconfig.json`): PASS (0 errors)
 - Build (`npm run build`): PASS (Vite production bundle built cleanly in `dist/`)
-- Curated Hero Database Persistence Test (`test-phase3-2-curated-db.ts`): PASS (111/112 assertions, verified permanent DB storage & recovery after Redis eviction)
-- Browser/UI Verification (Puppeteer Chromium): PASS (Verified actual image loading for One Piece, Naruto Shippuden, Bleach, Demon Slayer, Jujutsu Kaisen, Death Note, mobile viewport, and capsule navbar)
+- Automated Navigation & History Suite (`node scripts/test-movies-navigation.mjs`): PASS (6/6 tests passed)
+  - Direct load on `/#movies` preserves Movies view on refresh: PASS
+  - Movies navbar item `.active` state: PASS
+  - Home navbar item inactive when on Movies: PASS
+  - Clicking Home in navbar transitions to Home: PASS
+  - Clicking Movies in navbar transitions to Movies: PASS
+  - Browser Back button returns to Home: PASS
+  - Browser Forward button returns to Movies: PASS
+  - Movie card click opens Detail view: PASS
+- Browser/UI Visual Verification: PASS (`docs/screenshots/movies_page.png` and `docs/screenshots/movies_grid.png` verified)
 
 ## Verification Results
 
-- Verified zero black gap above Hero: Hero background image starts at viewport `y = 0`.
-- Verified horizontal capsule navbar floats centered above the Hero artwork.
-- Verified official TMDB logos display for all slides with transparent backgrounds and sharp quality.
-- Verified removal of all ranking labels ("TOP 10", "#06 THIS WEEK", poster rank badges, thumbnail rank numbers).
-- Verified synopsis rendering: no literal `<br><br>` tags displayed, consistent typography and spacing.
-- Verified mobile layout: responsive capsule topbar, full-bleed hero, clean thumbnails, and bottom nav.
+- Verified clicking Movies in navbar displays dedicated Movies catalog.
+- Verified URL hash changes to `/#movies` and Movies button shows active glowing indicator.
+- Verified browser refresh on `/#movies` stays on Movies view.
+- Verified browser Back and Forward buttons navigate cleanly between Home and Movies.
+- Verified genuine anime movies rendered in grid with artwork, ratings, titles, and genre pills.
+- Verified clicking any movie card opens its anime detail view.
+- Verified Home, Discover, Trending, Schedule, and My List navigation remain fully functional.
 
 ## Known Issues
 
@@ -126,7 +114,7 @@ COMPLETE
 
 Branch: main
 Working tree: Ready to commit
-Latest commit: feat: complete Phase 3.1 critical UI corrections and logo persistence
+Latest commit: aa5775b (feat: complete Phase 3.2.1 hero layout, ranking removal and official logo pipeline fix)
 
 ## Recovery Instructions
 
@@ -135,7 +123,7 @@ If work resumes in a new session:
 2. Read docs/DEVELOPMENT_STATUS.md.
 3. Inspect git status.
 4. Inspect current implementation.
-5. All Phase 3.2.1 tasks are complete and verified with screenshots in `docs/screenshots/`.
+5. All Movies navigation and dedicated view tasks are complete and verified with screenshots in `docs/screenshots/`.
 6. Next phase: Phase 4 (Streaming Provider Restructuring).
 
 ## Exact Next Task

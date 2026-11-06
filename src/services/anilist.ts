@@ -1848,6 +1848,101 @@ export async function getPopularAnime(
 
 
 /* =========================================================
+   ANIME MOVIES
+   ========================================================= */
+
+const ANIME_MOVIES_QUERY = `
+    query AnimeMovies(
+        $page: Int
+        $perPage: Int
+        $sort: [MediaSort]
+    ) {
+        Page(
+            page: $page
+            perPage: $perPage
+        ) {
+            media(
+                type: ANIME
+                format: MOVIE
+                sort: $sort
+            ) {
+                id
+                idMal
+                title {
+                    romaji
+                    english
+                    native
+                }
+                coverImage {
+                    medium
+                    large
+                    extraLarge
+                }
+                bannerImage
+                description
+                status
+                averageScore
+                episodes
+                duration
+                genres
+                format
+                seasonYear
+                source
+                studios {
+                    nodes {
+                        name
+                    }
+                }
+            }
+        }
+    }
+`
+
+export async function getAnimeMovies(
+    page = 1,
+    perPage = 30,
+    sort: 'POPULARITY_DESC' | 'SCORE_DESC' | 'START_DATE_DESC' = 'POPULARITY_DESC',
+): Promise<Anime[]> {
+    const safePage = Math.max(1, Math.floor(page))
+    const safePerPage = Math.min(50, Math.max(1, Math.floor(perPage)))
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/anime/movies?page=${safePage}&perPage=${safePerPage}`)
+        if (res.ok) {
+            const json = await res.json()
+            if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+                return (json.data as Anime[]).map(a => ({
+                    ...a,
+                    type: 'Movie',
+                }))
+            }
+        }
+    } catch {
+        // Fallback to direct AniList GraphQL
+    }
+
+    try {
+        const data = await aniListRequest<{
+            Page: {
+                media: AniListAnime[]
+            }
+        }>(
+            ANIME_MOVIES_QUERY,
+            {
+                page: safePage,
+                perPage: safePerPage,
+                sort: [sort],
+            },
+        )
+
+        return (data.Page.media || []).map(mapAniListAnime)
+    } catch (fallbackErr) {
+        console.error('[getAnimeMovies] Failed to load anime movies:', fallbackErr)
+        return []
+    }
+}
+
+/* =========================================================
    MEGAPLAY EMBED
    ========================================================= */
 
