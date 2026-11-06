@@ -7,6 +7,7 @@ import { ShareButton } from '../share/ShareButton'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { AnimeLogo } from './AnimeLogo'
+import { cleanSynopsis } from '../carousel/CinematicCarousel'
 import './detail.css'
 
 export function AnimeDetailHero({
@@ -86,7 +87,7 @@ export function AnimeDetailHero({
             {anime.studio && <span>Studio: {anime.studio}</span>}
           </div>
 
-          {anime.synopsis && <p className="detail-hero__synopsis">{anime.synopsis}</p>}
+          {anime.synopsis && <p className="detail-hero__synopsis">{cleanSynopsis(anime.synopsis)}</p>}
 
           <div className="detail-hero__actions">
             <Button onClick={onWatch}>

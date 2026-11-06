@@ -1459,6 +1459,96 @@ export async function fetchAnimeLogos(
     }
 }
 
+export interface CuratedAnimeReference {
+    anilistId: number
+    tmdbId: number
+    mediaType: 'tv' | 'movie'
+    title: string
+}
+
+export const CURATED_HERO_REFERENCES: CuratedAnimeReference[] = [
+    { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece' },
+    { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden' },
+    { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach' },
+    { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover' },
+    { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer' },
+    { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen' },
+    { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan' },
+    { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling' },
+    { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z' },
+    { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note' },
+]
+
+/**
+ * Phase 3.2: Loads the fixed collection of 10 curated Hero anime with official TMDB logos.
+ * Does not depend on dynamic AniList trending rankings.
+ */
+export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/anime/curated-hero`)
+        if (res.ok) {
+            const json = await res.json()
+            if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+                return (json.data as (Anime & { logo?: { logoUrl?: string; url?: string } })[]).map(a => {
+                    if (a.logo) {
+                        const url = a.logo.url || a.logo.logoUrl || ''
+                        a.logo.url = url
+                        a.logo.logoUrl = url
+                    }
+                    if (a.synopsis) {
+                        a.synopsis = cleanDescription(a.synopsis)
+                    }
+                    return a as Anime
+                })
+            }
+        }
+    } catch (err) {
+        console.warn('[fetchCuratedHeroAnime] Backend endpoint unavailable, falling back to direct query:', err)
+    }
+
+    try {
+        const [animeResults, logosMap] = await Promise.all([
+            Promise.all(
+                CURATED_HERO_REFERENCES.map(async (ref) => {
+                    try {
+                        const anime = await getAnimeById(ref.anilistId)
+                        anime.tmdbId = ref.tmdbId
+                        anime.mediaType = ref.mediaType
+                        if (anime.synopsis) {
+                            anime.synopsis = cleanDescription(anime.synopsis)
+                        }
+                        return anime
+                    } catch {
+                        return null
+                    }
+                }),
+            ),
+            fetchAnimeLogos(CURATED_HERO_REFERENCES.map(r => r.anilistId)),
+        ])
+
+        return animeResults
+            .filter((a): a is Anime => a !== null)
+            .map(anime => {
+                const logo = logosMap[Number(anime.id)]
+                if (logo) {
+                    const url = logo.url || (logo as unknown as { logoUrl?: string }).logoUrl || ''
+                    return {
+                        ...anime,
+                        logo: {
+                            ...logo,
+                            url,
+                            logoUrl: url,
+                        },
+                    }
+                }
+                return anime
+            })
+    } catch (fallbackErr) {
+        console.error('[fetchCuratedHeroAnime] Failed to load curated anime:', fallbackErr)
+        return []
+    }
+}
+
 export interface AiringScheduleEntry {
     id: string
     airingAt: number // Unix timestamp in seconds

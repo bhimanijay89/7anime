@@ -3,6 +3,7 @@ import dns from 'node:dns'
 import { cache } from '../redis/cache.js'
 import prisma from '../db/client.js'
 import type { AniListAnime, AnimeLogoResult } from '../types.js'
+export type { AnimeLogoResult } from '../types.js'
 
 export interface TmdbMappingResult {
   anilistId: number
@@ -190,7 +191,11 @@ export const CURATED_ANIME_TMDB_MAP: Record<number, { tmdbId: number; mediaType:
   // Hunter x Hunter (2011)
   11061: { tmdbId: 46298, mediaType: 'tv', season: 1 },
   // Solo Leveling
-  151807: { tmdbId: 209867, mediaType: 'tv', season: 1 },
+  151807: { tmdbId: 127532, mediaType: 'tv', season: 1 },
+  // Black Clover
+  97940: { tmdbId: 73223, mediaType: 'tv', season: 1 },
+  // Dragon Ball Z
+  813: { tmdbId: 12971, mediaType: 'tv', season: 1 },
   // Frieren: Beyond Journey's End
   154587: { tmdbId: 209867, mediaType: 'tv', season: 1 },
   // Chainsaw Man
@@ -222,6 +227,32 @@ export const CURATED_ANIME_TMDB_MAP: Record<number, { tmdbId: number; mediaType:
   // Suzume (Movie)
   142770: { tmdbId: 916224, mediaType: 'movie', season: 1 },
 }
+
+export interface CuratedHeroAnimeConfig {
+  anilistId: number
+  tmdbId: number
+  mediaType: 'tv' | 'movie'
+  title: string
+}
+
+/**
+ * Phase 3.2: Curated 10 anime collection for the cinematic Hero carousel.
+ * Fixed collection; does not depend on dynamic AniList trending rankings.
+ */
+export const CURATED_HERO_ANIME: CuratedHeroAnimeConfig[] = [
+  { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece' },
+  { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden' },
+  { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach' },
+  { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover' },
+  { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer' },
+  { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen' },
+  { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan' },
+  { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling' },
+  { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z' },
+  { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note' },
+]
+
+export const CURATED_HERO_ANILIST_IDS = new Set<number>(CURATED_HERO_ANIME.map(a => a.anilistId))
 
 function getTmdbToken(): string | null {
   return process.env.TMDB_READ_ACCESS_TOKEN || null
@@ -273,21 +304,21 @@ async function searchTmdb(
   const data = res.data
   if (!data?.results || data.results.length === 0) return null
 
-    // Anime-only validation: Must have genre_id 16 (Animation) or East Asian original language (ja, zh, ko)
-    const validAnimation = data.results.find(item => {
-      const isAnimationGenre = item.genre_ids?.includes(16)
-      const isAsianLang = ['ja', 'zh', 'ko'].includes(item.original_language || '')
-      return isAnimationGenre || isAsianLang
-    })
+  // Anime-only validation: Must have genre_id 16 (Animation) or East Asian original language (ja, zh, ko)
+  const validAnimation = data.results.find(item => {
+    const isAnimationGenre = item.genre_ids?.includes(16)
+    const isAsianLang = ['ja', 'zh', 'ko'].includes(item.original_language || '')
+    return isAnimationGenre || isAsianLang
+  })
 
-    if (!validAnimation) return null
+  if (!validAnimation) return null
 
-    const resolvedTitle = validAnimation.name || validAnimation.title || title
-    return {
-      id: validAnimation.id,
-      title: resolvedTitle,
-      mediaType,
-    }
+  const resolvedTitle = validAnimation.name || validAnimation.title || title
+  return {
+    id: validAnimation.id,
+    title: resolvedTitle,
+    mediaType,
+  }
 }
 
 /**
@@ -436,7 +467,7 @@ export async function resolveTmdbMapping(
             source: 'tmdb_api',
           },
         })
-        .catch(() => {})
+        .catch(() => { })
 
       void cache.set(cacheKey, result, MAPPING_CACHE_TTL)
       return result
@@ -578,11 +609,13 @@ export async function resolveTmdbLogo(
   anilistId: number,
   tmdbId?: number | null,
   mediaType?: 'tv' | 'movie' | null,
+  options?: { isPermanent?: boolean },
 ): Promise<AnimeLogoResult | null> {
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
     return null
   }
 
+  const isPermanent = Boolean(options?.isPermanent || CURATED_HERO_ANILIST_IDS.has(anilistId))
   const cacheKey = `anime:logo:${anilistId}`
 
   // Tier 1: Check Redis Cache
@@ -618,25 +651,25 @@ export async function resolveTmdbLogo(
 
     if (dbLogo) {
       const now = new Date()
-      const isExpired = dbLogo.expiresAt <= now
+      // Permanent logos have expiresAt === null or status === 'verified' and never expire
+      const isExpired = dbLogo.expiresAt !== null && dbLogo.expiresAt <= now
 
       if (!isExpired) {
-        const remainingTtlSeconds = Math.max(
-          60,
-          Math.floor((dbLogo.expiresAt.getTime() - now.getTime()) / 1000),
-        )
+        const remainingTtlSeconds = dbLogo.expiresAt
+          ? Math.max(60, Math.floor((dbLogo.expiresAt.getTime() - now.getTime()) / 1000))
+          : LOGO_CACHE_TTL
 
         if (dbLogo.notFound) {
-          // Re-populate Redis negative cache
-          void cache.set(
-            cacheKey,
-            { notFound: true, cachedAt: Date.now() },
-            remainingTtlSeconds,
-          )
-          return null
-        }
-
-        if (dbLogo.logoUrl && dbLogo.filePath) {
+          if (!isPermanent) {
+            // Re-populate Redis negative cache
+            void cache.set(
+              cacheKey,
+              { notFound: true, cachedAt: Date.now() },
+              remainingTtlSeconds,
+            )
+            return null
+          }
+        } else if (dbLogo.logoUrl && dbLogo.filePath) {
           const logoResult: AnimeLogoResult = {
             logoUrl: dbLogo.logoUrl,
             aspectRatio: dbLogo.aspectRatio ?? 1,
@@ -710,7 +743,7 @@ export async function resolveTmdbLogo(
               expiresAt,
             },
           })
-          .catch(() => {})
+          .catch(() => { })
         return null
       }
 
@@ -724,7 +757,20 @@ export async function resolveTmdbLogo(
       const fetchRes = await fetchTmdbWithFallback<TmdbImagesResponse>(endpoint, TMDB_TIMEOUT_MS)
 
       if (fetchRes.status === 404) {
-        // Entity not found on TMDB -> cache negative result (7 days) in Redis & DB
+        if (isPermanent) {
+          const existingValid = await prisma.animeTmdbLogo.findUnique({ where: { anilistId } })
+          if (existingValid?.logoUrl && !existingValid.notFound) {
+            return {
+              logoUrl: existingValid.logoUrl,
+              aspectRatio: existingValid.aspectRatio ?? 1,
+              width: existingValid.width ?? 100,
+              height: existingValid.height ?? 100,
+              language: existingValid.language ?? null,
+              filePath: existingValid.filePath || '',
+            }
+          }
+        }
+
         const expiresAt = new Date(Date.now() + LOGO_NEGATIVE_CACHE_TTL * 1000)
         await cache.set(cacheKey, { notFound: true, cachedAt: Date.now() }, LOGO_NEGATIVE_CACHE_TTL)
         void prisma.animeTmdbLogo
@@ -734,6 +780,7 @@ export async function resolveTmdbLogo(
               tmdbId: targetTmdbId,
               mediaType: targetMediaType,
               notFound: true,
+              status: 'not_found',
               expiresAt,
             },
             create: {
@@ -741,10 +788,11 @@ export async function resolveTmdbLogo(
               tmdbId: targetTmdbId,
               mediaType: targetMediaType,
               notFound: true,
+              status: 'not_found',
               expiresAt,
             },
           })
-          .catch(() => {})
+          .catch(() => { })
         return null
       }
 
@@ -757,7 +805,20 @@ export async function resolveTmdbLogo(
       const bestLogo = selectBestLogo(rawLogos)
 
       if (!bestLogo) {
-        // TMDB responded 200 OK, but has no suitable logos -> cache negative result (7 days) in Redis & DB
+        if (isPermanent) {
+          const existingValid = await prisma.animeTmdbLogo.findUnique({ where: { anilistId } })
+          if (existingValid?.logoUrl && !existingValid.notFound) {
+            return {
+              logoUrl: existingValid.logoUrl,
+              aspectRatio: existingValid.aspectRatio ?? 1,
+              width: existingValid.width ?? 100,
+              height: existingValid.height ?? 100,
+              language: existingValid.language ?? null,
+              filePath: existingValid.filePath || '',
+            }
+          }
+        }
+
         const expiresAt = new Date(Date.now() + LOGO_NEGATIVE_CACHE_TTL * 1000)
         await cache.set(cacheKey, { notFound: true, cachedAt: Date.now() }, LOGO_NEGATIVE_CACHE_TTL)
         void prisma.animeTmdbLogo
@@ -767,6 +828,7 @@ export async function resolveTmdbLogo(
               tmdbId: targetTmdbId,
               mediaType: targetMediaType,
               notFound: true,
+              status: 'not_found',
               expiresAt,
             },
             create: {
@@ -774,10 +836,11 @@ export async function resolveTmdbLogo(
               tmdbId: targetTmdbId,
               mediaType: targetMediaType,
               notFound: true,
+              status: 'not_found',
               expiresAt,
             },
           })
-          .catch(() => {})
+          .catch(() => { })
         return null
       }
 
@@ -790,8 +853,10 @@ export async function resolveTmdbLogo(
         filePath: bestLogo.file_path,
       }
 
-      // Cache successful result (30 days in Redis, 7-day TTL in DB)
-      const expiresAt = new Date(Date.now() + LOGO_NEGATIVE_CACHE_TTL * 1000)
+      // Permanent / curated logos do not expire (expiresAt = null, status = 'verified')
+      const dbExpiresAt = isPermanent ? null : new Date(Date.now() + LOGO_CACHE_TTL * 1000)
+      const dbStatus = isPermanent ? 'verified' : 'auto'
+
       await cache.set(
         cacheKey,
         {
@@ -807,7 +872,7 @@ export async function resolveTmdbLogo(
         LOGO_CACHE_TTL,
       )
 
-      void prisma.animeTmdbLogo
+      await prisma.animeTmdbLogo
         .upsert({
           where: { anilistId },
           update: {
@@ -819,8 +884,9 @@ export async function resolveTmdbLogo(
             height: logoResult.height,
             language: logoResult.language,
             filePath: logoResult.filePath,
+            status: dbStatus,
             notFound: false,
-            expiresAt,
+            expiresAt: dbExpiresAt,
           },
           create: {
             anilistId,
@@ -832,8 +898,9 @@ export async function resolveTmdbLogo(
             height: logoResult.height,
             language: logoResult.language,
             filePath: logoResult.filePath,
+            status: dbStatus,
             notFound: false,
-            expiresAt,
+            expiresAt: dbExpiresAt,
           },
         })
         .catch(err => {
@@ -857,4 +924,75 @@ export async function resolveTmdbLogo(
 
   inFlightLogoRequests.set(anilistId, resolutionPromise)
   return resolutionPromise
+}
+
+/**
+ * Phase 3.2: Verifies and persists all 10 curated Hero anime logos permanently
+ * into PostgreSQL.
+ */
+export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogoResult>> {
+  const result: Record<number, AnimeLogoResult> = {}
+  console.log('[TMDB Curated Hero] Verifying permanent database storage for 10 curated anime...')
+
+  try {
+    const dbRecords = await prisma.animeTmdbLogo.findMany({
+      where: {
+        anilistId: { in: CURATED_HERO_ANIME.map(a => a.anilistId) },
+        notFound: false,
+      },
+    })
+
+    const dbMap = new Map<number, typeof dbRecords[0]>()
+    for (const record of dbRecords) {
+      if (record.logoUrl && record.filePath) {
+        dbMap.set(record.anilistId, record)
+      }
+    }
+
+    for (const item of CURATED_HERO_ANIME) {
+      const existing = dbMap.get(item.anilistId)
+      if (existing && existing.logoUrl && existing.filePath) {
+        // Ensure permanently verified persistence (expiresAt = null, status = 'verified')
+        if (existing.expiresAt !== null || existing.status !== 'verified') {
+          await prisma.animeTmdbLogo
+            .update({
+              where: { anilistId: item.anilistId },
+              data: { expiresAt: null, status: 'verified', notFound: false },
+            })
+            .catch(() => {})
+        }
+
+        const logo: AnimeLogoResult = {
+          logoUrl: existing.logoUrl,
+          aspectRatio: existing.aspectRatio ?? 1,
+          width: existing.width ?? 100,
+          height: existing.height ?? 100,
+          language: existing.language ?? null,
+          filePath: existing.filePath,
+        }
+        result[item.anilistId] = logo
+        // Populate Redis cache
+        void cache.set(
+          `anime:logo:${item.anilistId}`,
+          {
+            ...logo,
+            notFound: false,
+            cachedAt: Date.now(),
+          },
+          LOGO_CACHE_TTL,
+        )
+      } else {
+        console.log(`[TMDB Curated Hero] Resolving missing logo for ${item.title} (AniList ${item.anilistId})...`)
+        const resolved = await resolveTmdbLogo(item.anilistId, item.tmdbId, item.mediaType, { isPermanent: true })
+        if (resolved) {
+          result[item.anilistId] = resolved
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[TMDB Curated Hero] Error ensuring curated hero logos:', err)
+  }
+
+  console.log(`[TMDB Curated Hero] ${Object.keys(result).length}/${CURATED_HERO_ANIME.length} curated logos ready in permanent storage.`)
+  return result
 }

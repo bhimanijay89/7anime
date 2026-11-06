@@ -8,7 +8,12 @@ import {
     getUpcomingAnime,
     searchAnime,
 } from '../services/anilist.js'
-import { resolveTmdbMapping, resolveTmdbLogo } from '../services/tmdb.js'
+import {
+    resolveTmdbMapping,
+    resolveTmdbLogo,
+    CURATED_HERO_ANIME,
+    ensureCuratedHeroLogos,
+} from '../services/tmdb.js'
 
 import type {
     AniListAnime,
@@ -54,6 +59,20 @@ function createEpisodeCatalogue(
             }
         },
     )
+}
+
+function cleanSynopsisText(raw?: string | null): string | undefined {
+    if (!raw) return undefined
+    return raw
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;|&apos;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim()
 }
 
 export function mapAniListToUnified(aniListAnime: AniListAnime): UnifiedAnime {
@@ -116,7 +135,7 @@ export function mapAniListToUnified(aniListAnime: AniListAnime): UnifiedAnime {
         genres: aniListAnime.genres ?? [],
         type: aniListAnime.format ?? undefined,
         year: aniListAnime.seasonYear ?? undefined,
-        synopsis: aniListAnime.description ?? undefined,
+        synopsis: cleanSynopsisText(aniListAnime.description),
         studio: aniListAnime.studios?.nodes?.[0]?.name ?? undefined,
         source: aniListAnime.source ?? undefined,
         duration:
@@ -204,6 +223,43 @@ router.get('/anime/search', async (req, res) => {
     } catch (error) {
         console.error('[GET /api/anime/search]', error)
         return sendError(res, 'Unable to search anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
+/* GET /api/anime/curated-hero */
+router.get('/anime/curated-hero', async (_req, res) => {
+    try {
+        const logosMap = await ensureCuratedHeroLogos()
+        const animeList: UnifiedAnime[] = []
+
+        for (const item of CURATED_HERO_ANIME) {
+            try {
+                const aniListAnime = await getAnimeById(item.anilistId)
+                const unified = mapAniListToUnified(aniListAnime)
+                unified.tmdbId = item.tmdbId
+                unified.mediaType = item.mediaType
+                const logo = logosMap[item.anilistId]
+                if (logo) {
+                    (unified as unknown as { logo: unknown }).logo = {
+                        url: logo.logoUrl,
+                        logoUrl: logo.logoUrl,
+                        aspectRatio: logo.aspectRatio,
+                        width: logo.width,
+                        height: logo.height,
+                        language: logo.language,
+                        filePath: logo.filePath,
+                    }
+                }
+                animeList.push(unified)
+            } catch (fetchErr) {
+                console.warn(`[GET /api/anime/curated-hero] Error loading anime ${item.anilistId}:`, fetchErr)
+            }
+        }
+
+        return sendSuccess(res, animeList)
+    } catch (error) {
+        console.error('[GET /api/anime/curated-hero]', error)
+        return sendError(res, 'Failed to load curated hero anime.', ErrorCode.SERVICE_UNAVAILABLE, 502)
     }
 })
 

@@ -160,8 +160,8 @@ model AnimeTmdbMapping {
 
 
 model AnimeTmdbLogo {
-  id          String   @id @default(uuid())
-  anilistId   Int      @unique
+  id          String    @id @default(uuid())
+  anilistId   Int       @unique
   tmdbId      Int?
   mediaType   String?
   logoUrl     String?
@@ -170,10 +170,11 @@ model AnimeTmdbLogo {
   height      Int?
   language    String?
   filePath    String?
-  notFound    Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  status      String    @default("verified")
+  notFound    Boolean   @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([anilistId])
   @@map("anime_tmdb_logos")

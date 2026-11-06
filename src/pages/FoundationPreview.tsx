@@ -59,7 +59,7 @@ import type { User } from '../types/domain'
 import { guestUser } from '../data/anime'
 import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
-import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos } from '../services/anilist'
+import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos, fetchCuratedHeroAnime } from '../services/anilist'
 import { isMovieMediaType } from '../services/videoResolver'
 
 import './preview.css'
@@ -106,6 +106,9 @@ function Home() {
     useState<Anime[]>([])
 
   const [upcomingData, setUpcomingData] =
+    useState<Anime[]>([])
+
+  const [curatedHeroAnime, setCuratedHeroAnime] =
     useState<Anime[]>([])
 
   const [homeLoading, setHomeLoading] =
@@ -387,11 +390,13 @@ function Home() {
         trending,
         popular,
         upcoming,
+        curatedHero,
       ] =
         await Promise.allSettled([
           getTrendingAnime(1, 20),
           getPopularAnime(1, 20),
           getUpcomingAnime(1, 15),
+          fetchCuratedHeroAnime(),
         ])
 
       const trendingList = trending.status === 'fulfilled' && trending.value.length > 0 ? trending.value : []
@@ -399,10 +404,14 @@ function Home() {
       const upcomingList = upcoming.status === 'fulfilled' && upcoming.value.length > 0
         ? upcoming.value.map(item => item.anime)
         : []
+      const curatedHeroList = curatedHero.status === 'fulfilled' && curatedHero.value.length > 0
+        ? curatedHero.value
+        : []
 
       setTrendingData(trendingList)
       setTopRatedData(popularList)
       setUpcomingData(upcomingList)
+      setCuratedHeroAnime(curatedHeroList)
 
       if (
         trending.status === 'rejected' &&
@@ -981,96 +990,17 @@ function Home() {
      DERIVED HOME DATA
   ========================================================= */
 
-  const top10Ids = useMemo(() => {
-    return trendingData
-      .slice(0, 10)
-      .map(a => Number(a.id))
-      .filter(id => Number.isInteger(id) && id > 0)
-  }, [trendingData])
-
-  useEffect(() => {
-    if (top10Ids.length === 0 || isDecoyActive) return
-    let isCancelled = false
-
-    fetchAnimeLogos(top10Ids)
-      .then(logosMap => {
-        if (isCancelled) return
-        setHeroLogos(prev => {
-          const updated = { ...prev }
-          for (const [idStr, logo] of Object.entries(logosMap)) {
-            if (logo) {
-              updated[idStr] = logo
-            }
-          }
-          return updated
-        })
-      })
-      .catch(err => {
-        console.warn('[FoundationPreview] Could not fetch hero logos:', err)
-      })
-
-    return () => {
-      isCancelled = true
-    }
-  }, [top10Ids, isDecoyActive])
-
+  /**
+   * Phase 3.2: Hero collection is fixed to the curated 10 anime
+   * with their permanent official TMDB logos.
+   */
   const heroAnime = useMemo(() => {
-    return trendingData.slice(0, 10).map(anime => {
-      const logo = heroLogos[String(anime.id)]
-      return logo ? { ...anime, logo } : anime
-    })
-  }, [trendingData, heroLogos])
-
-  const upcomingIds = useMemo(() => {
-    return Array.from(
-      new Set(
-        upcomingData
-          .map(anime => Number(anime.id))
-          .filter(id => Number.isInteger(id) && id > 0),
-      ),
-    )
-  }, [upcomingData])
-
-  useEffect(() => {
-    if (upcomingIds.length === 0 || isDecoyActive) return
-    let isCancelled = false
-
-    const BATCH_SIZE = 20
-    const batches: number[][] = []
-    for (let i = 0; i < upcomingIds.length; i += BATCH_SIZE) {
-      batches.push(upcomingIds.slice(i, i + BATCH_SIZE))
-    }
-
-    Promise.all(batches.map(batch => fetchAnimeLogos(batch)))
-      .then(batchResults => {
-        if (isCancelled) return
-        setUpcomingLogos(prev => {
-          const updated = { ...prev }
-          for (const logosMap of batchResults) {
-            for (const [idStr, logo] of Object.entries(logosMap)) {
-              if (logo) {
-                updated[idStr] = logo
-              }
-            }
-          }
-          return updated
-        })
-      })
-      .catch(err => {
-        console.warn('[FoundationPreview] Could not fetch upcoming logos:', err)
-      })
-
-    return () => {
-      isCancelled = true
-    }
-  }, [upcomingIds, isDecoyActive])
+    return curatedHeroAnime
+  }, [curatedHeroAnime])
 
   const upcomingAnime = useMemo(() => {
-    return upcomingData.map(anime => {
-      const logo = upcomingLogos[String(anime.id)]
-      return logo ? { ...anime, logo } : anime
-    })
-  }, [upcomingData, upcomingLogos])
+    return upcomingData
+  }, [upcomingData])
 
 
   /* =========================================================
@@ -1370,6 +1300,7 @@ function Home() {
                 />
               )}
 
+              <div className="home-body">
 
               {/* ===============================================
                   QUICK ACTIONS
@@ -1624,6 +1555,8 @@ function Home() {
                     handleDirectPlay
                   }
                 />
+              </div>
+
               </div>
 
             </>

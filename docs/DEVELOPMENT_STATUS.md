@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 3.1 — Critical UI Corrections + Logo Persistence + Database Repair
+Phase 3.2.1 — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
 
 ## Overall Status
 
-Phase 3.1 is COMPLETE and verified. The original horizontal capsule navbar has been forcefully restored near the top center, purging the unintended sidebar and rectangular top bar. The Top 10 Hero height has been expanded to near-fullscreen (`clamp(48rem, 82vh, 60rem)`), visibly larger than the Upcoming Anime carousel (`28rem`), with autoplay configured to 7500ms. The anime detail page background cover container height has been increased to `clamp(34rem, 50vh, 44rem)`. Universal TMDB anime logos are rendered across all three designated locations (Top 10 Hero, Upcoming Anime carousel, and Detail page) with resilient fallback typography. The missing database table issue has been resolved with PostgreSQL DDL migrations for `anime_tmdb_mappings` and `anime_tmdb_logos`, establishing dual-tier caching (Redis + PostgreSQL) with 7-day durability and negative result caching. All TypeScript, build, backend, and browser screenshot checks pass with zero errors.
+Phase 3.2.1 is COMPLETE and fully verified. The unwanted black gap above the Hero carousel has been completely eliminated by positioning the original horizontal rounded capsule navbar as a fixed overlay (`position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); z-index: 50`), allowing the Hero background artwork to extend all the way to the top of the viewport (`top: 0`) edge-to-edge behind the navbar. All Top 10 ranking elements ("TOP 10", "#06 THIS WEEK", poster rank badges, thumbnail rank numbers) have been removed from the Hero carousel, transforming it into a clean, curated cinematic showcase. The root cause of the missing official logos was identified (property naming mismatch `logoUrl` vs `url`) and fixed across the entire pipeline with aspect-ratio skeleton shimmer loading and zero-layout-shift containment. The synopsis text rendering bug displaying literal `<br><br>` tags was resolved by implementing HTML sanitization and entity decoding in both frontend and backend. All 10 curated anime logos are permanently stored in PostgreSQL (`status = 'verified'`, `expiresAt = null`). All TypeScript checks, production builds, database tests, and browser screenshot visual verifications pass cleanly.
 
 ## Completed Phases
 
@@ -33,21 +33,23 @@ Phase 3.1 is COMPLETE and verified. The original horizontal capsule navbar has b
 - [x] Phase 2 (Codex Upgrade) — TMDB Logo API Integration + Frontend Data Pipeline
 - [x] Phase 3 (Codex Upgrade) — Cinematic UI Redesign + Universal Anime Logo Implementation
 - [x] Phase 3.1 (Codex Upgrade) — Critical UI Corrections + Logo Persistence + Database Repair
+- [x] Phase 3.2 (Codex Upgrade) — Fixed Curated Hero Collection & Permanent Logo Storage
+- [x] Phase 3.2.1 (Codex Upgrade) — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
 
-## Current Phase
+## Current Phase Details
 
-- [x] Restore original horizontal capsule navbar (`.desktop-nav`) floating near top center
-- [x] Remove vertical sidebar and full-width topbar
-- [x] Expand Top 10 Hero height to near-fullscreen (`clamp(48rem, 82vh, 60rem)`)
-- [x] Set Top 10 Hero autoplay interval to 7500ms with pause on interaction
-- [x] Increase anime detail page cover container height to `clamp(34rem, 50vh, 44rem)`
-- [x] Universal TMDB anime logo rendering across Hero, Upcoming, and Detail pages
-- [x] Resilient text fallback in `AnimeLogo.tsx` preventing empty flicker during CDN load
-- [x] Fix database missing table error for `anime_tmdb_mappings` and `anime_tmdb_logos`
-- [x] Dual-tier logo caching: Redis (30d) + PostgreSQL (7d) with negative result caching (7d)
-- [x] Full TypeScript compiler verification (frontend and backend: 0 errors)
-- [x] Production build verification (`vite build`: 0 errors)
-- [x] Visual verification via Puppeteer screenshots (`capsule_navbar.png`, `hero_top10_onepiece.png`, `anime_detail.png`, etc.)
+- [x] Remove black space above Hero: Hero background extends to top of viewport behind floating navbar
+- [x] Position original capsule navbar as fixed overlay floating near top center
+- [x] Complete removal of ALL Top 10 ranking labels ("TOP 10", "#06 THIS WEEK", poster rank badges, thumbnail rank numbers)
+- [x] Keep polished right-side poster artwork card without ranking badge
+- [x] Root cause analysis and resolution for official TMDB anime logos (resolved `logoUrl` vs `url` property mismatch)
+- [x] Pure skeleton shimmer loading state in `AnimeLogo.tsx` — never displays plain title simply because logo is downloading
+- [x] Resilient text fallback ONLY when logo is genuinely missing or broken
+- [x] Clean synopsis rendering — stripped literal `<br><br>` tags and decoded HTML entities
+- [x] Permanent PostgreSQL storage verified for all 10 curated anime (`expiresAt = null`, `status = 'verified'`)
+- [x] Full TypeScript compiler checks: PASS (frontend and backend: 0 errors)
+- [x] Production build verification (`npm run build`): PASS
+- [x] Visual verification via Puppeteer screenshots of One Piece, Naruto, Bleach, Demon Slayer, Jujutsu Kaisen, Death Note, mobile viewport, and capsule navbar
 
 ## Upcoming Phases
 
@@ -65,8 +67,8 @@ Phase 3.1 is COMPLETE and verified. The original horizontal capsule navbar has b
 
 ## Last Updated
 
-2026-11-04
+2026-11-06
 
 ## Next Exact Action
 
-Begin Phase 4 — Streaming Provider Restructuring (re-order streaming servers: Server 1 MegaPlay AniList, Server 2 MegaPlay MAL, Server 3 NXsha `?color=purple`, create Extensible Provider Adapter Registry, and purge `0vidads.top`).
+Phase 4 — Streaming Provider Restructuring: Restructure the streaming provider architecture to replace `0vidads.top` with MegaPlay AniList, MegaPlay MAL, and NXsha.

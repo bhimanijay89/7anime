@@ -1,8 +1,24 @@
 /* ─── Home Layout ─── */
 .home {
+  width: 100%;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 7.5rem;
+}
+
+.home-body,
+.home-container {
   width: min(calc(100% - 2rem), 88rem);
   margin: 0 auto;
-  padding-bottom: 7.5rem;
+}
+
+.anime-detail,
+.schedule-view,
+.library-view,
+.profile-view {
+  width: min(calc(100% - 2rem), 88rem);
+  margin: 0 auto;
+  padding-top: 5.5rem;
 }
 
 /* ─── Eyebrow ─── */

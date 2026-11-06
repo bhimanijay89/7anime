@@ -103,6 +103,7 @@ export interface Anime {
 
 export interface AnimeLogo {
     url: string
+    logoUrl?: string
     aspectRatio?: number
     width?: number
     height?: number

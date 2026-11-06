@@ -1,4 +1,5 @@
 import { startCacheWarmer, getCacheHealthDiagnostics } from './services/warmer.js'
+import { ensureCuratedHeroLogos } from './services/tmdb.js'
 import 'dotenv/config'
 
 import cors from 'cors'
@@ -455,6 +456,9 @@ app.listen(
         )
 
         startCacheWarmer()
+        void ensureCuratedHeroLogos().catch(err => {
+            console.warn('[7anime Backend] Curated hero logos startup resolution error:', err)
+        })
 
         console.log(
             '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',

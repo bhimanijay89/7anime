@@ -15,6 +15,20 @@ import { Button, IconButton } from '../ui/Button'
 import { AnimeLogo } from '../anime/AnimeLogo'
 import './rail.css'
 
+export function cleanSynopsis(raw?: string | null): string {
+  if (!raw) return ''
+  return raw
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;|&apos;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 interface Top10HeroProps {
   anime: Anime[]
   onSelect?: (anime: Anime) => void
@@ -174,8 +188,6 @@ export function Top10Hero({
 
   if (!current) return null
 
-  const rank = String(activeIndex + 1).padStart(2, '0')
-
   return (
     <section
       ref={containerRef}
@@ -184,7 +196,7 @@ export function Top10Hero({
         : ''
         }`}
       aria-roledescription="carousel"
-      aria-label="Top 10 anime this week"
+      aria-label="Featured curated anime collection"
       tabIndex={0}
     >
       <div
@@ -206,11 +218,6 @@ export function Top10Hero({
         aria-live="polite"
       >
         <div className="hero-top10__content">
-          <p className="hero-top10__eyebrow">
-            TOP 10 ·{' '}
-            <span>#{rank} THIS WEEK</span>
-          </p>
-
           <div className="hero-top10__title-area">
             <AnimeLogo
               logo={current.logo}
@@ -274,7 +281,7 @@ export function Top10Hero({
             )}
 
           <p className="hero-top10__synopsis">
-            {current.synopsis}
+            {cleanSynopsis(current.synopsis)}
           </p>
 
           <div className="hero-top10__actions">
@@ -321,10 +328,6 @@ export function Top10Hero({
               alt={`${current.title} poster`}
               loading="eager"
             />
-
-            <strong className="hero-top10__poster-rank">
-              #{rank}
-            </strong>
           </div>
         </div>
       </div>
@@ -351,10 +354,7 @@ export function Top10Hero({
                 : ''
                 }`}
               onClick={() => goTo(index)}
-              aria-label={`Show #${String(
-                index + 1,
-              ).padStart(2, '0')} ${item.title
-                }`}
+              aria-label={item.title}
               aria-current={
                 index === activeIndex
                   ? 'true'
@@ -366,13 +366,6 @@ export function Top10Hero({
                 alt=""
                 loading="lazy"
               />
-
-              <span className="hero-top10__thumb-rank">
-                {String(index + 1).padStart(
-                  2,
-                  '0',
-                )}
-              </span>
             </button>
           ))}
         </div>

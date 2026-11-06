@@ -21,7 +21,8 @@ export interface AnimeLogoProps {
  * Renders the official TMDB title logo (transparent PNG) with:
  * - Proportional containment (`object-fit: contain`)
  * - Responsive sizing per location (Hero, Detail, Upcoming)
- * - Graceful fallback to styled anime title text on missing logo or image load error
+ * - Pure skeleton while loading — never shows plain title simply because image is loading
+ * - Graceful fallback to styled anime title text ONLY when logo is unavailable or fails to load
  * - Crossfade transitions between slides
  * - Accessible image alt and heading structure
  */
@@ -36,7 +37,11 @@ export function AnimeLogo({
   const [imageLoaded, setImageLoaded] = useState(false)
   const imgRef = React.useRef<HTMLImageElement>(null)
 
-  const logoUrl = logo?.url
+  // Normalize logo URL supporting both logo.url and logo.logoUrl
+  const logoUrl =
+    logo?.url ||
+    (logo as unknown as { logoUrl?: string })?.logoUrl ||
+    ''
 
   // Reset state when the logo URL changes (e.g. carousel slide change)
   useEffect(() => {
@@ -46,20 +51,9 @@ export function AnimeLogo({
       return
     }
     setImageLoaded(false)
-
-    if (logoUrl) {
-      const timeout = window.setTimeout(() => {
-        if (!imgRef.current?.complete || imgRef.current.naturalWidth === 0) {
-          setImageError(true)
-        }
-      }, 2000)
-      return () => window.clearTimeout(timeout)
-    }
   }, [logoUrl])
 
-  const shouldRenderImage = Boolean(logoUrl && !imageError)
   const variantClass = `anime-logo--${sizeVariant}`
-
   const HeadingTag = sizeVariant === 'hero' || sizeVariant === 'detail' ? 'h1' : 'h2'
   const len = title.length
   const longClass =
@@ -75,13 +69,22 @@ export function AnimeLogo({
     </HeadingTag>
   )
 
-  if (!shouldRenderImage) {
+  // Show plain title ONLY when logo is genuinely unavailable or fails to load
+  if (!logoUrl || imageError) {
     return textTitleElement
   }
 
   return (
     <div className={`anime-logo__container ${variantClass} ${className}`.trim()}>
-      {!imageLoaded && textTitleElement}
+      {!imageLoaded && (
+        <div
+          className="anime-logo__skeleton"
+          style={{
+            aspectRatio: logo?.aspectRatio ? `${logo.aspectRatio}` : '3.2 / 1',
+          }}
+          aria-hidden="true"
+        />
+      )}
       <img
         ref={imgRef}
         src={logoUrl}
@@ -89,10 +92,16 @@ export function AnimeLogo({
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
         className={`anime-logo__img ${imageLoaded ? 'anime-logo__img--loaded' : 'anime-logo__img--loading'}`}
-        onLoad={() => setImageLoaded(true)}
-        onError={() => setImageError(true)}
+        onLoad={() => {
+          setImageLoaded(true)
+          setImageError(false)
+        }}
+        onError={() => {
+          setImageError(true)
+        }}
         style={{
-          display: imageLoaded ? 'block' : 'none',
+          opacity: imageLoaded ? 1 : 0,
+          position: imageLoaded ? 'static' : 'absolute',
           ...(logo?.aspectRatio ? { aspectRatio: `${logo.aspectRatio}` } : {}),
         }}
       />

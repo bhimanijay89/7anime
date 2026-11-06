@@ -86,9 +86,11 @@
 
 .hero-top10 {
   position: relative;
-  min-height: clamp(48rem, 82vh, 60rem);
-  margin-top: var(--space-5);
-  border-radius: var(--radius-xl);
+  width: 100%;
+  min-height: clamp(50rem, 90vh, 64rem);
+  margin-top: 0;
+  padding-top: 5.5rem;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -119,8 +121,8 @@
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(90deg, rgba(8, 10, 15, 0.92) 0%, rgba(8, 10, 15, 0.6) 50%, rgba(8, 10, 15, 0.3) 100%),
-    linear-gradient(180deg, transparent 50%, rgba(8, 10, 15, 0.95) 100%);
+    linear-gradient(90deg, rgba(8, 10, 15, 0.94) 0%, rgba(8, 10, 15, 0.65) 50%, rgba(8, 10, 15, 0.3) 100%),
+    linear-gradient(180deg, rgba(8, 10, 15, 0.75) 0%, rgba(8, 10, 15, 0.25) 15%, transparent 35%, rgba(8, 10, 15, 0.95) 100%);
 }
 
 /* ─── Main Layout ─── */
@@ -134,6 +136,9 @@
   padding: var(--space-8);
   padding-bottom: var(--space-5);
   flex: 1;
+  max-width: 88rem;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .hero-top10--transitioning .hero-top10__content,
@@ -291,6 +296,9 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-8) var(--space-5);
+  max-width: 88rem;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .hero-top10__strip {
