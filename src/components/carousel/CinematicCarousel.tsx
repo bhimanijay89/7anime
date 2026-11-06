@@ -198,6 +198,8 @@ export function Top10Hero({
       aria-roledescription="carousel"
       aria-label="Featured curated anime collection"
       tabIndex={0}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
       <div
         className="hero-top10__bg"
@@ -333,15 +335,6 @@ export function Top10Hero({
       </div>
 
       <div className="hero-top10__strip-area">
-        <IconButton
-          label="Previous"
-          onClick={() =>
-            goTo(activeIndex - 1)
-          }
-        >
-          <ChevronLeft />
-        </IconButton>
-
         <div
           className="hero-top10__strip"
           ref={stripRef}
@@ -369,28 +362,6 @@ export function Top10Hero({
             </button>
           ))}
         </div>
-
-        <IconButton
-          label={
-            paused
-              ? 'Resume autoplay'
-              : 'Pause autoplay'
-          }
-          onClick={() =>
-            setPaused(currentPaused => !currentPaused)
-          }
-        >
-          {paused ? <Play /> : <Pause />}
-        </IconButton>
-
-        <IconButton
-          label="Next"
-          onClick={() =>
-            goTo(activeIndex + 1)
-          }
-        >
-          <ChevronRight />
-        </IconButton>
       </div>
     </section>
   )

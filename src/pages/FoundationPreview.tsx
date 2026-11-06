@@ -1,12 +1,11 @@
-import { ScheduleView } from '../components/schedule/ScheduleView'
-import { MoviesView } from '../components/movies/MoviesView'
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { MoviesSkeleton } from '../components/movies/MoviesSkeleton'
 import {
   ArrowLeft,
   Play,
   Plus,
   Sparkles,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import type {
   Anime,
   AnimeLogo,
@@ -38,13 +37,7 @@ import {
   type ViewMode,
 } from '../components/navigation/Navigation'
 
-import { FullPlayerView } from '../components/player/FullPlayerView'
-
-import { LibraryView } from '../components/profile/LibraryView'
-import { ProfileFullView, type UserProfileStats } from '../components/profile/ProfileFullView'
-
-import { SearchOverlay } from '../components/search/SearchOverlay'
-
+import type { UserProfileStats } from '../components/profile/ProfileFullView'
 import { Button } from '../components/ui/Button'
 import { Drawer } from '../components/ui/Overlay'
 
@@ -53,14 +46,21 @@ import {
   useToast,
 } from '../components/ui/Toast'
 
-import { AuthModal } from '../components/auth/AuthModal'
+// Code-split heavy views for faster initial loading
+const MoviesView = lazy(() => import('../components/movies/MoviesView').then(m => ({ default: m.MoviesView })))
+const ScheduleView = lazy(() => import('../components/schedule/ScheduleView').then(m => ({ default: m.ScheduleView })))
+const LibraryView = lazy(() => import('../components/profile/LibraryView').then(m => ({ default: m.LibraryView })))
+const ProfileFullView = lazy(() => import('../components/profile/ProfileFullView').then(m => ({ default: m.ProfileFullView })))
+const FullPlayerView = lazy(() => import('../components/player/FullPlayerView').then(m => ({ default: m.FullPlayerView })))
+const SearchOverlay = lazy(() => import('../components/search/SearchOverlay').then(m => ({ default: m.SearchOverlay })))
+const AuthModal = lazy(() => import('../components/auth/AuthModal').then(m => ({ default: m.AuthModal })))
 import type { AuthUser } from '../types/auth'
 import type { User } from '../types/domain'
 
 import { guestUser } from '../data/anime'
 import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
-import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos, fetchCuratedHeroAnime } from '../services/anilist'
+import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos, fetchCuratedHeroAnime, prefetchAnimeMovies } from '../services/anilist'
 import { isMovieMediaType } from '../services/videoResolver'
 
 import './preview.css'
@@ -445,18 +445,33 @@ function Home() {
     loadHomeData()
   }, [loadHomeData])
 
-  const moviesData = useMemo(() => {
-    const combined = [...trendingData, ...topRatedData]
-    const seen = new Set<string>()
-    const movies: Anime[] = []
-    for (const anime of combined) {
-      if (isMovieMediaType(anime.type) && !seen.has(anime.id)) {
-        seen.add(anime.id)
-        movies.push(anime)
+  // Warm up Movies cache in idle background after initial home render
+  useEffect(() => {
+    const idleId = typeof window !== 'undefined' && 'requestIdleCallback' in window
+      ? (window as unknown as { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(() => prefetchAnimeMovies(), { timeout: 3000 })
+      : setTimeout(() => prefetchAnimeMovies(), 2000)
+
+    return () => {
+      if (typeof window !== 'undefined' && 'cancelIdleCallback' in window && typeof idleId === 'number') {
+        (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId)
+      } else {
+        clearTimeout(idleId as any)
       }
     }
-    return movies
-  }, [trendingData, topRatedData])
+  }, [])
+
+  const handlePrefetch = useCallback((view: ViewMode) => {
+    if (view === 'movies') {
+      import('../components/movies/MoviesView')
+      prefetchAnimeMovies()
+    } else if (view === 'schedule') {
+      import('../components/schedule/ScheduleView')
+    } else if (view === 'library') {
+      import('../components/profile/LibraryView')
+    } else if (view === 'profile') {
+      import('../components/profile/ProfileFullView')
+    }
+  }, [])
 
   const handleDirectPlay = useCallback(async (anime: Anime) => {
     await openContinueWatchingPlayer(anime)
@@ -1168,6 +1183,7 @@ function Home() {
           onSearch={() => setSearch(true)}
           onMenu={() => setDrawer(true)}
           onNavigate={navigateTo}
+        onPrefetch={handlePrefetch}
           onOpenAuthModal={() => setAuthModalOpen(true)}
           onLogout={handleLogout}
           authUser={authUser}
@@ -1193,6 +1209,9 @@ function Home() {
         }
         onNavigate={
           navigateTo
+        }
+        onPrefetch={
+          handlePrefetch
         }
         onOpenAuthModal={() =>
           setAuthModalOpen(true)
@@ -1254,13 +1273,14 @@ function Home() {
              MOVIES
           ================================================== */
 
-          <MoviesView
-            initialMovies={moviesData}
-            isSaved={id => isSaved(String(id))}
-            onToggleSave={handleToggleSave}
-            onSelectAnime={openDetail}
-            onPlayAnime={handleDirectPlay}
-          />
+          <Suspense fallback={<MoviesSkeleton />}>
+            <MoviesView
+              isSaved={id => isSaved(String(id))}
+              onToggleSave={handleToggleSave}
+              onSelectAnime={openDetail}
+              onPlayAnime={handleDirectPlay}
+            />
+          </Suspense>
 
         ) : currentView ===
           'schedule' ? (
@@ -1577,33 +1597,7 @@ function Home() {
                 )}
               </div>
 
-              {/* ===============================================
-                  ANIME MOVIES
-              ================================================ */}
 
-              {moviesData.length > 0 && (
-                <div id="movies-rail">
-                  <ContentRail
-                    title="Anime Movies"
-                  >
-                    {moviesData
-                      .slice(0, 10)
-                      .map(
-                        (anime: Anime) => (
-                          <AnimeCard
-                            anime={anime}
-                            variant="landscape"
-                            key={`movie-${anime.id}`}
-                            isSaved={isSaved(anime.id)}
-                            onToggleSave={handleToggleSave}
-                            onSelect={openDetail}
-                            onPlay={handleDirectPlay}
-                          />
-                        ),
-                      )}
-                  </ContentRail>
-                </div>
-              )}
 
               {/* ===============================================
                   DISCOVERY
@@ -1769,6 +1763,9 @@ function Home() {
       <MobileNavigation
         onNavigate={
           navigateTo
+        }
+        onPrefetch={
+          handlePrefetch
         }
         onSearch={() =>
           setSearch(true)

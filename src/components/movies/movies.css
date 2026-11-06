@@ -303,8 +303,34 @@
   gap: var(--space-5);
 }
 
+/* ─── Skeleton Shimmer ─── */
+.movies-spotlight--skeleton {
+  min-height: clamp(20rem, 32vw, 26rem);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(85, 216, 255, 0.08), transparent 45%),
+    linear-gradient(135deg, rgba(20, 26, 38, 0.7) 0%, rgba(11, 15, 25, 0.9) 100%);
+  border: 1px solid var(--color-glass-border);
+}
+
+.movies-view--skeleton {
+  pointer-events: none;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
+  .movies-toolbar__top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .movies-toolbar__search input {
+    width: 100%;
+  }
+
+  .movies-toolbar__sort {
+    justify-content: space-between;
+  }
+
   .movies-spotlight__content {
     grid-template-columns: 1fr;
   }

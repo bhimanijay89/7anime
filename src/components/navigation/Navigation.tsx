@@ -67,6 +67,7 @@ export function DesktopNavbar({
   onMenu,
   onSearch,
   onNavigate,
+  onPrefetch,
   onOpenAuthModal,
   onLogout,
   authUser,
@@ -75,6 +76,7 @@ export function DesktopNavbar({
   onMenu?: () => void
   onSearch: () => void
   onNavigate?: (view: ViewMode) => void
+  onPrefetch?: (view: ViewMode) => void
   onOpenAuthModal?: () => void
   onLogout?: () => void
   authUser?: AuthUser | null
@@ -149,6 +151,7 @@ export function DesktopNavbar({
           className={currentView === 'movies' ? 'active' : ''}
           href="#movies"
           aria-current={currentView === 'movies' ? 'page' : undefined}
+          onMouseEnter={() => onPrefetch?.('movies')}
           onClick={e => {
             e.preventDefault()
             onNavigate?.('movies')
@@ -175,6 +178,7 @@ export function DesktopNavbar({
           className={currentView === 'schedule' ? 'active' : ''}
           href="#schedule"
           aria-current={currentView === 'schedule' ? 'page' : undefined}
+          onMouseEnter={() => onPrefetch?.('schedule')}
           onClick={e => {
             e.preventDefault()
             onNavigate?.('schedule')
@@ -189,6 +193,7 @@ export function DesktopNavbar({
           className={currentView === 'library' ? 'active' : ''}
           href="#library"
           aria-current={currentView === 'library' ? 'page' : undefined}
+          onMouseEnter={() => onPrefetch?.('library')}
           onClick={e => {
             e.preventDefault()
             onNavigate?.('library')
@@ -259,10 +264,12 @@ export function DesktopNavbar({
 
 export function MobileNavigation({
   onNavigate,
+  onPrefetch,
   onSearch,
   currentView = 'home',
 }: {
   onNavigate?: (view: ViewMode) => void
+  onPrefetch?: (view: ViewMode) => void
   onSearch?: () => void
   currentView?: ViewMode
 }) {

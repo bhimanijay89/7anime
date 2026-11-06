@@ -25,19 +25,38 @@ export function AnimeCard({
 }) {
   const cardRef = useRef<HTMLElement>(null)
   const [showHover, setShowHover] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
 
   const enterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeAnimationRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTimers = () => {
     if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current)
     if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current)
+    if (closeAnimationRef.current) clearTimeout(closeAnimationRef.current)
   }
 
   useEffect(() => {
     return () => clearTimers()
   }, [])
+
+  const startClose = () => {
+    setIsClosing(true)
+    closeAnimationRef.current = setTimeout(() => {
+      setShowHover(false)
+      setIsClosing(false)
+    }, 280)
+  }
+
+  const cancelClose = () => {
+    if (closeAnimationRef.current) {
+      clearTimeout(closeAnimationRef.current)
+      closeAnimationRef.current = null
+    }
+    setIsClosing(false)
+  }
 
   const handleMouseEnter = () => {
     // Only trigger hover on mouse-pointer devices (not touch screens)
@@ -50,11 +69,14 @@ export function AnimeCard({
       leaveTimeoutRef.current = null
     }
 
+    cancelClose()
+
     if (!showHover && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect()
       enterTimeoutRef.current = setTimeout(() => {
         setAnchorRect(rect)
         setShowHover(true)
+        setIsClosing(false)
       }, 350)
     }
   }
@@ -66,8 +88,8 @@ export function AnimeCard({
     }
 
     leaveTimeoutRef.current = setTimeout(() => {
-      setShowHover(false)
-    }, 220)
+      startClose()
+    }, 280)
   }
 
   const handlePortalMouseEnter = () => {
@@ -75,12 +97,13 @@ export function AnimeCard({
       clearTimeout(leaveTimeoutRef.current)
       leaveTimeoutRef.current = null
     }
+    cancelClose()
   }
 
   const handlePortalMouseLeave = () => {
     leaveTimeoutRef.current = setTimeout(() => {
-      setShowHover(false)
-    }, 180)
+      startClose()
+    }, 220)
   }
 
   return (
@@ -180,6 +203,7 @@ export function AnimeCard({
           anime={anime}
           anchorRect={anchorRect}
           isSaved={isSaved}
+          isClosing={isClosing}
           onToggleSave={onToggleSave}
           onPlay={onPlay || onSelect}
           onViewDetails={onSelect}

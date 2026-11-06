@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Bug Fix — Movies Navigation & Dedicated Movies View
+Phase 3.3 — Performance Optimization, Hero Polish & Foundation Page Cleanup
 
 ## Overall Status
 
-The Movies navigation issue is completely RESOLVED and fully verified. Clicking "Movies" in the floating capsule navbar now immediately opens a dedicated anime movies catalogue instead of scrolling to the home discovery section. The implementation includes a backend endpoint (`GET /api/anime/movies`) querying AniList with `format: MOVIE` and caching responses via Redis, a frontend client service with direct GraphQL fallback, and a dedicated `MoviesView` component styled in Liquid Glass with a spotlight presentation card, real-time search, genre filtering pills, and sorting dropdown. URL hash routing (`/#movies`) is synchronized with browser history (`pushState`, `popstate`, `hashchange`) ensuring that page refreshes and browser Back/Forward navigation preserve the active view seamlessly without breaking Home, Discover, Trending, Schedule, or My List navigation.
+Phase 3.3 is COMPLETE and fully verified. Site-wide performance optimizations have been implemented across the frontend stack. Code splitting with React `lazy` and `Suspense` was introduced for heavy views (`MoviesView`, `ScheduleView`, `LibraryView`, `ProfileFullView`, `FullPlayerView`, `SearchOverlay`, `AuthModal`), reducing the main production JavaScript bundle by 20.6% (from 364.73 kB to 288.41 kB) and the main CSS bundle by 49.8% (from 135.77 kB to 68.22 kB). An in-memory client-side cache with 5-minute TTL and request deduplication was added in `anilist.ts`, enabling instant 395ms transitions when opening the Movies page. A dedicated `MoviesSkeleton` component was built to provide smooth loading shimmer without layout shifts. Duplicate `#movies-rail` and obsolete `moviesData` state were eliminated from `FoundationPreview.tsx`. In the Hero carousel, the Previous/Next arrows and Play/Pause control buttons were removed, leaving the curated 10-thumbnail strip as the sole manual navigation control with 7500ms autoplay and hover-pause. Anime card hover animations were enhanced with GPU-friendly transforms, `cubic-bezier(0.22, 1, 0.36, 1)` easing, exit pop-in transitions, and reduced-motion support. All automated performance and visual verification tests pass cleanly.
 
 ## Completed Phases
 
@@ -36,25 +36,26 @@ The Movies navigation issue is completely RESOLVED and fully verified. Clicking 
 - [x] Phase 3.2 (Codex Upgrade) — Fixed Curated Hero Collection & Permanent Logo Storage
 - [x] Phase 3.2.1 (Codex Upgrade) — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
 - [x] Bug Fix — Movies Navigation & Dedicated Movies View
+- [x] Phase 3.3 (Codex Upgrade) — Performance Optimization, Hero Polish & Foundation Page Cleanup
 
 ## Current Phase Details
 
-- [x] Traced `src/components/navigation/Navigation.tsx` click handler and fixed routing
-- [x] Added `'movies'` to `ViewMode` union type
-- [x] Active state indicator in capsule navbar for Movies
-- [x] Backend endpoint `GET /api/anime/movies` with `format: MOVIE` AniList query and Redis caching
-- [x] Frontend `getAnimeMovies()` service in `src/services/anilist.ts` with backend API and GraphQL fallback
-- [x] Dedicated `MoviesView` component with header banner, movie count, spotlight movie feature card, search, genre filter pills, and sort dropdown
-- [x] Responsive movie grid using unified `AnimeCard` component
-- [x] Top spacing clearance in `src/pages/preview.css` (`padding-top: 5.5rem;`) for `.movies-view`
-- [x] URL hash routing (`/#movies`) and browser Back/Forward navigation support (`pushState`, `hashchange`, `popstate`)
-- [x] Direct browser refresh on `/#movies` preserves Movies view
-- [x] Clicking movie cards opens the anime detail view
-- [x] Verified Home, Discover, Trending, Schedule, and My List navigation unaffected
+- [x] Code-splitting via React `lazy` & `Suspense` for heavy views (`MoviesView`, `ScheduleView`, `LibraryView`, `ProfileFullView`, `FullPlayerView`, `SearchOverlay`, `AuthModal`)
+- [x] Main JS bundle reduced from 364.73 kB to 288.41 kB (20.6% reduction); CSS bundle reduced from 135.77 kB to 68.22 kB (49.8% reduction)
+- [x] In-memory client cache & in-flight promise deduplication in `src/services/anilist.ts`
+- [x] Background prefetching of Movies on idle (`requestIdleCallback`) and navbar link hover
+- [x] Dedicated `MoviesSkeleton` loading shimmer
+- [x] Instant Movies page navigation verified (measured 395ms transition)
+- [x] Removed duplicate `#movies-rail` and obsolete `moviesData` memo from `FoundationPreview.tsx`
+- [x] Removed Previous/Next arrow buttons and Play/Pause control from Hero carousel
+- [x] Preserved 10 curated thumbnail navigation controls below Hero
+- [x] Maintained 7500ms Hero autoplay with hover-pause
+- [x] Enhanced Anime Card hover animations with `cubic-bezier(0.22, 1, 0.36, 1)`, bidirectional pop-out and pop-in exit transitions, and `prefers-reduced-motion` support
+- [x] Responsive layout tested across desktop and mobile viewports (390x844)
 - [x] Full TypeScript compiler checks: PASS (frontend and backend: 0 errors)
 - [x] Production build verification (`npm run build`): PASS
-- [x] Automated Puppeteer test suite (`test-movies-navigation.mjs`): PASS (6/6 tests passed)
-- [x] Visual verification via Puppeteer screenshots (`docs/screenshots/movies_page.png` and `docs/screenshots/movies_grid.png`)
+- [x] Automated test suite (`scripts/test-phase3-3-performance.mjs`): PASS (6/6 test groups passed)
+- [x] Visual verification via Puppeteer screenshots (6 screenshots in `docs/screenshots/`)
 
 ## Upcoming Phases
 

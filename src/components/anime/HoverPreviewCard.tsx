@@ -14,6 +14,7 @@ export interface HoverPreviewCardProps {
   anime: Anime
   anchorRect: DOMRect
   isSaved?: boolean
+  isClosing?: boolean
   onToggleSave?: (anime: Anime) => void
   onPlay?: (anime: Anime) => void
   onViewDetails?: (anime: Anime) => void
@@ -25,6 +26,7 @@ export function HoverPreviewCard({
   anime,
   anchorRect,
   isSaved = false,
+  isClosing = false,
   onToggleSave,
   onPlay,
   onViewDetails,
@@ -61,7 +63,7 @@ export function HoverPreviewCard({
   return createPortal(
     <div
       ref={cardRef}
-      className="hover-preview-portal"
+      className={`hover-preview-portal ${isClosing ? 'hover-preview-portal--closing' : ''}`}
       style={{
         left: `${targetLeft}px`,
         top: `${targetTop}px`,

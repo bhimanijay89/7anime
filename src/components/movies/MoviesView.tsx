@@ -9,16 +9,19 @@ import {
   Star,
 } from 'lucide-react'
 import type { Anime } from '../../types/domain'
-import { getAnimeMovies } from '../../services/anilist'
+import { getAnimeMovies, getCachedAnimeMoviesSync } from '../../services/anilist'
 import { AnimeCard } from '../anime/AnimeCard'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/Feedback'
+import { MoviesSkeleton } from './MoviesSkeleton'
 import { cleanSynopsis } from '../carousel/CinematicCarousel'
 import './movies.css'
 
+export { MoviesSkeleton }
+
 export interface MoviesViewProps {
-  /** Pre-loaded movies passed from Home data to avoid initial empty render */
+  /** Optional pre-loaded movies passed from caller */
   initialMovies?: Anime[]
   /** Check whether an anime ID is saved in user library */
   isSaved?: (id: string | number) => boolean
@@ -51,32 +54,31 @@ export function MoviesView({
   onSelectAnime,
   onPlayAnime,
 }: MoviesViewProps) {
-  const [movies, setMovies] = useState<Anime[]>(initialMovies)
-  const [loading, setLoading] = useState(false)
+  // Use in-memory cached movie data immediately if available for 0ms transition
+  const [movies, setMovies] = useState<Anime[]>(() => {
+    const cached = getCachedAnimeMoviesSync()
+    if (cached && cached.length > 0) return cached
+    return initialMovies
+  })
+
+  const [loading, setLoading] = useState(() => {
+    const cached = getCachedAnimeMoviesSync()
+    return (!cached || cached.length === 0) && initialMovies.length === 0
+  })
+
   const [query, setQuery] = useState('')
   const [selectedGenre, setSelectedGenre] = useState('All')
   const [sortBy, setSortBy] = useState<SortOption>('popularity')
 
-  // Fetch full anime movies catalog on mount
+  // Fetch or revalidate anime movies catalog on mount
   useEffect(() => {
     let active = true
-    setLoading(true)
 
     getAnimeMovies(1, 35)
       .then(fetched => {
         if (!active) return
         if (fetched && fetched.length > 0) {
-          // Merge unique movies with initialMovies preserving order
-          const map = new Map<string, Anime>()
-          for (const m of fetched) {
-            map.set(String(m.id), { ...m, type: 'Movie' })
-          }
-          for (const m of initialMovies) {
-            if (!map.has(String(m.id))) {
-              map.set(String(m.id), { ...m, type: 'Movie' })
-            }
-          }
-          setMovies(Array.from(map.values()))
+          setMovies(fetched)
         }
       })
       .catch(err => {
@@ -89,7 +91,7 @@ export function MoviesView({
     return () => {
       active = false
     }
-  }, [initialMovies])
+  }, [])
 
   // Filter and sort movies
   const filteredMovies = useMemo(() => {
@@ -125,6 +127,11 @@ export function MoviesView({
   }, [filteredMovies])
 
   const spotlightSaved = spotlightMovie ? isSaved?.(spotlightMovie.id) : false
+
+  // If initial load with empty cache, display high-fidelity skeleton
+  if (loading && movies.length === 0) {
+    return <MoviesSkeleton />
+  }
 
   return (
     <section className="movies-view" aria-label="Anime Movies Catalogue">
@@ -182,7 +189,9 @@ export function MoviesView({
                   </span>
                 )}
                 {spotlightMovie.genres && spotlightMovie.genres.length > 0 && (
-                  <span>{spotlightMovie.genres.slice(0, 3).join(' · ')}</span>
+                  <span className="movies-spotlight__genres">
+                    {spotlightMovie.genres.slice(0, 3).join(' • ')}
+                  </span>
                 )}
               </div>
               {spotlightMovie.synopsis && (
@@ -192,6 +201,7 @@ export function MoviesView({
               )}
               <div className="movies-spotlight__actions">
                 <Button
+                  variant="primary"
                   onClick={() =>
                     onPlayAnime
                       ? onPlayAnime(spotlightMovie)
@@ -318,4 +328,3 @@ export function MoviesView({
     </section>
   )
 }
-

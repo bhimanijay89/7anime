@@ -1466,6 +1466,50 @@ export interface CuratedAnimeReference {
     title: string
 }
 
+/* =========================================================
+   CLIENT-SIDE IN-MEMORY CACHE & REQUEST DEDUPLICATION
+   ========================================================= */
+
+interface ClientCacheEntry<T> {
+    data: T
+    timestamp: number
+}
+
+const CLIENT_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const clientMemoryCache = new Map<string, ClientCacheEntry<any>>()
+const clientInflightRequests = new Map<string, Promise<any>>()
+
+export function getCachedAnimeData<T>(key: string): T | null {
+    const entry = clientMemoryCache.get(key)
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > CLIENT_CACHE_TTL_MS) {
+        clientMemoryCache.delete(key)
+        return null
+    }
+    return entry.data as T
+}
+
+export function setCachedAnimeData<T>(key: string, data: T): void {
+    clientMemoryCache.set(key, {
+        data,
+        timestamp: Date.now(),
+    })
+}
+
+export function getCachedAnimeMoviesSync(): Anime[] | null {
+    return (
+        getCachedAnimeData<Anime[]>('movies:1:35:POPULARITY_DESC') ||
+        getCachedAnimeData<Anime[]>('movies:1:35') ||
+        getCachedAnimeData<Anime[]>('movies:1:30:POPULARITY_DESC') ||
+        null
+    )
+}
+
+export function clearClientAnimeCache(): void {
+    clientMemoryCache.clear()
+    clientInflightRequests.clear()
+}
+
 export const CURATED_HERO_REFERENCES: CuratedAnimeReference[] = [
     { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece' },
     { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden' },
@@ -1484,6 +1528,14 @@ export const CURATED_HERO_REFERENCES: CuratedAnimeReference[] = [
  * Does not depend on dynamic AniList trending rankings.
  */
 export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
+    const cacheKey = 'hero:curated:10'
+    const cached = getCachedAnimeData<Anime[]>(cacheKey)
+    if (cached && cached.length > 0) return cached
+
+    const inflight = clientInflightRequests.get(cacheKey)
+    if (inflight) return inflight
+
+    const runFetch = async (): Promise<Anime[]> => {
     try {
         const res = await fetch(`${BACKEND_URL}/api/anime/curated-hero`)
         if (res.ok) {
@@ -1547,6 +1599,17 @@ export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
         console.error('[fetchCuratedHeroAnime] Failed to load curated anime:', fallbackErr)
         return []
     }
+    }
+
+    const promise = runFetch().then(res => {
+        if (res && res.length > 0) setCachedAnimeData(cacheKey, res)
+        return res
+    }).finally(() => {
+        clientInflightRequests.delete(cacheKey)
+    })
+
+    clientInflightRequests.set(cacheKey, promise)
+    return promise
 }
 
 export interface AiringScheduleEntry {
@@ -1900,46 +1963,77 @@ const ANIME_MOVIES_QUERY = `
 
 export async function getAnimeMovies(
     page = 1,
-    perPage = 30,
+    perPage = 35,
     sort: 'POPULARITY_DESC' | 'SCORE_DESC' | 'START_DATE_DESC' = 'POPULARITY_DESC',
 ): Promise<Anime[]> {
     const safePage = Math.max(1, Math.floor(page))
     const safePerPage = Math.min(50, Math.max(1, Math.floor(perPage)))
+    const cacheKey = `movies:${safePage}:${safePerPage}:${sort}`
 
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/anime/movies?page=${safePage}&perPage=${safePerPage}`)
-        if (res.ok) {
-            const json = await res.json()
-            if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-                return (json.data as Anime[]).map(a => ({
-                    ...a,
-                    type: 'Movie',
-                }))
+    const cached = getCachedAnimeData<Anime[]>(cacheKey)
+    if (cached && cached.length > 0) {
+        return cached
+    }
+
+    const inflight = clientInflightRequests.get(cacheKey)
+    if (inflight) {
+        return inflight
+    }
+
+    const fetchPromise = (async () => {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/anime/movies?page=${safePage}&perPage=${safePerPage}`)
+            if (res.ok) {
+                const json = await res.json()
+                if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+                    const list = (json.data as Anime[]).map(a => ({
+                        ...a,
+                        type: 'Movie' as const,
+                    }))
+                    setCachedAnimeData(cacheKey, list)
+                    return list
+                }
             }
+        } catch {
+            // Fallback to direct AniList GraphQL
         }
-    } catch {
-        // Fallback to direct AniList GraphQL
-    }
 
-    try {
-        const data = await aniListRequest<{
-            Page: {
-                media: AniListAnime[]
+        try {
+            const data = await aniListRequest<{
+                Page: {
+                    media: AniListAnime[]
+                }
+            }>(
+                ANIME_MOVIES_QUERY,
+                {
+                    page: safePage,
+                    perPage: safePerPage,
+                    sort: [sort],
+                },
+            )
+
+            const list = (data.Page.media || []).map(mapAniListAnime).map(a => ({
+                ...a,
+                type: 'Movie' as const,
+            }))
+            if (list.length > 0) {
+                setCachedAnimeData(cacheKey, list)
             }
-        }>(
-            ANIME_MOVIES_QUERY,
-            {
-                page: safePage,
-                perPage: safePerPage,
-                sort: [sort],
-            },
-        )
+            return list
+        } catch (fallbackErr) {
+            console.error('[getAnimeMovies] Failed to load anime movies:', fallbackErr)
+            return []
+        } finally {
+            clientInflightRequests.delete(cacheKey)
+        }
+    })()
 
-        return (data.Page.media || []).map(mapAniListAnime)
-    } catch (fallbackErr) {
-        console.error('[getAnimeMovies] Failed to load anime movies:', fallbackErr)
-        return []
-    }
+    clientInflightRequests.set(cacheKey, fetchPromise)
+    return fetchPromise
+}
+
+export function prefetchAnimeMovies(): void {
+    getAnimeMovies(1, 35).catch(() => {})
 }
 
 /* =========================================================
