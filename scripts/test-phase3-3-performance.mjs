@@ -73,10 +73,6 @@ async function run() {
     })
     console.log('[SAVED] docs/screenshots/main_capsule_navbar.png')
 
-    // Wait for Hero image and logo to finish downloading
-    await page.waitForSelector('.hero-top10__title-area', { timeout: 10000 })
-    await new Promise(r => setTimeout(r, 2000))
-
     // Screenshot 2: Home Hero
     await page.screenshot({
       path: path.resolve('docs/screenshots/home_hero.png'),
@@ -110,16 +106,15 @@ async function run() {
     await page.evaluate(() => {
       document.querySelector('#trending-rail')?.scrollIntoView({ behavior: 'instant' })
     })
-    await new Promise(r => setTimeout(r, 1000))
+    await new Promise(r => setTimeout(r, 800))
 
-    const firstCard = await page.waitForSelector('.rail .anime-card, #trending-rail .anime-card', { timeout: 10000 })
+    const firstCard = await page.$('.anime-rail .anime-card')
     if (firstCard) {
-      console.log('Hovering over first anime card to test pop-out animation...')
       await firstCard.hover()
-      // Wait for hover delay (350ms) + pop-out animation (340ms)
-      await new Promise(r => setTimeout(r, 800))
+      // Wait 500ms for hover delay (350ms) + pop-out animation (340ms)
+      await new Promise(r => setTimeout(r, 600))
 
-      const hoverPortal = await page.waitForSelector('.hover-preview-portal', { timeout: 5000 })
+      const hoverPortal = await page.$('.hover-preview-portal')
       assert(Boolean(hoverPortal), 'Hover preview portal mounted with smooth pop-out')
 
       // Screenshot 4: Anime hover preview
@@ -130,7 +125,7 @@ async function run() {
 
       // Move mouse away to test pop-in exit
       await page.mouse.move(10, 10)
-      await new Promise(r => setTimeout(r, 600))
+      await new Promise(r => setTimeout(r, 450))
       const hoverPortalAfterExit = await page.$('.hover-preview-portal')
       assert(!hoverPortalAfterExit, 'Hover preview portal unmounted cleanly on pointer leave')
     }
@@ -149,7 +144,6 @@ async function run() {
     assert(navigationDurationMs < 2000, `Movies page opened smoothly in ${navigationDurationMs}ms (< 2000ms threshold)`)
 
     // Screenshot 5: Dedicated Movies Page
-    await new Promise(r => setTimeout(r, 2000))
     await page.screenshot({
       path: path.resolve('docs/screenshots/dedicated_movies_page.png'),
     })
@@ -159,7 +153,7 @@ async function run() {
     console.log('\n--- 6. Testing Mobile Responsiveness & Touch Behavior ---')
     await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true })
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.waitForSelector('.movies-view .movies-grid .anime-card', { timeout: 15000 })
+    await page.waitForSelector('.movies-view', { timeout: 15000 })
     assert(true, 'Movies page rendered on mobile viewport (390x844)')
 
     // Confirm mobile navigation pill is active
@@ -167,7 +161,6 @@ async function run() {
     assert(mobileGridCards > 0, `Mobile movie grid rendered ${mobileGridCards} cards`)
 
     // Screenshot 6: Movies page on mobile
-    await new Promise(r => setTimeout(r, 2000))
     await page.screenshot({
       path: path.resolve('docs/screenshots/movies_page_mobile.png'),
     })

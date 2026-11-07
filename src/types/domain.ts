@@ -165,6 +165,8 @@ export interface Rank {
 export interface User {
     id: string
     username: string
+    displayName?: string
+    bio?: string
     avatar?: string
     level: UserLevel
     streak: Streak

@@ -1,0 +1,291 @@
+/* =========================================================
+   7ANIME — DUOLINGO-INSPIRED ANIMATED FLAME
+   Liquid Glass & Incandescent Plasma
+   ========================================================= */
+
+.anime-flame-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  isolation: isolate;
+}
+
+/* ─── Flame Sizes ─── */
+.anime-flame-wrapper--sm {
+  width: 28px;
+  height: 34px;
+}
+
+.anime-flame-wrapper--md {
+  width: 56px;
+  height: 68px;
+}
+
+.anime-flame-wrapper--lg {
+  width: 120px;
+  height: 145px;
+}
+
+.anime-flame-wrapper--xl {
+  width: 180px;
+  height: 220px;
+}
+
+/* ─── Ambient Glow ─── */
+.anime-flame__glow {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.5s ease, filter 0.5s ease;
+  filter: blur(28px);
+  opacity: 0.6;
+}
+
+/* ─── SVG Canvas ─── */
+.anime-flame-svg {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ─── Flame Layers Animation ─── */
+.anime-flame__outer {
+  transform-origin: 50% 90%;
+  animation: flameFlutter 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+  will-change: transform;
+}
+
+.anime-flame__mid {
+  transform-origin: 50% 88%;
+  animation: flameMidPulse 1.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate-reverse;
+  will-change: transform;
+}
+
+.anime-flame__core {
+  transform-origin: 50% 85%;
+  animation: flameCoreBreath 1.3s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* ─── Ember Sparks / Particles ─── */
+.anime-flame__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.anime-flame__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: #ffeb3b;
+  box-shadow: 0 0 6px #ff9800, 0 0 10px #ff5722;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.anime-flame__particle--1 {
+  width: 5px;
+  height: 5px;
+  left: 35%;
+  bottom: 25%;
+  animation: riseAndFade 1.9s infinite ease-out 0.2s;
+}
+
+.anime-flame__particle--2 {
+  width: 4px;
+  height: 4px;
+  left: 60%;
+  bottom: 22%;
+  animation: riseAndFade 2.3s infinite ease-out 0.8s;
+}
+
+.anime-flame__particle--3 {
+  width: 6px;
+  height: 6px;
+  left: 48%;
+  bottom: 30%;
+  animation: riseAndFade 1.6s infinite ease-out 1.2s;
+}
+
+.anime-flame__particle--4 {
+  width: 3px;
+  height: 3px;
+  left: 28%;
+  bottom: 20%;
+  animation: riseAndFade 2.5s infinite ease-out 0.5s;
+}
+
+/* ─── State-Dependent Styles ─── */
+
+/* 0 days: Inactive / Sleeping Ember */
+.anime-flame-wrapper--inactive .anime-flame__glow {
+  opacity: 0.15;
+  background: radial-gradient(circle, rgba(148, 163, 184, 0.2) 0%, transparent 70%);
+}
+
+.anime-flame-wrapper--inactive .anime-flame-svg {
+  filter: grayscale(0.85) contrast(0.9) opacity(0.5);
+}
+
+.anime-flame-wrapper--inactive .anime-flame__outer,
+.anime-flame-wrapper--inactive .anime-flame__mid,
+.anime-flame-wrapper--inactive .anime-flame__core {
+  animation-duration: 4.5s;
+}
+
+.anime-flame-wrapper--inactive .anime-flame__particles {
+  display: none;
+}
+
+/* 1–2 days: Small Flame */
+.anime-flame-wrapper--small .anime-flame__glow {
+  opacity: 0.45;
+  background: radial-gradient(circle, rgba(255, 120, 40, 0.35) 0%, transparent 70%);
+}
+
+.anime-flame-wrapper--small .anime-flame__particle--3,
+.anime-flame-wrapper--small .anime-flame__particle--4 {
+  display: none;
+}
+
+/* 3–6 days: Growing Flame */
+.anime-flame-wrapper--growing .anime-flame__glow {
+  opacity: 0.65;
+  background: radial-gradient(circle, rgba(255, 100, 30, 0.45) 0%, rgba(255, 180, 0, 0.2) 40%, transparent 70%);
+}
+
+/* 7–13 days: Bright Flame */
+.anime-flame-wrapper--bright .anime-flame__glow {
+  opacity: 0.8;
+  filter: blur(32px);
+  background: radial-gradient(circle, rgba(255, 80, 20, 0.6) 0%, rgba(255, 170, 0, 0.35) 45%, transparent 75%);
+}
+
+.anime-flame-wrapper--bright .anime-flame-svg {
+  filter: drop-shadow(0 0 16px rgba(255, 130, 30, 0.45));
+}
+
+/* 14–29 days: Roaring Flame */
+.anime-flame-wrapper--roaring .anime-flame__glow {
+  opacity: 0.95;
+  filter: blur(38px);
+  background: radial-gradient(circle, rgba(255, 60, 10, 0.75) 0%, rgba(255, 150, 0, 0.45) 50%, transparent 80%);
+}
+
+.anime-flame-wrapper--roaring .anime-flame-svg {
+  filter: drop-shadow(0 0 22px rgba(255, 100, 20, 0.65));
+}
+
+.anime-flame-wrapper--roaring .anime-flame__outer {
+  animation-duration: 1.8s;
+}
+
+/* 30+ days: Master Flame (Electric Cyan Core + Intense Orange Aura) */
+.anime-flame-wrapper--master .anime-flame__glow {
+  opacity: 1;
+  filter: blur(45px);
+  background: radial-gradient(circle, rgba(85, 216, 255, 0.6) 0%, rgba(255, 90, 20, 0.8) 35%, rgba(255, 170, 0, 0.4) 65%, transparent 85%);
+  animation: masterGlowPulse 2s ease-in-out infinite alternate;
+}
+
+.anime-flame-wrapper--master .anime-flame-svg {
+  filter: drop-shadow(0 0 28px rgba(255, 120, 30, 0.8)) drop-shadow(0 0 10px rgba(85, 216, 255, 0.5));
+}
+
+.anime-flame-wrapper--master .anime-flame__outer {
+  animation-duration: 1.5s;
+}
+
+.anime-flame-wrapper--master .anime-flame__particle {
+  background: #e0f7fa;
+  box-shadow: 0 0 8px #55d8ff, 0 0 14px #ff9800;
+}
+
+/* ─── Keyframe Animations ─── */
+@keyframes flameFlutter {
+  0% {
+    transform: scale(1) rotate(0deg) skewX(0deg);
+  }
+  25% {
+    transform: scale(1.02, 0.98) rotate(1.2deg) skewX(-1.5deg);
+  }
+  50% {
+    transform: scale(0.98, 1.03) rotate(-1deg) skewX(1.8deg);
+  }
+  75% {
+    transform: scale(1.03, 0.97) rotate(1.6deg) skewX(-1deg);
+  }
+  100% {
+    transform: scale(0.99, 1.01) rotate(-0.8deg) skewX(1deg);
+  }
+}
+
+@keyframes flameMidPulse {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.04, 0.96) translateY(-2px);
+  }
+  100% {
+    transform: scale(0.97, 1.03) translateY(1px);
+  }
+}
+
+@keyframes flameCoreBreath {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes riseAndFade {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  80% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(calc(-10px + 20px * var(--rand, 0.5)), -55px) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes masterGlowPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .anime-flame__outer,
+  .anime-flame__mid,
+  .anime-flame__core,
+  .anime-flame__particle,
+  .anime-flame__glow {
+    animation: none !important;
+    transform: none !important;
+  }
+}

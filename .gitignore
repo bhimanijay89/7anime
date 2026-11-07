@@ -40,3 +40,6 @@ public/Video Project *.mp4
 # Archives
 *.zip
 
+# User uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep

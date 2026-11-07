@@ -12,6 +12,8 @@ model User {
   username           String              @unique
   passwordHash       String
   avatar             String?
+  displayName        String?
+  bio                String?
   role               String              @default("USER")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -21,6 +23,9 @@ model User {
   userStats          UserStats?
   achievements       UserAchievement[]
   passwordResetCodes PasswordResetCode[]
+  streak             UserStreak?
+  dailyActivities    DailyWatchActivity[]
+  streakMilestones   StreakMilestone[]
 
   @@map("users")
 }
@@ -178,4 +183,49 @@ model AnimeTmdbLogo {
 
   @@index([anilistId])
   @@map("anime_tmdb_logos")
+}
+
+model UserStreak {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak     Int       @default(0)
+  longestStreak     Int       @default(0)
+  totalActiveDays   Int       @default(0)
+  lastQualifiedDate String?
+  timezone          String    @default("UTC")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("user_streaks")
+}
+
+model DailyWatchActivity {
+  id                     String   @id @default(uuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityDate           String
+  qualifyingWatchSeconds Int      @default(0)
+  completedEpisodes      Int      @default(0)
+  qualified              Boolean  @default(false)
+  episodesJson           Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([userId, activityDate])
+  @@index([userId])
+  @@index([activityDate])
+  @@map("daily_watch_activities")
+}
+
+model StreakMilestone {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestone  Int
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, milestone])
+  @@index([userId])
+  @@map("streak_milestones")
 }

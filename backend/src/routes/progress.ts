@@ -4,6 +4,7 @@ import prisma from '../db/client.js'
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth.js'
 import { ErrorCode, sendError, sendSuccess } from '../utils/response.js'
 import { recordUserActivity } from '../services/gamification.js'
+import { processWatchProgressForStreak } from '../services/streak.js'
 import { getAnimeById } from '../services/anilist.js'
 import { mapAniListToUnified } from './anime.js'
 
@@ -143,6 +144,20 @@ router.post(
         isCompleted ||
         (safeDuration > 0 && safeProgress >= Math.floor(safeDuration * 0.9))
 
+      const existingEntry = await prisma.watchProgress.findUnique({
+        where: {
+          userId_anilistId_episodeNumber: {
+            userId,
+            anilistId: numericAnimeId,
+            episodeNumber: numericEpisode,
+          },
+        },
+      })
+
+      const prevProgress = existingEntry ? existingEntry.progressSeconds : 0
+      // Incremental delta watched (max 60s per heartbeat to prevent seeking from inflating time)
+      const deltaSeconds = Math.min(60, Math.max(0, safeProgress - prevProgress))
+
       const entry = await prisma.watchProgress.upsert({
         where: {
           userId_anilistId_episodeNumber: {
@@ -166,10 +181,32 @@ router.post(
         },
       })
 
-      // Record activity to maintain watch streak and total time
-      await recordUserActivity(userId, safeProgress).catch(() => { })
+      // Process daily streak activity
+      const clientTz = (req.headers['x-timezone'] as string) || (req.body?.timezone as string) || undefined
+      const animeTitle = (req.body?.animeTitle as string) || (req.body?.title as string) || undefined
+      const streakResult = await processWatchProgressForStreak(userId, {
+        anilistId: numericAnimeId,
+        episodeNumber: numericEpisode,
+        progressSeconds: safeProgress,
+        durationSeconds: safeDuration,
+        completed: shouldComplete,
+        timezone: clientTz,
+        animeTitle,
+      }).catch(err => {
+        console.warn('[progress] Streak processing error:', err)
+        return null
+      })
 
-      return sendSuccess(res, { progress: entry })
+      // Record activity to maintain watch streak and verified total watch duration
+      await recordUserActivity(userId, deltaSeconds).catch(() => { })
+
+      return sendSuccess(res, {
+        progress: entry,
+        streak: streakResult ? {
+          isNewlyQualified: streakResult.isNewlyQualified,
+          newlyUnlockedMilestone: streakResult.newlyUnlockedMilestone,
+        } : null,
+      })
     } catch (error) {
       console.error('[progress] Save error:', error)
       return sendError(

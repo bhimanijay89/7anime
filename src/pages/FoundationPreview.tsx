@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from
 import { MoviesSkeleton } from '../components/movies/MoviesSkeleton'
 import {
   ArrowLeft,
+  LogIn,
   Play,
   Plus,
   Sparkles,
@@ -174,6 +175,8 @@ function Home() {
           setUserProfile({
             id: p.user.id,
             username: p.user.username,
+            displayName: p.user.displayName || undefined,
+            bio: p.user.bio || undefined,
             avatar: p.user.avatar || undefined,
             level: {
               level: p.level || 1,
@@ -187,6 +190,16 @@ function Home() {
             },
             coins: p.coins || 0,
           })
+          setAuthUser((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  avatar: p.user.avatar,
+                  displayName: p.user.displayName,
+                  bio: p.user.bio,
+                }
+              : null,
+          )
           setProfileStats(p)
         }
       }
@@ -255,16 +268,26 @@ function Home() {
           const items = await Promise.all(
             latestPerAnime.map(async (rec) => {
               try {
-                const detail = await getAnimeById(rec.anilistId)
+                // Prefer backend hydrated anime if present; otherwise fallback to getAnimeById
+                let baseAnime: Anime | null = (rec as any).anime || null
+                if (!baseAnime) {
+                  baseAnime = await getAnimeById(rec.anilistId).catch(() => null)
+                }
+                if (!baseAnime) return null
+
                 const duration = rec.durationSeconds > 0 ? rec.durationSeconds : 1440
                 const pct = Math.min(100, Math.round((rec.progressSeconds / duration) * 100))
+
                 return {
-                  ...detail,
+                  ...baseAnime,
                   episode: `EP ${rec.episodeNumber}`,
                   progress: pct,
                   lastWatchedEpisodeNumber: rec.episodeNumber,
+                  lastWatchedProgressSeconds: rec.progressSeconds,
+                  lastWatchedDurationSeconds: rec.durationSeconds,
                 }
-              } catch {
+              } catch (err) {
+                console.warn('[continue-watching] Item format error:', err)
                 return null
               }
             })
@@ -1337,6 +1360,22 @@ function Home() {
             onOpenAuthModal={() =>
               setAuthModalOpen(true)
             }
+            onContinueWatching={
+              openContinueWatchingPlayer
+            }
+            onProfileUpdated={(updated) => {
+              if (updated) {
+                setAuthUser((prev) => (prev ? { ...prev, ...updated } : null))
+                setUserProfile((prev) => ({
+                  ...prev,
+                  avatar: updated.avatar || undefined,
+                  displayName: updated.displayName || undefined,
+                  bio: updated.bio || undefined,
+                }))
+                fetchUserProfile()
+              }
+            }}
+            onNavigateLibrary={() => navigateTo('library')}
           />
 
         ) : currentView ===
@@ -1469,9 +1508,16 @@ function Home() {
                       onSelect={openContinueWatchingPlayer}
                     />
                   ))
+                ) : !authUser ? (
+                  <div className="empty-state-message" style={{ padding: 'var(--space-6) var(--space-8)', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', width: '100%' }}>
+                    <span>Sign in to track your watch progress and resume watching across any device.</span>
+                    <Button variant="glass" onClick={() => setAuthModalOpen(true)} style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
+                      <LogIn size={15} /> Sign In
+                    </Button>
+                  </div>
                 ) : (
                   <div className="empty-state-message" style={{ padding: 'var(--space-6) var(--space-8)', color: 'var(--text-dim)' }}>
-                    No anime in progress yet.
+                    No anime in progress yet. Start watching to pick up where you left off!
                   </div>
                 )}
               </ContentRail>

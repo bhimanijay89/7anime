@@ -1,6 +1,8 @@
+import 'dotenv/config'
+import path from 'node:path'
+import fs from 'node:fs'
 import { startCacheWarmer, getCacheHealthDiagnostics } from './services/warmer.js'
 import { ensureCuratedHeroLogos } from './services/tmdb.js'
-import 'dotenv/config'
 
 import cors from 'cors'
 import express, {
@@ -14,6 +16,7 @@ import authRouter from './routes/auth.js'
 import profileRouter from './routes/profile.js'
 import libraryRouter from './routes/library.js'
 import progressRouter from './routes/progress.js'
+import streakRouter from './routes/streak.js'
 import prisma from './db/client.js'
 import { getRedisStatus } from './redis/client.js'
 import { requestMetaMiddleware } from './middleware/requestMeta.js'
@@ -42,7 +45,7 @@ const PORT = Number(
 // Render requires the server to listen on 0.0.0.0.
 const HOST =
     process.env.HOST ||
-    '0.0.0.0'
+    (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '::')
 
 /*
  * =========================================================
@@ -60,6 +63,9 @@ const allowedOrigins = [
     'https://7anime.ct.ws',
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://[::1]:5173',
     ...envOrigins,
 ]
 
@@ -111,6 +117,9 @@ app.use(
             'Content-Type',
             'Authorization',
             'X-Request-ID',
+            'x-timezone',
+            'X-Timezone',
+            'X-Requested-With',
         ],
     }),
 )
@@ -135,16 +144,22 @@ app.use((_req, res, next) => {
 
 app.use(
     express.json({
-        limit: '1mb',
+        limit: '10mb',
     }),
 )
 
 app.use(
     express.urlencoded({
         extended: true,
-        limit: '1mb',
+        limit: '10mb',
     }),
 )
+
+const uploadsDir = path.resolve(process.cwd(), 'backend/uploads')
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true })
+}
+app.use('/uploads', express.static(uploadsDir))
 
 /*
  * =========================================================
@@ -307,6 +322,11 @@ app.use(
 app.use(
     '/api',
     progressRouter,
+)
+
+app.use(
+    '/api',
+    streakRouter,
 )
 
 console.log(

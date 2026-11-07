@@ -236,9 +236,19 @@ export function DesktopNavbar({
               aria-label="View user profile"
             >
               <span className="profile-chip__avatar" aria-hidden="true">
-                {authUser.username.slice(0, 1).toUpperCase()}
+                {authUser.avatar ? (
+                  <img
+                    src={authUser.avatar}
+                    alt={authUser.username}
+                    className="profile-chip__avatar-img"
+                  />
+                ) : (
+                  authUser.username.slice(0, 1).toUpperCase()
+                )}
               </span>
-              <span className="profile-chip__name">{authUser.username}</span>
+              <span className="profile-chip__name">
+                {authUser.displayName || authUser.username}
+              </span>
             </button>
           </div>
         ) : (

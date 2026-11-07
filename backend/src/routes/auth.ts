@@ -64,6 +64,8 @@ function sanitizeUser(user: {
     email: string
     username: string
     avatar: string | null
+    displayName?: string | null
+    bio?: string | null
     role?: string
     createdAt: Date
     updatedAt: Date
@@ -73,6 +75,8 @@ function sanitizeUser(user: {
         email: user.email,
         username: user.username,
         avatar: user.avatar,
+        displayName: user.displayName || null,
+        bio: user.bio || null,
         role: user.role || 'USER',
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

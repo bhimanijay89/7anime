@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 3.3 — Performance Optimization, Hero Polish & Foundation Page Cleanup
+Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
 
 ## Overall Status
 
-Phase 3.3 is COMPLETE and fully verified. Site-wide performance optimizations have been implemented across the frontend stack. Code splitting with React `lazy` and `Suspense` was introduced for heavy views (`MoviesView`, `ScheduleView`, `LibraryView`, `ProfileFullView`, `FullPlayerView`, `SearchOverlay`, `AuthModal`), reducing the main production JavaScript bundle by 20.6% (from 364.73 kB to 288.41 kB) and the main CSS bundle by 49.8% (from 135.77 kB to 68.22 kB). An in-memory client-side cache with 5-minute TTL and request deduplication was added in `anilist.ts`, enabling instant 395ms transitions when opening the Movies page. A dedicated `MoviesSkeleton` component was built to provide smooth loading shimmer without layout shifts. Duplicate `#movies-rail` and obsolete `moviesData` state were eliminated from `FoundationPreview.tsx`. In the Hero carousel, the Previous/Next arrows and Play/Pause control buttons were removed, leaving the curated 10-thumbnail strip as the sole manual navigation control with 7500ms autoplay and hover-pause. Anime card hover animations were enhanced with GPU-friendly transforms, `cubic-bezier(0.22, 1, 0.36, 1)` easing, exit pop-in transitions, and reduced-motion support. All automated performance and visual verification tests pass cleanly.
+The Monthly Watch Activity Calendar inside the 7Anime Profile page has been transformed into a signature Liquid Glass contribution calendar inspired by GitHub and Duolingo. Features a dynamic 2D grid (Mon–Sun) with activity intensity levels, incandescent animated flames, episode/duration badges on active days, an electric cyan "Today" indicator with live targets, an instant hover tooltip with status breakdowns, an expandable detail drawer, and a 5-card glass statistics console. Verified on desktop, tablet, and mobile viewports with zero horizontal overflow, 0 TypeScript errors, and successful production build.
 
 ## Completed Phases
 
@@ -37,25 +37,23 @@ Phase 3.3 is COMPLETE and fully verified. Site-wide performance optimizations ha
 - [x] Phase 3.2.1 (Codex Upgrade) — Hero Layout, Ranking Removal & Permanent Anime Logo Fix
 - [x] Bug Fix — Movies Navigation & Dedicated Movies View
 - [x] Phase 3.3 (Codex Upgrade) — Performance Optimization, Hero Polish & Foundation Page Cleanup
+- [x] Phase 4 — Duolingo-Inspired Watch Streak System (Database Persistence, Timezone Awareness, 6 Flame States, Milestones)
+- [x] Phase 4.1 — Critical Profile Data Accuracy Repair (Strict $\ge 80\%$ Episode Counting, Heartbeat Duration Fix, Test Seed)
+- [x] Phase 4.2 — Compact Multi-Column Profile Dashboard & Refined Slimmer Capsule Navbar
+- [x] Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
 
 ## Current Phase Details
 
-- [x] Code-splitting via React `lazy` & `Suspense` for heavy views (`MoviesView`, `ScheduleView`, `LibraryView`, `ProfileFullView`, `FullPlayerView`, `SearchOverlay`, `AuthModal`)
-- [x] Main JS bundle reduced from 364.73 kB to 288.41 kB (20.6% reduction); CSS bundle reduced from 135.77 kB to 68.22 kB (49.8% reduction)
-- [x] In-memory client cache & in-flight promise deduplication in `src/services/anilist.ts`
-- [x] Background prefetching of Movies on idle (`requestIdleCallback`) and navbar link hover
-- [x] Dedicated `MoviesSkeleton` loading shimmer
-- [x] Instant Movies page navigation verified (measured 395ms transition)
-- [x] Removed duplicate `#movies-rail` and obsolete `moviesData` memo from `FoundationPreview.tsx`
-- [x] Removed Previous/Next arrow buttons and Play/Pause control from Hero carousel
-- [x] Preserved 10 curated thumbnail navigation controls below Hero
-- [x] Maintained 7500ms Hero autoplay with hover-pause
-- [x] Enhanced Anime Card hover animations with `cubic-bezier(0.22, 1, 0.36, 1)`, bidirectional pop-out and pop-in exit transitions, and `prefers-reduced-motion` support
-- [x] Responsive layout tested across desktop and mobile viewports (390x844)
-- [x] Full TypeScript compiler checks: PASS (frontend and backend: 0 errors)
-- [x] Production build verification (`npm run build`): PASS
-- [x] Automated test suite (`scripts/test-phase3-3-performance.mjs`): PASS (6/6 test groups passed)
-- [x] Visual verification via Puppeteer screenshots (6 screenshots in `docs/screenshots/`)
+- [x] Replaced plain flat calendar with 2D Liquid Glass contribution grid (Mon–Sun alignment)
+- [x] 4 Activity intensity levels reflecting verified watch duration and completed episodes
+- [x] Active day cells display date number, incandescent flame, and episode/duration badges (`1 ep` / `25m`)
+- [x] Today cell features glowing cyan border, `TODAY` pill, pulsing clock, and live target badge (`20m left`)
+- [x] Custom instant Liquid Glass hover tooltip with status pills and episode metrics
+- [x] Expandable interactive detail drawer showing verified streaming breakdown and target achievements
+- [x] 5-Card glass statistics console with clear numerical hierarchy and color-coded icons
+- [x] Clean responsive layout verified from 320px to 1440px with zero horizontal scroll
+- [x] Zero TypeScript errors on frontend (`npx tsc -b`) and backend (`tsc -p backend/tsconfig.json`)
+- [x] Full production build verified (`npm run build`) in 7.62s
 
 ## Upcoming Phases
 
@@ -73,7 +71,7 @@ Phase 3.3 is COMPLETE and fully verified. Site-wide performance optimizations ha
 
 ## Last Updated
 
-2026-11-06
+2026-11-07
 
 ## Next Exact Action
 
