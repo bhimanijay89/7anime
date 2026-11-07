@@ -1763,6 +1763,7 @@
 @media (max-width: 768px) {
   .profile-space {
     padding-top: 5.25rem;
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 1.5rem);
   }
 
@@ -1794,6 +1795,7 @@
 @media (max-width: 480px) {
   .profile-space {
     padding-top: 5rem;
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
     width: calc(100% - 1rem);
     gap: 1.15rem;
   }
@@ -1864,6 +1866,7 @@
     width: 100%;
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
   }
 
   .profile-identity-card {

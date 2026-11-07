@@ -1439,10 +1439,22 @@ export async function fetchAnimeLogos(
             if (!Number.isInteger(numId) || numId <= 0) continue
 
             if (!logoItem || !logoItem.logoUrl) {
-                result[numId] = null
+                const curated = CURATED_HERO_REF_MAP.get(numId)
+                if (curated) {
+                    result[numId] = {
+                        url: normalizeLogoUrl(curated.assetPath),
+                        aspectRatio: curated.aspectRatio,
+                        width: curated.width,
+                        height: curated.height,
+                        language: 'en',
+                        filePath: curated.assetPath,
+                    }
+                } else {
+                    result[numId] = null
+                }
             } else {
                 result[numId] = {
-                    url: logoItem.logoUrl,
+                    url: normalizeLogoUrl(logoItem.logoUrl),
                     aspectRatio: logoItem.aspectRatio,
                     width: logoItem.width,
                     height: logoItem.height,
@@ -1457,13 +1469,6 @@ export async function fetchAnimeLogos(
         console.warn('[fetchAnimeLogos] Failed to fetch logos:', err)
         return {}
     }
-}
-
-export interface CuratedAnimeReference {
-    anilistId: number
-    tmdbId: number
-    mediaType: 'tv' | 'movie'
-    title: string
 }
 
 /* =========================================================
@@ -1510,18 +1515,45 @@ export function clearClientAnimeCache(): void {
     clientInflightRequests.clear()
 }
 
+export interface CuratedAnimeReference {
+    anilistId: number
+    tmdbId: number
+    mediaType: 'tv' | 'movie'
+    title: string
+    slug: string
+    assetPath: string
+    aspectRatio: number
+    width: number
+    height: number
+}
+
+export function normalizeLogoUrl(rawUrl?: string): string {
+    if (!rawUrl) return ''
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('blob:') || rawUrl.startsWith('data:')) {
+        return rawUrl
+    }
+    if (rawUrl.startsWith('/')) {
+        return `${BACKEND_URL}${rawUrl}`
+    }
+    return rawUrl
+}
+
 export const CURATED_HERO_REFERENCES: CuratedAnimeReference[] = [
-    { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece' },
-    { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden' },
-    { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach' },
-    { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover' },
-    { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer' },
-    { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen' },
-    { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan' },
-    { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling' },
-    { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z' },
-    { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note' },
+    { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece', slug: 'one-piece', assetPath: '/assets/hero-logos/one-piece.png', aspectRatio: 2.89, width: 500, height: 173 },
+    { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden', slug: 'naruto-shippuden', assetPath: '/assets/hero-logos/naruto-shippuden.png', aspectRatio: 1.908, width: 500, height: 262 },
+    { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach', slug: 'bleach', assetPath: '/assets/hero-logos/bleach.png', aspectRatio: 2.793, width: 500, height: 179 },
+    { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover', slug: 'black-clover', assetPath: '/assets/hero-logos/black-clover.png', aspectRatio: 5.747, width: 500, height: 87 },
+    { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer', slug: 'demon-slayer', assetPath: '/assets/hero-logos/demon-slayer.png', aspectRatio: 1.055, width: 499, height: 473 },
+    { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen', slug: 'jujutsu-kaisen', assetPath: '/assets/hero-logos/jujutsu-kaisen.png', aspectRatio: 4.464, width: 500, height: 112 },
+    { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan', slug: 'attack-on-titan', assetPath: '/assets/hero-logos/attack-on-titan.png', aspectRatio: 3.448, width: 500, height: 145 },
+    { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling', slug: 'solo-leveling', assetPath: '/assets/hero-logos/solo-leveling.png', aspectRatio: 3.623, width: 500, height: 138 },
+    { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z', slug: 'dragon-ball-z', assetPath: '/assets/hero-logos/dragon-ball-z.png', aspectRatio: 3.817, width: 500, height: 131 },
+    { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note', slug: 'death-note', assetPath: '/assets/hero-logos/death-note.png', aspectRatio: 4.057, width: 499, height: 123 },
 ]
+
+export const CURATED_HERO_REF_MAP = new Map<number, CuratedAnimeReference>(
+    CURATED_HERO_REFERENCES.map(r => [r.anilistId, r])
+)
 
 /**
  * Phase 3.2: Loads the fixed collection of 10 curated Hero anime with official TMDB logos.
@@ -1541,11 +1573,26 @@ export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
         if (res.ok) {
             const json = await res.json()
             if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-                return (json.data as (Anime & { logo?: { logoUrl?: string; url?: string } })[]).map(a => {
+                return (json.data as (Anime & { logo?: { logoUrl?: string; url?: string; aspectRatio?: number; width?: number; height?: number; filePath?: string } })[]).map(a => {
+                    const curated = CURATED_HERO_REF_MAP.get(Number(a.id))
                     if (a.logo) {
-                        const url = a.logo.url || a.logo.logoUrl || ''
+                        const rawUrl = a.logo.url || a.logo.logoUrl || (curated ? curated.assetPath : '')
+                        const url = normalizeLogoUrl(rawUrl)
                         a.logo.url = url
                         a.logo.logoUrl = url
+                        if (curated && !a.logo.aspectRatio) {
+                            a.logo.aspectRatio = curated.aspectRatio
+                        }
+                    } else if (curated) {
+                        (a as any).logo = {
+                            url: normalizeLogoUrl(curated.assetPath),
+                            logoUrl: normalizeLogoUrl(curated.assetPath),
+                            aspectRatio: curated.aspectRatio,
+                            width: curated.width,
+                            height: curated.height,
+                            language: 'en',
+                            filePath: curated.assetPath,
+                        }
                     }
                     if (a.synopsis) {
                         a.synopsis = cleanDescription(a.synopsis)

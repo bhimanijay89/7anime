@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
+Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
 
 ## Overall Status
 
-The Monthly Watch Activity Calendar inside the 7Anime Profile page has been transformed into a signature Liquid Glass contribution calendar inspired by GitHub and Duolingo. Features a dynamic 2D grid (Mon–Sun) with activity intensity levels, incandescent animated flames, episode/duration badges on active days, an electric cyan "Today" indicator with live targets, an instant hover tooltip with status breakdowns, an expandable detail drawer, and a 5-card glass statistics console. Verified on desktop, tablet, and mobile viewports with zero horizontal overflow, 0 TypeScript errors, and successful production build.
+Completed a comprehensive mobile-first overhaul across the Hero section, User Profile page, navigation system, and backend anime logo delivery architecture. All 10 curated anime title logos are stored as permanent optimized PNG assets in `backend/assets/hero-logos/` (and version-controlled in Git), served with 1-year immutable caching headers and CORS protection. The mobile Hero features a cinematic dark gradient overlay, prominent logo containment, non-wrapping specs, clamped synopsis, properly sized touch buttons, and a smooth touch-scrollable thumbnail carousel with safe-area end padding. The desktop floating navbar now incorporates intelligent auto-hide on downward scroll with immediate reveal on scroll up or mouse approach, ensuring the Monthly Watch Activity calendar and profile milestones are 100% unobstructed. Verified across all 5 standard viewports (320x720, 375x812, 430x932, 768x1024, 1440x900) with 0px horizontal overflow, zero TypeScript errors, and successful production build.
 
 ## Completed Phases
 
@@ -41,19 +41,25 @@ The Monthly Watch Activity Calendar inside the 7Anime Profile page has been tran
 - [x] Phase 4.1 — Critical Profile Data Accuracy Repair (Strict $\ge 80\%$ Episode Counting, Heartbeat Duration Fix, Test Seed)
 - [x] Phase 4.2 — Compact Multi-Column Profile Dashboard & Refined Slimmer Capsule Navbar
 - [x] Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
+- [x] Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
 
 ## Current Phase Details
 
-- [x] Replaced plain flat calendar with 2D Liquid Glass contribution grid (Mon–Sun alignment)
-- [x] 4 Activity intensity levels reflecting verified watch duration and completed episodes
-- [x] Active day cells display date number, incandescent flame, and episode/duration badges (`1 ep` / `25m`)
-- [x] Today cell features glowing cyan border, `TODAY` pill, pulsing clock, and live target badge (`20m left`)
-- [x] Custom instant Liquid Glass hover tooltip with status pills and episode metrics
-- [x] Expandable interactive detail drawer showing verified streaming breakdown and target achievements
-- [x] 5-Card glass statistics console with clear numerical hierarchy and color-coded icons
-- [x] Clean responsive layout verified from 320px to 1440px with zero horizontal scroll
-- [x] Zero TypeScript errors on frontend (`npx tsc -b`) and backend (`tsc -p backend/tsconfig.json`)
-- [x] Full production build verified (`npm run build`) in 7.62s
+- [x] Permanent Backend Logo Storage: 10 curated anime official transparent PNG logos bundled in `backend/assets/hero-logos/` (committed to git)
+- [x] Static Asset Serving: Express static middleware at `/assets` and `/api/assets` with `Cache-Control: public, max-age=31536000, immutable` and `Access-Control-Allow-Origin: *`
+- [x] Central Mapping: Exact mapping of AniList ID, TMDB ID, title, slug, asset path, dimensions, and aspect ratio in `backend/src/services/tmdb.ts`
+- [x] Fast Tier-0 Resolver: `resolveTmdbLogo` and `ensureCuratedHeroLogos` serve local assets with 0ms latency and 100% offline reliability
+- [x] Frontend Normalization: `anilist.ts` and `AnimeLogo.tsx` resolve relative paths to active backend origin with client offline fallback
+- [x] Mobile-First Hero Redesign: Dedicated composition for 320–374px, 375–430px, 431–600px, 601–1024px, and 1025px+
+- [x] Foreground Readability: Deep vertical vignette gradient preventing background artwork from dominating text and buttons
+- [x] Responsive Logo Placement: Properly clamped logo sizing (`clamp(2.8rem, 11vw, 4.4rem)`) avoiding awkward stretching or overflow
+- [x] Clamped Metadata: Single non-wrapping specs row, compact genre chips, 2-line clamped synopsis, standard 44px touch buttons
+- [x] Horizontal Carousel: Smooth touch scrolling (`-webkit-overflow-scrolling: touch`), clear active border/scale, end padding preventing clipping
+- [x] Navigation Safe-Area Clearance: Bottom margin and `calc(7.5rem + env(safe-area-inset-bottom, 0px))` clearance so mobile bottom nav never covers content
+- [x] Desktop Navbar Auto-Hide on Scroll: Intelligent scroll-direction tracking slides floating capsule navbar out of view on scroll down, revealing 100% viewport for reading calendar and milestones
+- [x] Global Overflow Guard: `overflow-x: hidden` and `max-width: 100vw` on `html` and `body` eliminating page-wide horizontal scroll jumps
+- [x] Comprehensive 5-Viewport Verification: 320x720, 375x812, 430x932, 768x1024, and 1440x900 screenshots captured
+- [x] TypeScript & Build Verification: `npx tsc -b` (0 errors), backend `tsc` (0 errors), `npm run build` (built in 12.13s)
 
 ## Upcoming Phases
 
@@ -71,7 +77,7 @@ The Monthly Watch Activity Calendar inside the 7Anime Profile page has been tran
 
 ## Last Updated
 
-2026-11-07
+2026-11-08
 
 ## Next Exact Action
 

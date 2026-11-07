@@ -11,7 +11,7 @@ import {
   Search,
   UserRound,
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { IconButton } from '../ui/Button'
 import logoImg from '../../public/logo.png'
 import type { AuthUser } from '../../types/auth'
@@ -82,6 +82,35 @@ export function DesktopNavbar({
   authUser?: AuthUser | null
   currentView?: ViewMode
 }) {
+  const [isScrolledDown, setIsScrolledDown] = useState(false)
+  const lastScrollY = useRef(0)
+
+  // Auto-hide capsule navbar on scroll down to keep reading viewport 100% unobstructed; reveal on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      if (currentScrollY > 75 && currentScrollY > lastScrollY.current + 8) {
+        setIsScrolledDown(true)
+      } else if (currentScrollY < lastScrollY.current - 6 || currentScrollY <= 40) {
+        setIsScrolledDown(false)
+      }
+      lastScrollY.current = currentScrollY
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY < 60) {
+        setIsScrolledDown(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [])
+
   // Global search shortcut listener: Cmd/Ctrl+K or '/' opens search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -112,7 +141,7 @@ export function DesktopNavbar({
 
   return (
     <header
-      className="desktop-nav glass-elevated"
+      className={`desktop-nav glass-elevated ${isScrolledDown ? 'desktop-nav--scrolled-down' : ''}`}
       aria-label="Main Navigation"
     >
       {/* 7Anime Logo Brand */}

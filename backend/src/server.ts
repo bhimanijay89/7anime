@@ -161,6 +161,30 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir))
 
+// Phase 5: Permanent static asset serving for curated hero anime logos
+const assetsDir = fs.existsSync(path.resolve(process.cwd(), 'backend/assets'))
+    ? path.resolve(process.cwd(), 'backend/assets')
+    : path.resolve(process.cwd(), 'assets')
+
+const staticAssetOptions = {
+    maxAge: '365d',
+    immutable: true,
+    setHeaders: (res: Response, filePath: string) => {
+        if (filePath.endsWith('.png')) {
+            res.setHeader('Content-Type', 'image/png')
+        } else if (filePath.endsWith('.svg')) {
+            res.setHeader('Content-Type', 'image/svg+xml')
+        } else if (filePath.endsWith('.webp')) {
+            res.setHeader('Content-Type', 'image/webp')
+        }
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        res.setHeader('Access-Control-Allow-Origin', '*')
+    },
+}
+
+app.use('/assets', express.static(assetsDir, staticAssetOptions))
+app.use('/api/assets', express.static(assetsDir, staticAssetOptions))
+
 /*
  * =========================================================
  * Request logger

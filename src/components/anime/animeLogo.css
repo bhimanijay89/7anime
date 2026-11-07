@@ -184,8 +184,27 @@
 }
 
 @media (max-width: 480px) {
-  .anime-logo__img {
+  .anime-logo--hero {
+    height: clamp(3rem, 12vw, 4.4rem);
+    max-width: 88%;
+    margin: 0 0 0.2rem;
+  }
+
+  .anime-logo--hero .anime-logo__img {
+    max-height: clamp(3rem, 12vw, 4.4rem);
     object-position: left center;
+  }
+}
+
+@media (max-width: 374px) {
+  .anime-logo--hero {
+    height: 2.85rem;
+    max-width: 85%;
+    margin: 0 0 0.15rem;
+  }
+
+  .anime-logo--hero .anime-logo__img {
+    max-height: 2.85rem;
   }
 }
 

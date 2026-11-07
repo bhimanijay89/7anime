@@ -38,10 +38,21 @@ export function AnimeLogo({
   const imgRef = React.useRef<HTMLImageElement>(null)
 
   // Normalize logo URL supporting both logo.url and logo.logoUrl
-  const logoUrl =
+  let logoUrl =
     logo?.url ||
     (logo as unknown as { logoUrl?: string })?.logoUrl ||
     ''
+
+  if (logoUrl && logoUrl.startsWith('/') && !logoUrl.startsWith('//')) {
+    const backendBase =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? `${window.location.protocol}//${window.location.hostname}:3001`
+        : ''
+    if (backendBase) {
+      logoUrl = `${backendBase}${logoUrl}`
+    }
+  }
 
   // Reset state when the logo URL changes (e.g. carousel slide change)
   useEffect(() => {

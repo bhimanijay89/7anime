@@ -233,26 +233,34 @@ export interface CuratedHeroAnimeConfig {
   tmdbId: number
   mediaType: 'tv' | 'movie'
   title: string
+  slug: string
+  assetPath: string
+  width: number
+  height: number
+  aspectRatio: number
 }
 
 /**
- * Phase 3.2: Curated 10 anime collection for the cinematic Hero carousel.
- * Fixed collection; does not depend on dynamic AniList trending rankings.
+ * Phase 5: Curated 10 anime collection with permanent local backend PNG logos.
+ * Stored in backend/assets/hero-logos/ and served statically with immutable cache headers.
  */
 export const CURATED_HERO_ANIME: CuratedHeroAnimeConfig[] = [
-  { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece' },
-  { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden' },
-  { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach' },
-  { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover' },
-  { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer' },
-  { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen' },
-  { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan' },
-  { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling' },
-  { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z' },
-  { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note' },
+  { anilistId: 21, tmdbId: 37854, mediaType: 'tv', title: 'One Piece', slug: 'one-piece', assetPath: '/assets/hero-logos/one-piece.png', width: 500, height: 173, aspectRatio: 2.89 },
+  { anilistId: 1735, tmdbId: 31910, mediaType: 'tv', title: 'Naruto Shippuden', slug: 'naruto-shippuden', assetPath: '/assets/hero-logos/naruto-shippuden.png', width: 500, height: 262, aspectRatio: 1.908 },
+  { anilistId: 269, tmdbId: 30984, mediaType: 'tv', title: 'Bleach', slug: 'bleach', assetPath: '/assets/hero-logos/bleach.png', width: 500, height: 179, aspectRatio: 2.793 },
+  { anilistId: 97940, tmdbId: 73223, mediaType: 'tv', title: 'Black Clover', slug: 'black-clover', assetPath: '/assets/hero-logos/black-clover.png', width: 500, height: 87, aspectRatio: 5.747 },
+  { anilistId: 101922, tmdbId: 85937, mediaType: 'tv', title: 'Demon Slayer', slug: 'demon-slayer', assetPath: '/assets/hero-logos/demon-slayer.png', width: 499, height: 473, aspectRatio: 1.055 },
+  { anilistId: 113415, tmdbId: 95479, mediaType: 'tv', title: 'Jujutsu Kaisen', slug: 'jujutsu-kaisen', assetPath: '/assets/hero-logos/jujutsu-kaisen.png', width: 500, height: 112, aspectRatio: 4.464 },
+  { anilistId: 16498, tmdbId: 1429, mediaType: 'tv', title: 'Attack on Titan', slug: 'attack-on-titan', assetPath: '/assets/hero-logos/attack-on-titan.png', width: 500, height: 145, aspectRatio: 3.448 },
+  { anilistId: 151807, tmdbId: 127532, mediaType: 'tv', title: 'Solo Leveling', slug: 'solo-leveling', assetPath: '/assets/hero-logos/solo-leveling.png', width: 500, height: 138, aspectRatio: 3.623 },
+  { anilistId: 813, tmdbId: 12971, mediaType: 'tv', title: 'Dragon Ball Z', slug: 'dragon-ball-z', assetPath: '/assets/hero-logos/dragon-ball-z.png', width: 500, height: 131, aspectRatio: 3.817 },
+  { anilistId: 1535, tmdbId: 13916, mediaType: 'tv', title: 'Death Note', slug: 'death-note', assetPath: '/assets/hero-logos/death-note.png', width: 499, height: 123, aspectRatio: 4.057 },
 ]
 
 export const CURATED_HERO_ANILIST_IDS = new Set<number>(CURATED_HERO_ANIME.map(a => a.anilistId))
+export const CURATED_HERO_MAP = new Map<number, CuratedHeroAnimeConfig>(
+  CURATED_HERO_ANIME.map(a => [a.anilistId, a])
+)
 
 function getTmdbToken(): string | null {
   return process.env.TMDB_READ_ACCESS_TOKEN || null
@@ -615,6 +623,19 @@ export async function resolveTmdbLogo(
     return null
   }
 
+  // Tier 0: Direct permanent local backend hero logo mapping (Phase 5)
+  if (CURATED_HERO_MAP.has(anilistId)) {
+    const curated = CURATED_HERO_MAP.get(anilistId)!
+    return {
+      logoUrl: curated.assetPath,
+      aspectRatio: curated.aspectRatio,
+      width: curated.width,
+      height: curated.height,
+      language: 'en',
+      filePath: curated.assetPath,
+    }
+  }
+
   const isPermanent = Boolean(options?.isPermanent || CURATED_HERO_ANILIST_IDS.has(anilistId))
   const cacheKey = `anime:logo:${anilistId}`
 
@@ -932,67 +953,61 @@ export async function resolveTmdbLogo(
  */
 export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogoResult>> {
   const result: Record<number, AnimeLogoResult> = {}
-  console.log('[TMDB Curated Hero] Verifying permanent database storage for 10 curated anime...')
+  console.log('[TMDB Curated Hero] Ensuring permanent local backend assets for 10 curated anime...')
 
-  try {
-    const dbRecords = await prisma.animeTmdbLogo.findMany({
-      where: {
-        anilistId: { in: CURATED_HERO_ANIME.map(a => a.anilistId) },
+  for (const item of CURATED_HERO_ANIME) {
+    const logo: AnimeLogoResult = {
+      logoUrl: item.assetPath,
+      aspectRatio: item.aspectRatio,
+      width: item.width,
+      height: item.height,
+      language: 'en',
+      filePath: item.assetPath,
+    }
+    result[item.anilistId] = logo
+
+    // Ensure PostgreSQL animeTmdbLogo record is permanently verified with local asset path
+    prisma.animeTmdbLogo
+      .upsert({
+        where: { anilistId: item.anilistId },
+        create: {
+          anilistId: item.anilistId,
+          tmdbId: item.tmdbId,
+          logoUrl: item.assetPath,
+          filePath: item.assetPath,
+          aspectRatio: item.aspectRatio,
+          width: item.width,
+          height: item.height,
+          language: 'en',
+          status: 'verified',
+          notFound: false,
+          expiresAt: null,
+        },
+        update: {
+          logoUrl: item.assetPath,
+          filePath: item.assetPath,
+          aspectRatio: item.aspectRatio,
+          width: item.width,
+          height: item.height,
+          status: 'verified',
+          notFound: false,
+          expiresAt: null,
+        },
+      })
+      .catch(() => {})
+
+    // Populate Redis cache
+    void cache.set(
+      `anime:logo:${item.anilistId}`,
+      {
+        ...logo,
         notFound: false,
+        cachedAt: Date.now(),
       },
-    })
-
-    const dbMap = new Map<number, typeof dbRecords[0]>()
-    for (const record of dbRecords) {
-      if (record.logoUrl && record.filePath) {
-        dbMap.set(record.anilistId, record)
-      }
-    }
-
-    for (const item of CURATED_HERO_ANIME) {
-      const existing = dbMap.get(item.anilistId)
-      if (existing && existing.logoUrl && existing.filePath) {
-        // Ensure permanently verified persistence (expiresAt = null, status = 'verified')
-        if (existing.expiresAt !== null || existing.status !== 'verified') {
-          await prisma.animeTmdbLogo
-            .update({
-              where: { anilistId: item.anilistId },
-              data: { expiresAt: null, status: 'verified', notFound: false },
-            })
-            .catch(() => {})
-        }
-
-        const logo: AnimeLogoResult = {
-          logoUrl: existing.logoUrl,
-          aspectRatio: existing.aspectRatio ?? 1,
-          width: existing.width ?? 100,
-          height: existing.height ?? 100,
-          language: existing.language ?? null,
-          filePath: existing.filePath,
-        }
-        result[item.anilistId] = logo
-        // Populate Redis cache
-        void cache.set(
-          `anime:logo:${item.anilistId}`,
-          {
-            ...logo,
-            notFound: false,
-            cachedAt: Date.now(),
-          },
-          LOGO_CACHE_TTL,
-        )
-      } else {
-        console.log(`[TMDB Curated Hero] Resolving missing logo for ${item.title} (AniList ${item.anilistId})...`)
-        const resolved = await resolveTmdbLogo(item.anilistId, item.tmdbId, item.mediaType, { isPermanent: true })
-        if (resolved) {
-          result[item.anilistId] = resolved
-        }
-      }
-    }
-  } catch (err) {
-    console.error('[TMDB Curated Hero] Error ensuring curated hero logos:', err)
+      LOGO_CACHE_TTL,
+    )
   }
 
-  console.log(`[TMDB Curated Hero] ${Object.keys(result).length}/${CURATED_HERO_ANIME.length} curated logos ready in permanent storage.`)
+  console.log(`[TMDB Curated Hero] ${Object.keys(result).length}/${CURATED_HERO_ANIME.length} curated logos ready in permanent local storage.`)
   return result
 }
