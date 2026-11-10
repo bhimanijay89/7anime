@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
+Phase 5.1 — InfinityFree CI Deployment Fix & Minimal Profile Navigation with 20 Anime Character Avatars
 
 ## Overall Status
 
-Completed a comprehensive mobile-first overhaul across the Hero section, User Profile page, navigation system, and backend anime logo delivery architecture. All 10 curated anime title logos are stored as permanent optimized PNG assets in `backend/assets/hero-logos/` (and version-controlled in Git), served with 1-year immutable caching headers and CORS protection. The mobile Hero features a cinematic dark gradient overlay, prominent logo containment, non-wrapping specs, clamped synopsis, properly sized touch buttons, and a smooth touch-scrollable thumbnail carousel with safe-area end padding. The desktop floating navbar now incorporates intelligent auto-hide on downward scroll with immediate reveal on scroll up or mouse approach, ensuring the Monthly Watch Activity calendar and profile milestones are 100% unobstructed. Verified across all 5 standard viewports (320x720, 375x812, 430x932, 768x1024, 1440x900) with 0px horizontal overflow, zero TypeScript errors, and successful production build.
+Resolved all 35 ESLint errors across 11 files in accordance with strict linting standards, without disabling any ESLint rule or adding blanket ignore comments. Upgraded the InfinityFree CI/CD deployment workflow runtime in `.github/workflows/deploy-infinityfree.yml` from Node.js 20 to Node.js 22 LTS to ensure full compatibility with modern dependencies and Puppeteer 25. Implemented minimal profile navigation in the floating capsule navbar by eliminating username text in favor of an elegant 40px circular avatar button with accessible tooltips and focus-visible states. Curated, downloaded, and version-controlled 20 official high-resolution anime character avatars in `public/assets/avatars/` and `backend/assets/avatars/`, enhanced `AvatarModal.tsx` and `avatar-modal.css` with a responsive 20-character selection grid with live Liquid Glass ring preview and character/series metadata, and verified backend profile route validation. Verified with `npm run lint` (0 errors), `npx tsc -b` (0 errors), `npx tsc -p backend/tsconfig.json` (0 errors), `npm run build` (0 errors), and `npm run build:infinityfree` (61 files packaged).
 
 ## Completed Phases
 
@@ -42,43 +42,35 @@ Completed a comprehensive mobile-first overhaul across the Hero section, User Pr
 - [x] Phase 4.2 — Compact Multi-Column Profile Dashboard & Refined Slimmer Capsule Navbar
 - [x] Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
 - [x] Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
+- [x] Phase 5.1 — InfinityFree CI Deployment Fix & Minimal Profile Navigation with 20 Anime Character Avatars
 
 ## Current Phase Details
 
-- [x] Permanent Backend Logo Storage: 10 curated anime official transparent PNG logos bundled in `backend/assets/hero-logos/` (committed to git)
-- [x] Static Asset Serving: Express static middleware at `/assets` and `/api/assets` with `Cache-Control: public, max-age=31536000, immutable` and `Access-Control-Allow-Origin: *`
-- [x] Central Mapping: Exact mapping of AniList ID, TMDB ID, title, slug, asset path, dimensions, and aspect ratio in `backend/src/services/tmdb.ts`
-- [x] Fast Tier-0 Resolver: `resolveTmdbLogo` and `ensureCuratedHeroLogos` serve local assets with 0ms latency and 100% offline reliability
-- [x] Frontend Normalization: `anilist.ts` and `AnimeLogo.tsx` resolve relative paths to active backend origin with client offline fallback
-- [x] Mobile-First Hero Redesign: Dedicated composition for 320–374px, 375–430px, 431–600px, 601–1024px, and 1025px+
-- [x] Foreground Readability: Deep vertical vignette gradient preventing background artwork from dominating text and buttons
-- [x] Responsive Logo Placement: Properly clamped logo sizing (`clamp(2.8rem, 11vw, 4.4rem)`) avoiding awkward stretching or overflow
-- [x] Clamped Metadata: Single non-wrapping specs row, compact genre chips, 2-line clamped synopsis, standard 44px touch buttons
-- [x] Horizontal Carousel: Smooth touch scrolling (`-webkit-overflow-scrolling: touch`), clear active border/scale, end padding preventing clipping
-- [x] Navigation Safe-Area Clearance: Bottom margin and `calc(7.5rem + env(safe-area-inset-bottom, 0px))` clearance so mobile bottom nav never covers content
-- [x] Desktop Navbar Auto-Hide on Scroll: Intelligent scroll-direction tracking slides floating capsule navbar out of view on scroll down, revealing 100% viewport for reading calendar and milestones
-- [x] Global Overflow Guard: `overflow-x: hidden` and `max-width: 100vw` on `html` and `body` eliminating page-wide horizontal scroll jumps
-- [x] Comprehensive 5-Viewport Verification: 320x720, 375x812, 430x932, 768x1024, and 1440x900 screenshots captured
-- [x] TypeScript & Build Verification: `npx tsc -b` (0 errors), backend `tsc` (0 errors), `npm run build` (built in 12.13s)
-
-## Upcoming Phases
-
-- [ ] Phase 4 — Streaming Provider Restructuring (Server 1: MegaPlay AniList, Server 2: MegaPlay MAL, Server 3: NXsha with `?color=purple`, Server 4+: Extensible Provider Registry; purge `0vidads.top`)
-- [ ] Phase 5 — Automatic Failover State Machine
-- [ ] Phase 6 — Comprehensive Regression Testing & Full Verification
+- [x] ESLint Error Remediation: 35/35 errors resolved across 11 files (`backend/src/routes/profile.ts`, `backend/src/routes/streak.ts`, `backend/src/scripts/test-phase2-logo-api.ts`, `backend/src/server.ts`, `backend/src/services/streak.ts`, `src/components/navigation/Navigation.tsx`, `src/components/profile/ProfileFullView.tsx`, `src/components/streak/DailyActivityCalendar.tsx`, `src/pages/FoundationPreview.tsx`, `src/services/anilist.ts`, `src/services/streak.ts`).
+- [x] Zero Workarounds: No ESLint rules disabled, no blanket `eslint-disable` comments added, and ESLint config untouched.
+- [x] CI Runtime Upgrade: `.github/workflows/deploy-infinityfree.yml` upgraded from Node.js 20 to Node.js 22 LTS.
+- [x] Minimal Profile Navigation: Username text removed from capsule navbar; rendered as 40px circular avatar button with accessible tooltip `title="My Profile"` / `aria-label="My Profile"` and focus rings. User identity remains in Profile page header.
+- [x] 20 Anime Character Avatars: Downloaded official character portraits from AniList into `public/assets/avatars/` and `backend/assets/avatars/` (Goku, Vegeta, Eren, Naruto, Sasuke, Itachi, Minato, Hinata, Sakura, Luffy, Zoro, Ichigo, Orihime, Chad, Sung Jinwoo, Mikey, Takemichi, Tanjiro, Gojo, Asta).
+- [x] Avatar Catalog & Types: Created `src/data/animeAvatars.ts` exporting strongly typed character and series metadata.
+- [x] Selection UI: 4-column desktop / 2-column mobile avatar grid in `AvatarModal.tsx` and `avatar-modal.css` with active badges, name labels, anime tags, and dynamic Liquid Glass preview.
+- [x] Backend Integration: Verified `/assets/` prefix validation in `backend/src/routes/profile.ts` for instant preset avatar persistence.
+- [x] Discoverable Profile Sign Out: Integrated keyboard-accessible, clearly labelled Sign Out action into `ProfileSummary.tsx` and connected it via `ProfileFullView.tsx` to `handleLogout`, while keeping navbar avatar-only and right-click logout intact.
+- [x] Premium My List / Personal Library Redesign: Upgraded `LibraryView.tsx` with cinematic header, live collection stats ribbon, segmented category tabs (`All Saved`, `Watching`, `Plan to Watch`, `Completed`), fast search with clear button, multi-mode sorting, and modular `LibraryCard.tsx` with self-contained 2:3 aspect-ratio poster, desktop hover actions, accidental-deletion protection, and dedicated mobile touch action bar.
+- [x] Complete Movies Page Visual Overhaul: Redesigned `MoviesView.tsx` with compact intro (`.movies-intro`), cinematic interactive hero (`.movies-hero`) with landscape backdrop and multi-tier scrims, 2:3 elevated poster card, live spotlight switcher, fixed *A Silent Voice* black poster bug (`referrerPolicy="no-referrer"` + fallback cascade), dedicated `MovieCard.tsx`, multi-category discovery toolbar, and curated rails for Top Rated Masterpieces and Studio Ghibli Classics.
+- [x] Cinematic Featured Movies Hero Carousel: Upgraded the featured movie hero into an animated 5-film carousel (`MoviesHeroCarousel.tsx`) featuring stacked backdrop crossfading, infinite Ken Burns slow zoom, coordinated glide-in poster, staggered metadata fade-up, animated indicator progress bars, 01/05 slide counter, prev/next glass controls, 7.5s autoplay with hover/tab-hidden pause, touch swipe gestures, adjacent asset preloading, and `prefers-reduced-motion` compliance. Resolved focus-lock bug on mouse interaction via `:focus-visible` detection, pointer event reset, and verified 100% automated transition progression in headless Chrome.
 
 ## Current Blockers
 
-- None.
+None.
 
 ## Known Technical Debt
 
-- None.
+None.
 
 ## Last Updated
 
-2026-11-08
+2026-11-10
 
 ## Next Exact Action
 
-Phase 4 — Streaming Provider Restructuring: Restructure the streaming provider architecture to replace `0vidads.top` with MegaPlay AniList, MegaPlay MAL, and NXsha.
+Wait for user review before committing or pushing changes to `main`.
