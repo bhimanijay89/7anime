@@ -187,7 +187,7 @@ export async function pingStreakWatch(data: {
   episodeDurationSec?: number;
   watchProgressPercent?: number;
   deltaSeconds?: number;
-}): Promise<any> {
+}): Promise<unknown> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/streak/ping`, {
       method: 'POST',

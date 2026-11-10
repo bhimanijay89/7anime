@@ -174,8 +174,9 @@ router.get('/profile', async (req: Request, res: Response) => {
       })
     )
 
-    const userDisplayName = (user as any).displayName || user.username
-    const userBio = (user as any).bio || ''
+    const userWithProfile = user as { displayName?: string | null; bio?: string | null; role?: string }
+    const userDisplayName = userWithProfile.displayName || user.username
+    const userBio = userWithProfile.bio || ''
 
     return sendSuccess(res, {
       user: {
@@ -285,7 +286,7 @@ router.post('/profile/avatar', async (req: Request, res: Response) => {
       return sendError(res, 'Avatar data is required.', ErrorCode.BAD_REQUEST, 400)
     }
 
-    let finalAvatar = avatar.trim()
+    const finalAvatar = avatar.trim()
 
     // Handle Data URI format (data:image/webp;base64,... etc.)
     const matches = finalAvatar.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i)
@@ -314,7 +315,8 @@ router.post('/profile/avatar', async (req: Request, res: Response) => {
     } else if (
       !finalAvatar.startsWith('http://') &&
       !finalAvatar.startsWith('https://') &&
-      !finalAvatar.startsWith('/uploads/')
+      !finalAvatar.startsWith('/uploads/') &&
+      !finalAvatar.startsWith('/assets/')
     ) {
       return sendError(
         res,

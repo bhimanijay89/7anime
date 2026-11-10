@@ -5,7 +5,6 @@ import {
   getUserStreakSummary,
   getUserStreakActivity,
   processWatchProgressForStreak,
-  getOrCreateUserStreak,
 } from '../services/streak.js'
 import prisma from '../db/client.js'
 

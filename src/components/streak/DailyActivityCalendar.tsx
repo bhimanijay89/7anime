@@ -543,7 +543,7 @@ export const DailyActivityCalendar: React.FC<DailyActivityCalendarProps> = ({
             }
 
             // Cell styling state classes
-            let cellStateClass = '';
+            let cellStateClass: string;
             if (!cell.isCurrentMonth) {
               cellStateClass = 'streak-cell--outside';
             } else if (cell.isToday) {

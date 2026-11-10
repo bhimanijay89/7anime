@@ -37,6 +37,8 @@ export interface Anime {
     /*
      * AniList ID
      */
+    anilistId?: number
+    lastWatchedEpisodeNumber?: number
     poster: string
 
     /*

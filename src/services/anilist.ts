@@ -1355,7 +1355,7 @@ export async function getUpcomingAnime(
 export const BACKEND_URL =
     (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
         ? `${window.location.protocol}//${window.location.hostname}:3001`
-        : (((import.meta as any).env?.VITE_API_URL as string | undefined) || 'https://sevenanime-vodw.onrender.com')
+        : (((import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL) || 'https://sevenanime-vodw.onrender.com')
 
 export interface AnimeMappingData {
     anilistId: number
@@ -1377,7 +1377,7 @@ export async function fetchAnimeMapping(anilistId: number | string): Promise<Ani
         throw new Error(`Mapping service returned HTTP ${response.status}`)
     }
 
-    let json: any
+    let json: { ok?: boolean; data?: AnimeMappingData; error?: { message?: string } }
     try {
         json = await response.json()
     } catch {
@@ -1481,8 +1481,8 @@ interface ClientCacheEntry<T> {
 }
 
 const CLIENT_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
-const clientMemoryCache = new Map<string, ClientCacheEntry<any>>()
-const clientInflightRequests = new Map<string, Promise<any>>()
+const clientMemoryCache = new Map<string, ClientCacheEntry<unknown>>()
+const clientInflightRequests = new Map<string, Promise<unknown>>()
 
 export function getCachedAnimeData<T>(key: string): T | null {
     const entry = clientMemoryCache.get(key)
@@ -1565,7 +1565,7 @@ export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
     if (cached && cached.length > 0) return cached
 
     const inflight = clientInflightRequests.get(cacheKey)
-    if (inflight) return inflight
+    if (inflight) return inflight as Promise<Anime[]>
 
     const runFetch = async (): Promise<Anime[]> => {
     try {
@@ -1573,7 +1573,7 @@ export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
         if (res.ok) {
             const json = await res.json()
             if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-                return (json.data as (Anime & { logo?: { logoUrl?: string; url?: string; aspectRatio?: number; width?: number; height?: number; filePath?: string } })[]).map(a => {
+                return (json.data as (Anime & { logo?: { logoUrl?: string; url?: string; aspectRatio?: number; width?: number; height?: number; filePath?: string; language?: string } })[]).map(a => {
                     const curated = CURATED_HERO_REF_MAP.get(Number(a.id))
                     if (a.logo) {
                         const rawUrl = a.logo.url || a.logo.logoUrl || (curated ? curated.assetPath : '')
@@ -1584,7 +1584,7 @@ export async function fetchCuratedHeroAnime(): Promise<Anime[]> {
                             a.logo.aspectRatio = curated.aspectRatio
                         }
                     } else if (curated) {
-                        (a as any).logo = {
+                        a.logo = {
                             url: normalizeLogoUrl(curated.assetPath),
                             logoUrl: normalizeLogoUrl(curated.assetPath),
                             aspectRatio: curated.aspectRatio,
@@ -2024,7 +2024,7 @@ export async function getAnimeMovies(
 
     const inflight = clientInflightRequests.get(cacheKey)
     if (inflight) {
-        return inflight
+        return inflight as Promise<Anime[]>
     }
 
     const fetchPromise = (async () => {

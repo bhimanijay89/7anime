@@ -119,17 +119,10 @@ export async function getUserStreakSummary(userId: string, clientTimezone?: stri
   const nextMilestoneDef = STREAK_MILESTONES.find(m => m.days > streak.currentStreak) || null
   const prevMilestoneDays = [...STREAK_MILESTONES].reverse().find(m => m.days <= streak.currentStreak)?.days || 0
 
-  let milestoneProgressPct = 0
-  let remainingDays = 0
-
-  if (nextMilestoneDef) {
-    remainingDays = nextMilestoneDef.days - streak.currentStreak
-    const span = nextMilestoneDef.days - prevMilestoneDays
-    const progressInSpan = streak.currentStreak - prevMilestoneDays
-    milestoneProgressPct = Math.min(100, Math.max(0, Math.round((progressInSpan / span) * 100)))
-  } else {
-    milestoneProgressPct = 100
-  }
+  const remainingDays = nextMilestoneDef ? nextMilestoneDef.days - streak.currentStreak : 0
+  const milestoneProgressPct = nextMilestoneDef
+    ? Math.min(100, Math.max(0, Math.round(((streak.currentStreak - prevMilestoneDays) / (nextMilestoneDef.days - prevMilestoneDays)) * 100)))
+    : 100
 
   // Unlocked milestones
   const unlockedRecords = await prisma.streakMilestone.findMany({
@@ -183,7 +176,7 @@ export async function getUserStreakActivity(
   const todayStr = getLocalDateString(today, streak.timezone)
 
   let startStr = options.startDate
-  let endStr = options.endDate || todayStr
+  const endStr = options.endDate || todayStr
 
   if (!startStr) {
     const count = options.daysCount || 30
