@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import type {
   Anime,
-  AnimeLogo,
   Episode,
 } from '../types/domain'
 
@@ -57,6 +56,7 @@ const SearchOverlay = lazy(() => import('../components/search/SearchOverlay').th
 const AuthModal = lazy(() => import('../components/auth/AuthModal').then(m => ({ default: m.AuthModal })))
 import type { AuthUser } from '../types/auth'
 import type { User } from '../types/domain'
+import type { LibrarySyncStatus } from '../components/profile/libraryUtils'
 
 import { guestUser } from '../data/anime'
 import { isDevToolsActive, onDevToolsChange } from '../utils/security'
@@ -143,8 +143,7 @@ function Home() {
   const [userProfile, setUserProfile] = useState<User>(guestUser)
   const [profileStats, setProfileStats] = useState<UserProfileStats | undefined>(undefined)
   const [continueWatchingList, setContinueWatchingList] = useState<Anime[]>([])
-  const [heroLogos, setHeroLogos] = useState<Record<string, AnimeLogo | null>>({})
-  const [upcomingLogos, setUpcomingLogos] = useState<Record<string, AnimeLogo | null>>({})
+  const [librarySyncStatus, setLibrarySyncStatus] = useState<LibrarySyncStatus>('guest')
 
   const { notify } =
     useToast()
@@ -210,6 +209,7 @@ function Home() {
 
   const fetchUserLibrary = useCallback(async () => {
     if (isDecoyActive) return
+    setLibrarySyncStatus('syncing')
     try {
       const res = await fetch(`${BACKEND_URL}/api/library`, {
         headers: getAuthHeaders(),
@@ -220,21 +220,48 @@ function Home() {
         if (data.ok && Array.isArray(data.data?.library)) {
           const entries = data.data.library as Array<{ anilistId: number; status: string }>
           const loadedAnime = await Promise.all(
-            entries.map(async (entry) => {
+            entries.map(async (entry): Promise<Anime | null> => {
               try {
-                return await getAnimeById(entry.anilistId)
+                const anime = await getAnimeById(entry.anilistId)
+                if (!anime) return null
+                const normalized = (entry.status || '').toUpperCase()
+                const userLibraryStatus: 'watching' | 'completed' | 'planned' | undefined =
+                  normalized === 'COMPLETED'
+                    ? 'completed'
+                    : normalized === 'PLANNING' || normalized === 'PLAN_TO_WATCH'
+                    ? 'planned'
+                    : normalized === 'WATCHING'
+                    ? 'watching'
+                    : undefined
+
+                return {
+                  ...anime,
+                  libraryStatus: userLibraryStatus,
+                }
               } catch {
                 return null
               }
             })
           )
-          setSavedLibrary(loadedAnime.filter((item): item is Anime => item !== null))
+          const validSaved: Anime[] = []
+          for (const item of loadedAnime) {
+            if (item) {
+              validSaved.push(item)
+            }
+          }
+          setSavedLibrary(validSaved)
+          setLibrarySyncStatus('synced')
+        } else {
+          setLibrarySyncStatus('error')
         }
+      } else {
+        setLibrarySyncStatus('error')
       }
     } catch (error) {
       console.error('Failed to fetch user library:', error)
+      setLibrarySyncStatus('error')
     }
-  }, [])
+  }, [isDecoyActive])
 
   const fetchUserProgress = useCallback(async () => {
     if (isDecoyActive) return
@@ -253,6 +280,7 @@ function Home() {
             durationSeconds: number
             completed: boolean
             updatedAt: string
+            anime?: Anime | null
           }>
 
           // Deduplicate by anilistId — keep only the latest episode per anime.
@@ -269,7 +297,7 @@ function Home() {
             latestPerAnime.map(async (rec) => {
               try {
                 // Prefer backend hydrated anime if present; otherwise fallback to getAnimeById
-                let baseAnime: Anime | null = (rec as any).anime || null
+                let baseAnime: Anime | null = rec.anime || null
                 if (!baseAnime) {
                   baseAnime = await getAnimeById(rec.anilistId).catch(() => null)
                 }
@@ -361,6 +389,7 @@ function Home() {
       setProfileStats(undefined)
       setSavedLibrary([])
       setContinueWatchingList([])
+      setLibrarySyncStatus('guest')
     } catch (error) {
       console.error('Session check failed:', error)
       localStorage.removeItem('7anime_token')
@@ -369,6 +398,7 @@ function Home() {
       setProfileStats(undefined)
       setSavedLibrary([])
       setContinueWatchingList([])
+      setLibrarySyncStatus('guest')
     }
   }, [fetchUserProfile, fetchUserLibrary, fetchUserProgress])
 
@@ -381,6 +411,7 @@ function Home() {
       localStorage.setItem('7anime_token', token)
     }
     setAuthUser(user)
+    setLibrarySyncStatus('syncing')
     setAuthModalOpen(false)
     notify(`Welcome back, ${user.username}!`, 'success')
     await Promise.all([fetchUserProfile(), fetchUserLibrary(), fetchUserProgress()])
@@ -402,6 +433,7 @@ function Home() {
       setProfileStats(undefined)
       setSavedLibrary([])
       setContinueWatchingList([])
+      setLibrarySyncStatus('guest')
       notify('You have signed out.', 'info')
     }
   }
@@ -478,7 +510,7 @@ function Home() {
       if (typeof window !== 'undefined' && 'cancelIdleCallback' in window && typeof idleId === 'number') {
         (window as unknown as { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(idleId)
       } else {
-        clearTimeout(idleId as any)
+        clearTimeout(idleId as ReturnType<typeof setTimeout>)
       }
     }
   }, [])
@@ -997,14 +1029,26 @@ function Home() {
         const parsedId = Number(animeId)
         if (Number.isInteger(parsedId) && parsedId > 0) {
           try {
-            await fetch(`${BACKEND_URL}/api/library/${parsedId}`, {
+            setLibrarySyncStatus('syncing')
+            const res = await fetch(`${BACKEND_URL}/api/library/${parsedId}`, {
               method: 'DELETE',
               headers: getAuthHeaders(),
               credentials: 'include',
             })
+            if (res.ok) {
+              const data = await res.json()
+              if (data.ok) {
+                setLibrarySyncStatus('synced')
+              } else {
+                setLibrarySyncStatus('error')
+              }
+            } else {
+              setLibrarySyncStatus('error')
+            }
             await fetchUserProfile()
           } catch (err) {
             console.error('Failed to remove from backend library:', err)
+            setLibrarySyncStatus('error')
           }
         }
       }
@@ -1032,7 +1076,7 @@ function Home() {
         setSavedLibrary(
           previous => [
             ...previous,
-            anime,
+            { ...anime, libraryStatus: 'watching' },
           ],
         )
 
@@ -1045,7 +1089,8 @@ function Home() {
           const parsedId = Number(anime.id)
           if (Number.isInteger(parsedId) && parsedId > 0) {
             try {
-              await fetch(`${BACKEND_URL}/api/library`, {
+              setLibrarySyncStatus('syncing')
+              const res = await fetch(`${BACKEND_URL}/api/library`, {
                 method: 'POST',
                 headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 credentials: 'include',
@@ -1054,9 +1099,20 @@ function Home() {
                   status: 'WATCHING',
                 }),
               })
+              if (res.ok) {
+                const data = await res.json()
+                if (data.ok) {
+                  setLibrarySyncStatus('synced')
+                } else {
+                  setLibrarySyncStatus('error')
+                }
+              } else {
+                setLibrarySyncStatus('error')
+              }
               await fetchUserProfile()
             } catch (err) {
               console.error('Failed to save to backend library:', err)
+              setLibrarySyncStatus('error')
             }
           }
         }
@@ -1329,11 +1385,23 @@ function Home() {
             savedAnime={
               savedLibrary
             }
+            isAuthenticated={
+              Boolean(authUser)
+            }
+            syncStatus={
+              authUser ? librarySyncStatus : 'guest'
+            }
             onSelectAnime={
               openDetail
             }
+            onPlayAnime={
+              handleDirectPlay
+            }
             onRemoveFromLibrary={
               handleRemoveFromLibrary
+            }
+            onBrowseCatalog={() =>
+              navigateTo('home')
             }
           />
 

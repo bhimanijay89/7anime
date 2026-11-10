@@ -69,6 +69,11 @@ export interface Anime {
 
     progress?: number
 
+    libraryStatus?:
+    | 'watching'
+    | 'planned'
+    | 'completed'
+
     genres?: string[]
 
     type?:
