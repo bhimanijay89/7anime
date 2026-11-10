@@ -43,11 +43,15 @@ Resolved all 35 ESLint errors across 11 files in accordance with strict linting 
 - [x] Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
 - [x] Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
 - [x] Phase 5.1 — InfinityFree CI Deployment Fix & Minimal Profile Navigation with 20 Anime Character Avatars
+- [x] Phase 5.2 — Profile Dashboard Mobile Responsiveness & Streak Architecture Hardening
 
 ## Current Phase Details
 
-- [x] ESLint Error Remediation: 35/35 errors resolved across 11 files (`backend/src/routes/profile.ts`, `backend/src/routes/streak.ts`, `backend/src/scripts/test-phase2-logo-api.ts`, `backend/src/server.ts`, `backend/src/services/streak.ts`, `src/components/navigation/Navigation.tsx`, `src/components/profile/ProfileFullView.tsx`, `src/components/streak/DailyActivityCalendar.tsx`, `src/pages/FoundationPreview.tsx`, `src/services/anilist.ts`, `src/services/streak.ts`).
-- [x] Zero Workarounds: No ESLint rules disabled, no blanket `eslint-disable` comments added, and ESLint config untouched.
+- [x] Streak Calendar Mobile Overflow Fix: Replaced `repeat(7, 1fr)` with strict `repeat(7, minmax(0, 1fr))` across calendar weekdays row and 7-column dates grid; added `min-width: 0; box-sizing: border-box;` to cell containers and children; added responsive `20m left` vs `20m` text-switching on mobile to prevent pending badge blowout.
+- [x] Streak Milestones Mobile Responsiveness: Added `repeat(auto-fill, minmax(min(100%, 260px), 1fr))` and single-column mobile stacking; removed restrictive `white-space: nowrap` from milestone titles and descriptions in favor of natural multi-line wrapping (`word-break: break-word; overflow-wrap: anywhere;`); enabled flex wrapping on reward badges; scaled padding down cleanly on `<= 480px` and `<= 360px` screens.
+- [x] Removal of Recently Watched from Profile: Completely removed Recently Watched tab button, tab pane, cards, and 134 lines of dead CSS rules from Profile Dashboard while preserving global continue watching on Home and video player prefetching.
+- [x] Overall Profile Dashboard Mobile Responsiveness: Verified and eliminated horizontal scroll across 320px, 360px, 375px, 390px, 430px, 768px, 1024px, and 1440px viewports.
+- [x] Quality Checks: `npx tsc -b` (0 errors), `npm run lint` (0 errors), `npm run build` (0 errors).
 - [x] CI Runtime Upgrade: `.github/workflows/deploy-infinityfree.yml` upgraded from Node.js 20 to Node.js 22 LTS.
 - [x] Minimal Profile Navigation: Username text removed from capsule navbar; rendered as 40px circular avatar button with accessible tooltip `title="My Profile"` / `aria-label="My Profile"` and focus rings. User identity remains in Profile page header.
 - [x] 20 Anime Character Avatars: Downloaded official character portraits from AniList into `public/assets/avatars/` and `backend/assets/avatars/` (Goku, Vegeta, Eren, Naruto, Sasuke, Itachi, Minato, Hinata, Sakura, Luffy, Zoro, Ichigo, Orihime, Chad, Sung Jinwoo, Mikey, Takemichi, Tanjiro, Gojo, Asta).

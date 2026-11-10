@@ -6,10 +6,8 @@ import {
   Film,
   LogIn,
   LogOut,
-  Play,
   ShieldCheck,
   UserCheck,
-  History,
   Trophy,
   Bookmark,
   Tv,
@@ -17,7 +15,7 @@ import {
   FolderHeart,
   Activity,
 } from 'lucide-react'
-import type { User, Anime } from '../../types/domain'
+import type { User } from '../../types/domain'
 import type { AuthUser } from '../../types/auth'
 import { ProfileSummary, AchievementCard } from './ProfileSummary'
 import { AvatarModal } from './AvatarModal'
@@ -80,7 +78,6 @@ export interface ProfileFullViewProps {
   profileStats?: UserProfileStats
   onLogout?: () => void
   onOpenAuthModal?: () => void
-  onContinueWatching?: (anime: Anime) => void
   onProfileUpdated?: (updatedUser: Partial<User>) => void
   onNavigateLibrary?: () => void
 }
@@ -106,14 +103,13 @@ export function ProfileFullView({
   profileStats,
   onLogout,
   onOpenAuthModal,
-  onContinueWatching,
   onProfileUpdated,
   onNavigateLibrary,
 }: ProfileFullViewProps) {
   const [streakData, setStreakData] = useState<UserStreakSummary | null>(null)
   const [activities, setActivities] = useState<DailyActivityItem[]>([])
   const [streakLoading, setStreakLoading] = useState<boolean>(true)
-  const [activeTab, setActiveTab] = useState<'recent' | 'achievements' | 'library'>('recent')
+  const [activeTab, setActiveTab] = useState<'achievements' | 'library'>('achievements')
 
   // Modals state
   const [avatarModalOpen, setAvatarModalOpen] = useState<boolean>(false)
@@ -267,7 +263,6 @@ export function ProfileFullView({
   }
 
   const todayStr = new Date().toISOString().slice(0, 10)
-  const recentList = profileStats?.recentlyWatched || []
   const achievementsList = profileStats?.achievements || []
   const libraryStats = profileStats?.libraryStats || { watching: 0, completed: 0, planning: 0, dropped: 0, total: 0 }
 
@@ -458,20 +453,10 @@ export function ProfileFullView({
           />
         </div>
 
-        {/* ─── Row 4: Tabbed Content Section (Recently Watched, Achievements, Library) ─── */}
+        {/* ─── Row 4: Tabbed Content Section (Achievements, Library) ─── */}
         <div className="profile-content-section glass">
               {/* Navigation Tabs */}
               <div className="profile-tabs-nav">
-                <button
-                  type="button"
-                  className={`profile-nav-tab ${activeTab === 'recent' ? 'profile-nav-tab--active' : ''}`}
-                  onClick={() => setActiveTab('recent')}
-                >
-                  <History size={16} />
-                  <span>Recently Watched</span>
-                  {recentList.length > 0 && <span className="profile-tab-count">{recentList.length}</span>}
-                </button>
-
                 <button
                   type="button"
                   className={`profile-nav-tab ${activeTab === 'achievements' ? 'profile-nav-tab--active' : ''}`}
@@ -497,74 +482,7 @@ export function ProfileFullView({
                 </button>
               </div>
 
-              {/* Tab 1: Recently Watched */}
-              {activeTab === 'recent' && (
-                <div className="profile-tab-pane">
-                  {recentList.length > 0 ? (
-                    <div className="profile-recent__grid">
-                      {recentList.map((item) => (
-                        <div
-                          key={item.id}
-                          className="profile-recent__card"
-                          onClick={() =>
-                            onContinueWatching &&
-                            onContinueWatching({
-                              id: String(item.anilistId),
-                              anilistId: item.anilistId,
-                              title: item.title,
-                              poster: item.poster,
-                              status: 'Airing',
-                              lastWatchedEpisodeNumber: item.episodeNumber,
-                            })
-                          }
-                        >
-                          <div className="profile-recent__thumb-wrap">
-                            {item.poster ? (
-                              <img
-                                src={item.poster}
-                                alt={item.title}
-                                className="profile-recent__thumb"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="profile-recent__thumb-fallback">
-                                <Film size={22} />
-                              </div>
-                            )}
-                            <div className="profile-recent__play-overlay">
-                              <Play size={18} fill="currentColor" />
-                            </div>
-                            <div className="profile-recent__prog-bar">
-                              <div
-                                className="profile-recent__prog-fill"
-                                style={{ width: `${item.progressPercent}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="profile-recent__info">
-                            <strong className="profile-recent__title" title={item.title}>
-                              {item.title}
-                            </strong>
-                            <div className="profile-recent__sub">
-                              <span>Episode {item.episodeNumber}</span>
-                              <span className="profile-recent__pct">{item.progressPercent}%</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="profile-empty-tab">
-                      <History size={36} className="profile-empty-tab__icon" />
-                      <h3>No Recent Watch Activity</h3>
-                      <p>Start watching an anime episode to track your progress and resume anytime.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab 2: Achievements */}
+              {/* Tab 1: Achievements */}
               {activeTab === 'achievements' && (
                 <div className="profile-tab-pane">
                   {achievementsList.length > 0 ? (

@@ -641,7 +641,10 @@ export const DailyActivityCalendar: React.FC<DailyActivityCalendarProps> = ({
                       {minutesWatched}m
                     </span>
                   ) : cell.isCurrentMonth && cell.isToday && !isQualified ? (
-                    <span className="streak-cell__badge streak-cell__badge--pending">20m left</span>
+                    <span className="streak-cell__badge streak-cell__badge--pending">
+                      <span className="streak-badge-full">20m left</span>
+                      <span className="streak-badge-short">20m</span>
+                    </span>
                   ) : null}
                 </div>
 

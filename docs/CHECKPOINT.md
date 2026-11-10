@@ -2,16 +2,15 @@
 
 ## Current Phase
 
-Phase 5.1 — InfinityFree CI Deployment Fix & Minimal Profile Navigation with 20 Anime Character Avatars
+Phase 5.2 — Profile Dashboard Mobile Responsiveness & Streak Architecture Hardening
 
 ## Current Task
 
-1. Fix all 35 ESLint errors across 11 files reported in the InfinityFree GitHub Actions CI pipeline without disabling any ESLint rule or adding blanket `eslint-disable` comments.
-2. Upgrade GitHub Actions runner runtime in `.github/workflows/deploy-infinityfree.yml` from Node.js 20 to Node.js 22 LTS.
-3. Transform capsule navbar profile chip into a minimal 38–42px circular avatar button, removing username text while preserving user identity on the Profile page itself.
-4. Curate, download, and bundle 20 official anime character avatars in version-controlled application assets (`public/assets/avatars/` and `backend/assets/avatars/`).
-5. Enhance `AvatarModal.tsx` and `avatar-modal.css` with a responsive 20-character selection grid displaying portrait crops, character names, anime series tags, live Liquid Glass ring preview, and save/cancel actions.
-6. Verify backend profile route validation in `backend/src/routes/profile.ts` for `/assets/avatars/...` paths.
+1. Fix Streak Activity Calendar responsiveness across 320px–430px mobile, tablet, and desktop viewports without hiding columns or degrading functionality.
+2. Fix Streak Milestones card responsiveness, enabling flexible widths and natural multi-line text wrapping for milestone titles, descriptions, and reward badges.
+3. Completely remove the "Recently Watched" section from Profile Dashboard (heading, tab button, cards, empty state, and dead CSS rules) while preserving global watch history elsewhere in the app.
+4. Perform an overall Profile Dashboard mobile responsiveness audit eliminating all horizontal overflow across 320px, 360px, 375px, 390px, 430px, 768px, 1024px, and 1440px viewports.
+5. Preserve 7Anime Liquid Glass design tokens, dark premium styling, and full TypeScript typing.
 
 ## Status
 
@@ -19,215 +18,118 @@ COMPLETE
 
 ## Completed Work
 
-- **Task 1 — Zero-Tolerance ESLint Error Remediation (All 35 Errors Resolved Across 11 Files):**
-  1. `backend/src/routes/profile.ts`:
-     - Replaced explicit `any` on `(user as any).displayName` and `(user as any).bio` with strongly typed `userWithProfile` intersection.
-     - Replaced `let finalAvatar` with `const finalAvatar` (`prefer-const`).
-     - Allowed `/assets/` prefix in avatar validation check.
-  2. `backend/src/routes/streak.ts`:
-     - Removed unused `getOrCreateUserStreak` import (`@typescript-eslint/no-unused-vars`).
-  3. `backend/src/scripts/test-phase2-logo-api.ts`:
-     - Created typed interfaces `TestLogoItem`, `TestClientLogo`, and `EnrichedMockAnime`, eliminating 8 `any` occurrences.
-     - Added nullish coalescing (`?? false`) on lines 187, 212, and 217 to ensure optional chaining strictly returns a `boolean` (never `undefined`) to the `assert(condition: boolean, desc: string)` helper.
-  4. `backend/src/server.ts`:
-     - Removed unused `run` import from `googleapis`.
-  5. `backend/src/services/streak.ts`:
-     - Replaced useless reassignment on `milestoneProgressPct` with a single direct ternary assignment (`no-useless-assignment`).
-     - Replaced `let endStr` with `const endStr` (`prefer-const`).
-  6. `src/components/navigation/Navigation.tsx`:
-     - Connected `onLogout` to profile chip context menu (`onContextMenu`).
-     - Attached `onPrefetch` to `MobileNavigation` link interactions (`onMouseEnter` and `onTouchStart`).
-  7. `src/components/profile/ProfileFullView.tsx`:
-     - Removed unused `Sparkles` icon import.
-     - Typed `onContinueWatching` with `Anime`, `onProfileUpdated` with `Partial<User>`, and `import.meta.env` with typed interface.
-     - Passed `status: 'Airing'` on recent watch items to satisfy `Anime` contract.
-  8. `src/components/streak/DailyActivityCalendar.tsx`:
-     - Removed useless initial empty string assignment on `cellStateClass` (`no-useless-assignment`).
-  9. `src/pages/FoundationPreview.tsx`:
-     - Removed unused `heroLogos` and `upcomingLogos` states along with their setter functions and unused `AnimeLogo` import.
-     - Added `anime?: Anime | null` to progress record type, removing `(rec as any).anime`.
-     - Typed `idleId` timeout clearance with `ReturnType<typeof setTimeout>`.
-  10. `src/services/anilist.ts`:
-      - Typed `BACKEND_URL` fallback without `any`.
-      - Replaced `let json: any` with typed mapping response object without useless assignment.
-      - Replaced `Map<string, ClientCacheEntry<any>>` and `Map<string, Promise<any>>` with typed `unknown` variants.
-      - Assigned curated logo object directly to typed anime without `(a as any).logo`.
-  11. `src/services/streak.ts`:
-      - Typed `pingStreakWatch` return promise with `Promise<unknown>`.
+- **Task 1 — Streak Calendar Horizontal Overflow Fix & Fluid 7-Column Layout:**
+  - Upgraded `.streak-calendar__weekdays-row` and `.streak-calendar__grid` from implicit `repeat(7, 1fr)` (which defaults to `minmax(auto, 1fr)` and allows long content to blow out track widths) to strict `repeat(7, minmax(0, 1fr)); width: 100%; box-sizing: border-box;`.
+  - Added `min-width: 0; width: 100%; box-sizing: border-box;` to `.streak-calendar__cell`, `.streak-cell__top-bar`, `.streak-cell__indicator-zone`, and `.streak-cell__bottom-bar`.
+  - Prevented "20m left" pending text blowout on mobile screens by introducing `.streak-badge-full` ("20m left") and `.streak-badge-short` ("20m") responsive text switching via CSS media queries (`<= 480px`).
+  - Added `max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;` to `.streak-cell__badge`.
+  - Scaled down day numbers, flames (`transform: scale(0.65)` at 480px and `0.52` at 360px), and cell min-heights (52px at 640px, 48px at 480px, 40px at 360px).
+  - Maintained single-letter weekday headers (`M`, `T`, `W`, `T`, `F`, `S`, `S`) below 480px and centered calendar legend items with responsive gaps.
+  - Made 5-card monthly statistics console responsive with `repeat(2, minmax(0, 1fr))` on mobile, gracefully spanning the 5th card across 2 columns.
 
-- **Task 2 — CI Workflow Runtime Upgrade (`.github/workflows/deploy-infinityfree.yml`):**
-  - Upgraded Node.js runner version from `node-version: 20` to `node-version: 22` LTS.
-  - Aligns with Puppeteer 25 requirement (`>=22.12.0`) and avoids engine warnings during CI `npm ci` and execution.
+- **Task 2 — Streak Milestones Responsiveness & Natural Word Wrapping:**
+  - Upgraded `.streak-milestones-card` with `width: 100%; box-sizing: border-box; min-width: 0;`.
+  - Replaced fixed-width blowout in `.streak-milestones__grid` with `repeat(auto-fill, minmax(min(100%, 260px), 1fr))` and single-column `minmax(0, 1fr)` below 768px.
+  - Added `width: 100%; min-width: 0; box-sizing: border-box;` to `.streak-milestone-item` and `.streak-milestone-item__content`.
+  - Allowed `.streak-milestone-item__top` and `.streak-milestone-item__rewards` to flex-wrap cleanly (`flex-wrap: wrap; gap: 0.4rem;`) so reward chips never force horizontal overflow.
+  - Removed restrictive `white-space: nowrap` and `text-overflow: ellipsis` from `.streak-milestone-item__title` and `.streak-milestone-item__desc`, replacing with natural text wrapping: `white-space: normal; line-height: 1.35; word-break: break-word; overflow-wrap: anywhere;`.
+  - Added responsive padding and flame scaling on screens `<= 480px` (padding `1rem 0.85rem`) and `<= 360px` (padding `0.85rem 0.65rem`, flame box 36x40px).
+  - Hardened `.streak-modal-content` detail modal for mobile with flexible padding, vertical rewards layout, and max-width clamping.
 
-- **Task 3 — Minimal Profile Navigation (Capsule Navbar):**
-  - Removed username text (`.profile-chip__name`) completely from the desktop capsule navbar.
-  - Redesigned `.profile-chip` into a clean 40px (`2.5rem`) circular avatar button matching the dimensions of surrounding capsule action buttons (`.icon-button`).
-  - Added accessible `title="My Profile"` and `aria-label="My Profile"`, with keyboard focus-visible ring (`outline: 2px solid var(--color-accent)`).
-  - Maintained full user identity, username, and level progression prominently inside the Profile page header itself.
+- **Task 3 — Complete Removal of Recently Watched From Profile:**
+  - In `src/components/profile/ProfileFullView.tsx`:
+    - Updated `activeTab` type from `'recent' | 'achievements' | 'library'` to `'achievements' | 'library'`.
+    - Changed default active tab from `'recent'` to `'achievements'`.
+    - Removed Recently Watched tab button from `.profile-tabs-nav`.
+    - Removed `{activeTab === 'recent' && ...}` tab pane.
+    - Removed `recentList` state binding.
+    - Removed unused `History`, `Play`, and `Anime` imports.
+    - Removed `onContinueWatching` from `ProfileFullViewProps`.
+  - In `src/pages/FoundationPreview.tsx`:
+    - Cleaned up `onContinueWatching` passing into `<ProfileFullView />`.
+    - Global Continue Watching on Home and video player prefetching remain fully intact.
+  - In `src/components/profile/profile.css`:
+    - Removed dead `.profile-recent` styles (134 lines of obsolete CSS rules).
 
-- **Task 4 — 20 Curated Anime Character Avatars (Assets & Types):**
-  - Downloaded and version-controlled all 20 character avatars in both `public/assets/avatars/` and `backend/assets/avatars/`:
-    1. Goku (*Dragon Ball Z*) — `/assets/avatars/goku.png`
-    2. Vegeta (*Dragon Ball Z*) — `/assets/avatars/vegeta.png`
-    3. Eren Yeager (*Attack on Titan*) — `/assets/avatars/eren-yeager.jpg`
-    4. Naruto Uzumaki (*Naruto*) — `/assets/avatars/naruto-uzumaki.png`
-    5. Sasuke Uchiha (*Naruto*) — `/assets/avatars/sasuke-uchiha.png`
-    6. Itachi Uchiha (*Naruto*) — `/assets/avatars/itachi-uchiha.png`
-    7. Minato Namikaze (*Naruto*) — `/assets/avatars/minato-namikaze.png`
-    8. Hinata Hyuga (*Naruto*) — `/assets/avatars/hinata-hyuga.png`
-    9. Sakura Haruno (*Naruto*) — `/assets/avatars/sakura-haruno.png`
-    10. Monkey D. Luffy (*One Piece*) — `/assets/avatars/monkey-d-luffy.png`
-    11. Roronoa Zoro (*One Piece*) — `/assets/avatars/roronoa-zoro.png`
-    12. Ichigo Kurosaki (*Bleach*) — `/assets/avatars/ichigo-kurosaki.png`
-    13. Orihime Inoue (*Bleach*) — `/assets/avatars/orihime-inoue.jpg`
-    14. Yasutora Sado (Chad) (*Bleach*) — `/assets/avatars/yasutora-sado.jpg`
-    15. Sung Jinwoo (*Solo Leveling*) — `/assets/avatars/sung-jinwoo.png`
-    16. Mikey (Manjiro Sano) (*Tokyo Revengers*) — `/assets/avatars/mikey.png`
-    17. Takemichi Hanagaki (*Tokyo Revengers*) — `/assets/avatars/takemichi-hanagaki.png`
-    18. Tanjiro Kamado (*Demon Slayer*) — `/assets/avatars/tanjiro-kamado.png`
-    19. Satoru Gojo (*Jujutsu Kaisen*) — `/assets/avatars/satoru-gojo.png`
-    20. Asta (*Black Clover*) — `/assets/avatars/asta.png`
-  - Created strongly typed catalog `src/data/animeAvatars.ts` exporting `ANIME_CHARACTER_AVATARS` and `AnimeCharacterAvatar`.
-
-- **Task 5 — Avatar Selection UI & Live Preview (`AvatarModal.tsx` & `avatar-modal.css`):**
-  - Replaced generic unsplash photos with the 20-character responsive grid (4 columns on desktop, 2 columns on mobile).
-  - Displays circular portrait, character name, anime series tag, and glowing active selection checkmark.
-  - Live Liquid Glass Ring preview dynamically shows character name and anime series.
-  - Preserved custom upload, canvas high-DPI zoom/crop, remove avatar, and cancel flows.
-
-- **Task 5 — Discoverable Profile Sign Out & Navigation Integration:**
-  - Integrated a dedicated, discoverable `Sign Out` button into the profile identity quick-action bar (`ProfileSummary.tsx`).
-  - Passed `onLogout` from `ProfileFullView.tsx` into `<ProfileSummary />`, directly reusing the existing `handleLogout` session cleanup logic.
-  - Added `.profile-action-btn--signout` styling in `profile.css` with crimson/coral accents (`rgba(255, 112, 129, ...)`), hover illumination, and keyboard `:focus-visible` ring.
-  - Fully keyboard accessible (`Tab` navigatable, `Enter`/`Space` triggerable, with descriptive `aria-label` and `title`).
-  - Preserved avatar-only minimal capsule navbar in `Navigation.tsx` while retaining right-click logout as an optional shortcut.
-
-- **Task 6 — Premium My List / Personal Library UI Redesign:**
-  - Redesigned `LibraryView.tsx` and created dedicated modular `LibraryCard.tsx` and `library.css`.
-  - Replaced bulky and awkward external card wrapper and disruptive 320x340px portal popover with a self-contained, fixed 2:3 aspect-ratio anime poster card.
-  - Integrated smooth desktop hover overlay with prominent Play button, Details action, and accidental-deletion-protected Remove action ("Remove?" with confirmation state and 3.5s timeout).
-  - Added full mobile touch support with a dedicated mobile quick-action bar (`Play` and `Remove`) active on touch viewports (`@media (hover: none)`).
-  - Implemented cinematic header with title, subtitle, sync status, and responsive stats ribbon (Total Saved, Watching, Plan to Watch, Completed).
-  - Built modern category tabs (`All Saved`, `Watching`, `Plan to Watch`, `Completed`) with dynamic count badges and colored category indicators.
-  - Built integrated search with clear button (<kbd>X</kbd>) and <kbd>Esc</kbd> shortcut, alongside multi-mode sorting (Recently Added, Highest Rated, Title A-Z, Most Episodes).
-  - Designed tailored empty states for empty collection, unmatched search query, or empty category tab, with direct catalog exploration.
-
-- **Task 7 — Complete Movies Page Visual Overhaul (Priority UI Redesign):**
-  - Overhauled `MoviesView.tsx` with a compact, non-wasted page introduction (`.movies-intro`) featuring collection badges, title, and film count.
-  - Redesigned the featured movie hero into an immersive cinematic showcase (`.movies-hero`) with full-width landscape backdrop, multi-tier left and bottom gradient scrims, 2:3 elevated poster card, runtime/year/rating badges, synopsis, action buttons (Watch Movie, In My List, Details), and interactive carousel dots for the top 5 spotlight films.
-  - Fixed movie poster failure (including *A Silent Voice* black box bug):
-    1. Added `<meta name="referrer" content="no-referrer" />` to `index.html` to eliminate CDN hotlink 403 blocks from AniList/MAL.
-    2. Added `referrerPolicy="no-referrer"` to all image tags.
-    3. Created dedicated `MovieCard.tsx` with intelligent cascade fallback (`poster` -> `cover` -> `banner` -> stylized dark canvas placeholder with film reel icon and title).
-  - Built an advanced discovery toolbar with category tabs (`All Movies`, `Popular`, `Top Rated (8.0+)`, `Studio Ghibli`, `Recent Releases`), live query search with clear button (<kbd>X</kbd>), horizontal genre filter strip (`All`, `Drama`, `Action`, etc.), and multi-criteria sorting.
-  - Implemented curated discovery rails in default browse mode:
-    - *Top Rated Masterpieces (8.4+ Rating)*
-    - *Studio Ghibli Classics* (real Studio Ghibli films: *Spirited Away*, *Princess Mononoke*, *Howl's Moving Castle*, *Totoro*, etc.)
-    - *All Anime Movies Catalogue*
-  - Re-architected `movies.css` and `MoviesSkeleton.tsx` with fluid responsive breakpoints from 320px mobile to 1920px ultrawide, and touch-friendly mobile action bars (`@media (hover: none)`).
-
-- **Task 8 — Cinematic Featured Movies Hero Carousel Upgrade & Autoplay Bug Fix:**
-  - Upgraded the featured movie hero section on the Movies page (`#movies`) into an exceptionally smooth, cinematic, animated featured carousel (`src/components/movies/MoviesHeroCarousel.tsx`).
-  - Curated top 5 spotlight films dynamically using real movie records with deduplication by AniList ID, non-empty title verification, artwork existence validation (`banner || cover || poster`), and index bounding safety (`safeIndex`).
-  - Resolved Autoplay Rotation Issue in Actual Browser:
-    - Root cause: Bubbled DOM focus events from mouse clicks on internal buttons (`pills`, `arrows`, `watch/list/details`) caused `isFocused` state to lock permanently, preventing autoplay from resuming after mouse exit or manual interaction.
-    - Solution: Refined `onFocus` to only set `isFocused(true)` when the active target matches `:focus-visible` (true keyboard tab navigation), cleared focus state on pointer `onMouseDown`, added window-level `blur` and `mouseleave` listeners to prevent stuck hover states when pointer exits the viewport, and eliminated stale closure intervals with a stable callback ref and automatic timer reset on manual interaction.
-  - Multi-Layer Backdrop Crossfade & Ken Burns Zoom:
-    - Stacked absolute backdrop layers (`.movies-hero__backdrop-layer`) with 800ms cubic-bezier opacity crossfade (`will-change: opacity`).
-    - Infinite alternate Ken Burns slow zoom (`heroKenBurns`: 1.00 to 1.08 over 18s).
-    - Multi-tier contrast scrims (left 90° gradient, bottom 0° gradient, top 180° vignette).
-  - Synchronized Content Scene Transitions:
-    - Keyed content scene by `currentMovie.id` ensuring zero flicker or layout shift on slide changes.
-    - Left 2:3 aspect-ratio poster card glides smoothly (`posterSlideIn`: `opacity: 0, transform: translateX(-18px) scale(0.97)` to `1, 0, 1` over 550ms).
-    - Staggered details entrance (`contentFadeUp` over 480ms): badges (30ms delay), title (80ms delay), rating & genres (130ms delay), overview/synopsis (170ms delay), and action buttons (210ms delay).
-  - Action Buttons & Preserved Capabilities:
-    - "Watch Movie" primary button triggers `onPlayAnime` or `onSelectAnime`.
-    - "Add to List" / "In My List" button connects to `onToggleSave` with dynamic saved state reflection.
-    - "Details" button opens the anime detail modal.
-  - Controls, Autoplay, Gestures & Accessibility:
-    - Glassmorphic navigation control bar (`.movies-hero__controls`) positioned at bottom-right of the hero.
-    - Prev / Next circular glass arrow buttons with hover glow and keyboard support.
-    - Slide indicator pills with movie title labels and animated progress fill (`progressFill`: 0% to 100% over 7500ms).
-    - Slide counter displaying padded indices (e.g., `01 / 05`).
-    - Autoplay progression every 7.5 seconds, automatically paused on desktop hover, keyboard focus (`:focus-visible`), and when the browser tab is hidden (`document.visibilityState === 'hidden'`).
-    - Automatic reset of 7.5s timer after manual navigation (Next, Prev, Indicator clicks, Keyboard arrows, Touch swipe).
-    - Full `prefers-reduced-motion: reduce` support disabling Ken Burns zoom and slide animations.
+- **Task 4 — Overall Profile Dashboard Mobile Responsiveness:**
+  - Set `box-sizing: border-box; max-width: 100%;` on `.profile-space` across all media queries.
+  - Upgraded `.profile-dashboard__top-grid` and `.profile-dashboard__activity-grid` to use `minmax(0, 1fr)` on mobile.
+  - Upgraded `.profile-metrics-console__grid` to `repeat(5, minmax(0, 1fr))` on desktop, `repeat(3, minmax(0, 1fr))` at `<= 1100px`, `repeat(2, minmax(0, 1fr))` at `<= 768px`, and `minmax(0, 1fr)` at `<= 480px`.
+  - Ensured `.profile-identity-card__display-name` and `.profile-identity-card__bio` use `word-break: break-word;`.
+  - Upgraded `.profile-library-overview` to `repeat(4, minmax(0, 1fr))` on desktop, `repeat(2, minmax(0, 1fr))` at `<= 768px`, and `minmax(0, 1fr)` at `<= 360px`.
+  - Verified layout across 320px, 360px, 375px, 390px, 430px, 768px, 1024px, and 1440px viewports. Zero horizontal scroll.
 
 ## Files Created
 
-- `src/components/movies/MoviesHeroCarousel.tsx` (cinematic featured movie carousel with Ken Burns, synchronized scene transitions, autoplay, indicators, and touch gestures)
-- `src/components/movies/MovieCard.tsx` (modular, self-contained 2:3 movie card with hover overlay and mobile touch actions)
-- `src/components/profile/LibraryCard.tsx` (modular, self-contained library poster card)
-- `src/components/profile/library.css` (dedicated Liquid Glass styling for Personal Library)
-- `public/assets/avatars/*.{png,jpg}` (20 anime character portrait assets)
-- `backend/assets/avatars/*.{png,jpg}` (20 backend static assets)
-- `src/data/animeAvatars.ts` (strongly typed avatar catalog)
-- `src/data/animeAvatars.json` (raw manifest)
-- `scripts/fetch-avatars.mjs` (avatar ingestion utility)
+- None
 
 ## Files Modified
 
-- `index.html`
-- `src/components/movies/MoviesView.tsx`
-- `src/components/movies/MoviesSkeleton.tsx`
-- `src/components/movies/movies.css`
-- `.github/workflows/deploy-infinityfree.yml`
-- `backend/src/routes/profile.ts`
-- `backend/src/routes/streak.ts`
-- `backend/src/scripts/test-phase2-logo-api.ts`
-- `backend/src/server.ts`
-- `backend/src/services/streak.ts`
-- `src/components/navigation/Navigation.tsx`
-- `src/components/navigation/navigation.css`
-- `src/components/profile/AvatarModal.tsx`
-- `src/components/profile/avatar-modal.css`
-- `src/components/profile/LibraryView.tsx`
 - `src/components/profile/ProfileFullView.tsx`
-- `src/components/profile/ProfileSummary.tsx`
 - `src/components/profile/profile.css`
 - `src/components/streak/DailyActivityCalendar.tsx`
+- `src/components/streak/streak.css`
 - `src/pages/FoundationPreview.tsx`
-- `src/services/anilist.ts`
-- `src/services/streak.ts`
-- `src/types/domain.ts`
-- `src/components/streak/DailyActivityCalendar.tsx`
-- `src/pages/FoundationPreview.tsx`
-- `src/services/anilist.ts`
-- `src/services/streak.ts`
-- `src/types/domain.ts`
+
+## Files Deleted
+
+- None
+
+## Architecture Decisions
+
+- **Strict `minmax(0, 1fr)` vs `1fr` in CSS Grid:** CSS Grid tracks defined as `1fr` expand beyond the viewport if children contain rigid content due to the implicit `minmax(auto, 1fr)` behavior. Enforcing `minmax(0, 1fr)` guarantees that tracks shrink to container width.
+- **Natural Word Wrapping Over Ellipsis Truncation for Milestones:** Instead of truncating milestone descriptions and badges with ellipsis, natural word wrapping (`word-break: break-word; overflow-wrap: anywhere;`) maintains readability across compact mobile viewports without forcing card blowout.
+- **Responsive Text Variant Switching:** By pairing `<span className="streak-badge-full">20m left</span>` with `<span className="streak-badge-short">20m</span>`, the UI renders rich labels on desktop/tablet while scaling down to compact notations on mobile without breaking grid geometry.
+- **Profile Decoupling From Watch History:** Removed profile-specific Recently Watched components while preserving global watch history and continue watching across the application.
 
 ## Tests / Checks
 
-- ESLint (`npm run lint`): PASS (0 errors, 0 warnings, exit code 0)
-- Frontend TypeScript (`npx tsc -b`): PASS (exit code 0)
-- Backend TypeScript (`npx tsc -p backend/tsconfig.json`): PASS (exit code 0)
-- Production Build (`npm run build`): PASS (exit code 0)
-- InfinityFree Package (`npm run build:infinityfree`): PASS (exit code 0, 61 files generated)
+- TypeScript (`npx tsc -b`): PASS (0 errors)
+- Lint (`npm run lint`): PASS (0 errors)
+- Build (`npm run build`): PASS (Vite + Prisma + backend compilation succeeded in 15.45s)
+- Browser/UI verification: PASS (Zero horizontal overflow; fluid scaling down to 320px)
 
 ## Verification Results
 
-- `npm run lint` ran against all 11 modified files and exited cleanly with 0 errors and 0 warnings.
-- Frontend and backend TypeScript compilation succeeded with zero type errors.
-- Production build created client bundles (`dist/index.html`, CSS, JS chunks) and generated Prisma client without errors.
-- `build:infinityfree` successfully produced the full static package in `deployment/infinityfree` with valid `.htaccess` and `index.html`.
+- Verified calendar grid on 320px screen: available width is 276px, 7 columns at ~39.4px each with 2px gap fit completely without horizontal overflow.
+- Verified milestone cards on 320px screen: padding scales to 0.65rem, cards fit 100% of container, rewards wrap naturally, and titles/descriptions break words without pushing past container bounds.
+- Verified Recently Watched section is completely removed from Profile without residual tabs, empty states, or dead CSS rules.
+- Verified Achievements and Library Overview remain cleanly tabbed and accessible.
 
 ## Known Issues
 
-None.
+- None
+
+## Incomplete Work
+
+- None
+
+## Follow-Up
+
+- None
 
 ## Git State
 
-Branch: main
-Working tree: MODIFIED (Awaiting user review before commit/push)
+Branch:
+main
+
+Working tree:
+MODIFIED (5 files modified, uncommitted per user instructions)
+
+Latest relevant commit:
+6bbb17e feat: redesign movies and personal library
 
 ## Recovery Instructions
 
 If work resumes in a new session:
+
 1. Read this file.
 2. Read docs/DEVELOPMENT_STATUS.md.
-3. Inspect `git status` and `git diff`.
-4. Review changes with the user and proceed to commit/push upon approval.
+3. Inspect git status.
+4. Inspect the current implementation.
+5. Continue from the assigned task.
+6. Do not redo completed work unless verification proves it is incorrect.
 
 ## Exact Next Task
 
-Wait for user review of the ESLint fixes and Phase 5.1 avatar implementation before creating the git commit and pushing to main.
+Phase assigned complete. Await user instructions for the next task or commit request.

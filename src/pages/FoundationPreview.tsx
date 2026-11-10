@@ -1428,9 +1428,6 @@ function Home() {
             onOpenAuthModal={() =>
               setAuthModalOpen(true)
             }
-            onContinueWatching={
-              openContinueWatchingPlayer
-            }
             onProfileUpdated={(updated) => {
               if (updated) {
                 setAuthUser((prev) => (prev ? { ...prev, ...updated } : null))
