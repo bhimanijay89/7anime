@@ -1,0 +1,142 @@
+[
+  {
+    "id": "goku",
+    "name": "Goku",
+    "anime": "Dragon Ball Z",
+    "assetPath": "/assets/avatars/goku.png",
+    "sizeBytes": 123256
+  },
+  {
+    "id": "vegeta",
+    "name": "Vegeta",
+    "anime": "Dragon Ball Z",
+    "assetPath": "/assets/avatars/vegeta.png",
+    "sizeBytes": 98214
+  },
+  {
+    "id": "eren-yeager",
+    "name": "Eren Yeager",
+    "anime": "Attack on Titan",
+    "assetPath": "/assets/avatars/eren-yeager.jpg",
+    "sizeBytes": 25995
+  },
+  {
+    "id": "naruto-uzumaki",
+    "name": "Naruto Uzumaki",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/naruto-uzumaki.png",
+    "sizeBytes": 141833
+  },
+  {
+    "id": "sasuke-uchiha",
+    "name": "Sasuke Uchiha",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/sasuke-uchiha.png",
+    "sizeBytes": 89043
+  },
+  {
+    "id": "itachi-uchiha",
+    "name": "Itachi Uchiha",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/itachi-uchiha.png",
+    "sizeBytes": 118700
+  },
+  {
+    "id": "minato-namikaze",
+    "name": "Minato Namikaze",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/minato-namikaze.png",
+    "sizeBytes": 149077
+  },
+  {
+    "id": "hinata-hyuga",
+    "name": "Hinata Hyuga",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/hinata-hyuga.png",
+    "sizeBytes": 124287
+  },
+  {
+    "id": "sakura-haruno",
+    "name": "Sakura Haruno",
+    "anime": "Naruto",
+    "assetPath": "/assets/avatars/sakura-haruno.png",
+    "sizeBytes": 129432
+  },
+  {
+    "id": "monkey-d-luffy",
+    "name": "Monkey D. Luffy",
+    "anime": "One Piece",
+    "assetPath": "/assets/avatars/monkey-d-luffy.png",
+    "sizeBytes": 183568
+  },
+  {
+    "id": "roronoa-zoro",
+    "name": "Roronoa Zoro",
+    "anime": "One Piece",
+    "assetPath": "/assets/avatars/roronoa-zoro.png",
+    "sizeBytes": 136379
+  },
+  {
+    "id": "ichigo-kurosaki",
+    "name": "Ichigo Kurosaki",
+    "anime": "Bleach",
+    "assetPath": "/assets/avatars/ichigo-kurosaki.png",
+    "sizeBytes": 127924
+  },
+  {
+    "id": "orihime-inoue",
+    "name": "Orihime Inoue",
+    "anime": "Bleach",
+    "assetPath": "/assets/avatars/orihime-inoue.jpg",
+    "sizeBytes": 26959
+  },
+  {
+    "id": "yasutora-sado",
+    "name": "Yasutora Sado (Chad)",
+    "anime": "Bleach",
+    "assetPath": "/assets/avatars/yasutora-sado.jpg",
+    "sizeBytes": 29931
+  },
+  {
+    "id": "sung-jinwoo",
+    "name": "Sung Jinwoo",
+    "anime": "Solo Leveling",
+    "assetPath": "/assets/avatars/sung-jinwoo.png",
+    "sizeBytes": 111154
+  },
+  {
+    "id": "mikey",
+    "name": "Mikey (Manjiro Sano)",
+    "anime": "Tokyo Revengers",
+    "assetPath": "/assets/avatars/mikey.png",
+    "sizeBytes": 118335
+  },
+  {
+    "id": "takemichi-hanagaki",
+    "name": "Takemichi Hanagaki",
+    "anime": "Tokyo Revengers",
+    "assetPath": "/assets/avatars/takemichi-hanagaki.png",
+    "sizeBytes": 165113
+  },
+  {
+    "id": "tanjiro-kamado",
+    "name": "Tanjiro Kamado",
+    "anime": "Demon Slayer",
+    "assetPath": "/assets/avatars/tanjiro-kamado.png",
+    "sizeBytes": 128827
+  },
+  {
+    "id": "satoru-gojo",
+    "name": "Satoru Gojo",
+    "anime": "Jujutsu Kaisen",
+    "assetPath": "/assets/avatars/satoru-gojo.png",
+    "sizeBytes": 150198
+  },
+  {
+    "id": "asta",
+    "name": "Asta",
+    "anime": "Black Clover",
+    "assetPath": "/assets/avatars/asta.png",
+    "sizeBytes": 146277
+  }
+]

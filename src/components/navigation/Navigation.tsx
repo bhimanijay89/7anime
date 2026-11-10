@@ -262,21 +262,25 @@ export function DesktopNavbar({
               onClick={() =>
                 onNavigate ? onNavigate('profile') : onMenu?.()
               }
+              onContextMenu={e => {
+                if (onLogout) {
+                  e.preventDefault()
+                  onLogout()
+                }
+              }}
+              title={onLogout ? 'View user profile (Right-click to sign out)' : 'View user profile'}
               aria-label="View user profile"
             >
               <span className="profile-chip__avatar" aria-hidden="true">
                 {authUser.avatar ? (
                   <img
                     src={authUser.avatar}
-                    alt={authUser.username}
+                    alt={authUser.displayName || authUser.username}
                     className="profile-chip__avatar-img"
                   />
                 ) : (
                   authUser.username.slice(0, 1).toUpperCase()
                 )}
-              </span>
-              <span className="profile-chip__name">
-                {authUser.displayName || authUser.username}
               </span>
             </button>
           </div>
@@ -337,6 +341,12 @@ export function MobileNavigation({
             href={targetView === 'search' ? '#search' : `#${targetView}`}
             key={name}
             aria-current={isActive ? 'page' : undefined}
+            onMouseEnter={() => {
+              if (targetView !== 'search') onPrefetch?.(targetView as ViewMode)
+            }}
+            onTouchStart={() => {
+              if (targetView !== 'search') onPrefetch?.(targetView as ViewMode)
+            }}
             onClick={e => {
               e.preventDefault()
               if (targetView === 'search') {

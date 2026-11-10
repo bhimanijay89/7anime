@@ -9,6 +9,7 @@ import {
   Check,
   Shield,
   Calendar,
+  LogOut,
 } from 'lucide-react'
 import type { User } from '../../types/domain'
 import { Progress } from '../ui/Progress'
@@ -20,6 +21,7 @@ export interface ProfileSummaryProps {
   onEditProfile?: () => void
   onShareProfile?: () => void
   isAuthenticated?: boolean
+  onLogout?: () => void
 }
 
 export function ProfileSummary({
@@ -28,6 +30,7 @@ export function ProfileSummary({
   onEditProfile,
   onShareProfile,
   isAuthenticated = true,
+  onLogout,
 }: ProfileSummaryProps) {
   const [copied, setCopied] = useState<boolean>(false)
 
@@ -183,6 +186,19 @@ export function ProfileSummary({
             {copied ? <Check size={13} className="text-emerald-400" /> : <Share2 size={13} />}
             <span>{copied ? 'Copied Link!' : 'Share'}</span>
           </button>
+
+          {onLogout && (
+            <button
+              type="button"
+              className="profile-action-btn profile-action-btn--signout"
+              onClick={onLogout}
+              aria-label="Sign out of your account"
+              title="Sign out of 7anime"
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       )}
     </section>

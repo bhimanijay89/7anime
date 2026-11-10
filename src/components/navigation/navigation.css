@@ -217,25 +217,20 @@
    ============================================================ */
 
 .profile-chip {
+  width: 2.5rem;
+  height: 2.5rem;
   border: 1px solid var(--color-glass-border);
-
   background: rgba(255, 255, 255, 0.05);
-
   color: var(--color-text-primary);
-
-  border-radius: 999px;
-
-  padding: 0.22rem 0.65rem 0.22rem 0.3rem;
-
+  border-radius: 50%;
+  padding: 0;
   display: flex;
   align-items: center;
-
-  gap: 0.38rem;
-
+  justify-content: center;
   cursor: pointer;
-
-  white-space: nowrap;
-
+  position: relative;
+  overflow: hidden;
+  outline: none;
   transition:
     background var(--duration-fast) var(--ease-out),
     border-color var(--duration-fast) var(--ease-out),
@@ -243,23 +238,24 @@
     box-shadow var(--duration-fast) var(--ease-out);
 }
 
+.profile-chip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .profile-chip__avatar {
-  width: 1.55rem;
-  height: 1.55rem;
-  font-size: 0.75rem;
-
+  width: 100%;
+  height: 100%;
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-bold);
   flex-shrink: 0;
-
   border-radius: 50%;
   overflow: hidden;
-
   background:
     linear-gradient(135deg,
       var(--color-accent),
       var(--color-accent-secondary));
-
   color: #071019;
-
   display: grid;
   place-items: center;
 }
@@ -272,32 +268,19 @@
   display: block;
 }
 
-.profile-chip__name {
-  font-size: 0.8rem;
-
-  font-weight: var(--font-weight-semibold);
-
-  letter-spacing: -0.01em;
-}
-
 .profile-chip:hover {
   background: var(--color-glass-interactive);
-
   border-color: var(--color-glass-border-hover);
-
   transform: translateY(-1px);
-
   box-shadow:
-    0 0 14px rgba(85, 216, 255, 0.1);
+    0 0 16px rgba(85, 216, 255, 0.25);
 }
 
 .profile-chip--active {
-  border-color: rgba(85, 216, 255, 0.35);
-
-  background: rgba(85, 216, 255, 0.12);
-
+  border-color: rgba(85, 216, 255, 0.6);
+  background: rgba(85, 216, 255, 0.15);
   box-shadow:
-    0 0 16px rgba(85, 216, 255, 0.15);
+    0 0 18px rgba(85, 216, 255, 0.35);
 }
 
 /* ============================================================

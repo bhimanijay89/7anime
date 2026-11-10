@@ -16,9 +16,8 @@ import {
   CheckCircle2,
   FolderHeart,
   Activity,
-  Sparkles,
 } from 'lucide-react'
-import type { User } from '../../types/domain'
+import type { User, Anime } from '../../types/domain'
 import type { AuthUser } from '../../types/auth'
 import { ProfileSummary, AchievementCard } from './ProfileSummary'
 import { AvatarModal } from './AvatarModal'
@@ -81,13 +80,13 @@ export interface ProfileFullViewProps {
   profileStats?: UserProfileStats
   onLogout?: () => void
   onOpenAuthModal?: () => void
-  onContinueWatching?: (anime: any) => void
-  onProfileUpdated?: (updatedUser: any) => void
+  onContinueWatching?: (anime: Anime) => void
+  onProfileUpdated?: (updatedUser: Partial<User>) => void
   onNavigateLibrary?: () => void
 }
 
 const BACKEND_URL =
-  (import.meta as any).env?.VITE_BACKEND_URL ||
+  (import.meta as unknown as { env?: { VITE_BACKEND_URL?: string } }).env?.VITE_BACKEND_URL ||
   (typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3001'
     : '')
@@ -347,6 +346,7 @@ export function ProfileFullView({
             isAuthenticated={!!authUser}
             onEditAvatar={() => setAvatarModalOpen(true)}
             onEditProfile={() => setEditProfileModalOpen(true)}
+            onLogout={onLogout}
           />
           <WatchStreakHero
             isAuthenticated={!!authUser}
@@ -513,6 +513,7 @@ export function ProfileFullView({
                               anilistId: item.anilistId,
                               title: item.title,
                               poster: item.poster,
+                              status: 'Airing',
                               lastWatchedEpisodeNumber: item.episodeNumber,
                             })
                           }

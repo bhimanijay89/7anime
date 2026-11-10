@@ -1114,6 +1114,25 @@
   transform: translateY(-1px);
 }
 
+.profile-action-btn--signout {
+  background: rgba(255, 112, 129, 0.08);
+  border-color: rgba(255, 112, 129, 0.28);
+  color: #ff9da7;
+}
+
+.profile-action-btn--signout:hover {
+  background: rgba(255, 112, 129, 0.2);
+  border-color: #ff7081;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(255, 112, 129, 0.25);
+}
+
+.profile-action-btn--signout:focus-visible {
+  outline: 2px solid #ff7081;
+  outline-offset: 2px;
+}
+
 /* ─── Profile Header: Structured, Balanced & Non-Overlapping ─── */
 .profile-header {
   border-radius: var(--radius-xl);

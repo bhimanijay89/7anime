@@ -11,6 +11,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { ANIME_CHARACTER_AVATARS, AnimeCharacterAvatar } from '../../data/animeAvatars'
 import './avatar-modal.css'
 
 export interface AvatarModalProps {
@@ -22,40 +23,6 @@ export interface AvatarModalProps {
   onRemoveAvatar: () => Promise<boolean>
 }
 
-// Curated high-aesthetic anime profile presets
-const ANIME_PRESETS = [
-  {
-    id: 'luffy',
-    name: 'Pirate King',
-    url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 'shinobi',
-    name: 'Ninja Spirit',
-    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 'cyber',
-    name: 'Cyber Neo',
-    url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 'swordsman',
-    name: 'Blade Master',
-    url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 'mystic',
-    name: 'Jujutsu Aura',
-    url: 'https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=320&q=80',
-  },
-  {
-    id: 'solaris',
-    name: 'Solar Flare',
-    url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=320&q=80',
-  },
-]
-
 export function AvatarModal({
   isOpen,
   currentAvatar,
@@ -65,6 +32,7 @@ export function AvatarModal({
   onRemoveAvatar,
 }: AvatarModalProps) {
   const [activeTab, setActiveTab] = useState<'upload' | 'presets'>('upload')
+  const [selectedPreset, setSelectedPreset] = useState<AnimeCharacterAvatar | null>(null)
   const [previewSrc, setPreviewSrc] = useState<string | null>(currentAvatar || null)
   const [zoom, setZoom] = useState<number>(1)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +47,11 @@ export function AvatarModal({
   useEffect(() => {
     if (isOpen) {
       setPreviewSrc(currentAvatar || null)
+      const matched = ANIME_CHARACTER_AVATARS.find((p) => p.assetPath === currentAvatar)
+      setSelectedPreset(matched || null)
+      if (matched) {
+        setActiveTab('presets')
+      }
       setZoom(1)
       setError(null)
       setIsSaving(false)
@@ -119,6 +92,7 @@ export function AvatarModal({
       const reader = new FileReader()
       reader.onload = (event) => {
         const result = event.target?.result as string
+        setSelectedPreset(null)
         setPreviewSrc(result)
         setZoom(1)
       }
@@ -153,6 +127,7 @@ export function AvatarModal({
       const reader = new FileReader()
       reader.onload = (event) => {
         const result = event.target?.result as string
+        setSelectedPreset(null)
         setPreviewSrc(result)
         setZoom(1)
       }
@@ -161,9 +136,10 @@ export function AvatarModal({
     [],
   )
 
-  const handleSelectPreset = (url: string) => {
+  const handleSelectPreset = (preset: AnimeCharacterAvatar) => {
     setError(null)
-    setPreviewSrc(url)
+    setSelectedPreset(preset)
+    setPreviewSrc(preset.assetPath)
     setZoom(1)
   }
 
@@ -230,7 +206,11 @@ export function AvatarModal({
     setError(null)
 
     try {
-      const processed = await exportCroppedAvatar()
+      // If user selected an un-zoomed preset asset, directly save the asset path
+      let processed: string | null = previewSrc
+      if (zoom !== 1 || previewSrc.startsWith('data:')) {
+        processed = await exportCroppedAvatar()
+      }
       if (!processed) {
         throw new Error('Image processing failed')
       }
@@ -332,8 +312,8 @@ export function AvatarModal({
           </div>
 
           <div className="avatar-modal__preview-info">
-            <strong>{username}</strong>
-            <span>Preview in Liquid Glass Ring</span>
+            <strong>{selectedPreset ? selectedPreset.name : username}</strong>
+            <span>{selectedPreset ? selectedPreset.anime : 'Preview in Liquid Glass Ring'}</span>
           </div>
         </div>
 
@@ -405,24 +385,29 @@ export function AvatarModal({
 
         {/* Tab 2: Anime Presets */}
         {activeTab === 'presets' && (
-          <div className="avatar-presets__grid">
-            {ANIME_PRESETS.map((preset) => {
-              const isSelected = previewSrc === preset.url
+          <div className="avatar-presets__grid" role="listbox" aria-label="Anime Character Avatars">
+            {ANIME_CHARACTER_AVATARS.map((preset) => {
+              const isSelected = previewSrc === preset.assetPath
               return (
                 <button
                   key={preset.id}
                   type="button"
+                  role="option"
+                  aria-selected={isSelected}
                   className={`avatar-preset-btn ${isSelected ? 'avatar-preset-btn--selected' : ''}`}
-                  onClick={() => handleSelectPreset(preset.url)}
-                  title={preset.name}
+                  onClick={() => handleSelectPreset(preset)}
+                  title={`${preset.name} (${preset.anime})`}
                 >
-                  <img src={preset.url} alt={preset.name} loading="lazy" />
-                  {isSelected && (
-                    <span className="avatar-preset-check">
-                      <Check size={12} />
-                    </span>
-                  )}
+                  <div className="avatar-preset-img-wrapper">
+                    <img src={preset.assetPath} alt={preset.name} loading="lazy" />
+                    {isSelected && (
+                      <span className="avatar-preset-check">
+                        <Check size={12} />
+                      </span>
+                    )}
+                  </div>
                   <span className="avatar-preset-name">{preset.name}</span>
+                  <span className="avatar-preset-anime">{preset.anime}</span>
                 </button>
               )
             })}
