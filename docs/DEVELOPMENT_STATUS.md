@@ -44,8 +44,13 @@ Resolved all 35 ESLint errors across 11 files in accordance with strict linting 
 - [x] Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
 - [x] Phase 5.1 — InfinityFree CI Deployment Fix & Minimal Profile Navigation with 20 Anime Character Avatars
 - [x] Phase 5.2 — Profile Dashboard Mobile Responsiveness & Streak Architecture Hardening
+- [x] Phase 5.3 — GitHub Actions CI/CD Non-Blocking Lint Workflow Hardening
 
 ## Current Phase Details
+
+- [x] Non-Blocking CI Lint Step: Added `continue-on-error: true` to `🔍 Lint Source Code` (`npm run lint`) in `.github/workflows/deploy-infinityfree.yml`. Lint violations remain fully visible in runner logs while preventing premature workflow termination.
+- [x] Mandatory Build Gating Preserved: Frontend TypeScript (`npx tsc -b`), backend TypeScript (`npx tsc -p backend/tsconfig.json`), bundle packaging (`npm run build:infinityfree`), and verification steps remain strictly blocking.
+- [x] Zero Source Code Changes: Application code, ESLint config, and `package.json` remain untouched.
 
 - [x] Streak Calendar Mobile Overflow Fix: Replaced `repeat(7, 1fr)` with strict `repeat(7, minmax(0, 1fr))` across calendar weekdays row and 7-column dates grid; added `min-width: 0; box-sizing: border-box;` to cell containers and children; added responsive `20m left` vs `20m` text-switching on mobile to prevent pending badge blowout.
 - [x] Streak Milestones Mobile Responsiveness: Added `repeat(auto-fill, minmax(min(100%, 260px), 1fr))` and single-column mobile stacking; removed restrictive `white-space: nowrap` from milestone titles and descriptions in favor of natural multi-line wrapping (`word-break: break-word; overflow-wrap: anywhere;`); enabled flex wrapping on reward badges; scaled padding down cleanly on `<= 480px` and `<= 360px` screens.

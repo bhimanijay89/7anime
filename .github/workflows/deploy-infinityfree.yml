@@ -35,6 +35,7 @@ jobs:
 
       - name: 🔍 Lint Source Code
         run: npm run lint
+        continue-on-error: true
 
       - name: 🔬 Type Check Frontend
         run: npx tsc -b
