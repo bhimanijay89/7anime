@@ -1,23 +1,69 @@
 /* =========================================================
-   7ANIME — VIDEO RESOLVER SERVICE
+   7ANIME — VIDEO RESOLVER SERVICE (FOUR-SERVER ARCHITECTURE)
    =========================================================
 
-   SERVER 1 — 0vidads + TMDB ID (Default Primary Server)
-     Movie: https://0vidads.top/embed/movie/{TMDB_ID}
-     TV:    https://0vidads.top/embed/tv/{TMDB_ID}/{SEASON}/{EPISODE}
+   SERVER 1 — AnimeTVPlus + MAL ID
+     URL: https://embed.animetvplus.site/home/embed/mal/{malId}/{episodeNumber}
 
-   SERVER 2 — megaplay.buzz + AniList ID
-     https://megaplay.buzz/stream/ani/{ANILIST_ID}/{EPISODE}/{sub|dub}
+   SERVER 2 — AnimeTVPlus + AniList ID
+     URL: https://embed.animetvplus.site/home/embed/anilist/{anilistId}/{episodeNumber}
 
-   SERVER 3 — megaplay.buzz + MAL ID
-     https://megaplay.buzz/stream/mal/{MAL_ID}/{EPISODE}/{sub|dub}
+   SERVER 3 — MegaPlay + AniList ID
+     URL: https://megaplay.buzz/stream/ani/{anilistId}/{episodeNumber}/{sub|dub}
+
+   SERVER 4 — MegaPlay + MAL ID
+     URL: https://megaplay.buzz/stream/mal/{malId}/{episodeNumber}/{sub|dub}
 
    ========================================================= */
 
 import { isDevToolsActive } from '../utils/security'
 
+export const ANIMETVPLUS_EMBED_BASE = 'https://embed.animetvplus.site/home/embed'
+export const MEGAPLAY_STREAM_BASE = 'https://megaplay.buzz/stream'
+
+export type ServerId = 'server1' | 'server2' | 'server3' | 'server4'
+
+export interface ServerConfig {
+    id: ServerId
+    name: string
+    provider: 'AnimeTVPlus' | 'MegaPlay'
+    identifierType: 'MAL' | 'AniList'
+    description: string
+}
+
+export const SERVER_CONFIGS: Record<ServerId, ServerConfig> = {
+    server1: {
+        id: 'server1',
+        name: 'Server 1',
+        provider: 'AnimeTVPlus',
+        identifierType: 'MAL',
+        description: 'AnimeTVPlus (MAL ID)',
+    },
+    server2: {
+        id: 'server2',
+        name: 'Server 2',
+        provider: 'AnimeTVPlus',
+        identifierType: 'AniList',
+        description: 'AnimeTVPlus (AniList ID)',
+    },
+    server3: {
+        id: 'server3',
+        name: 'Server 3',
+        provider: 'MegaPlay',
+        identifierType: 'AniList',
+        description: 'MegaPlay (AniList ID)',
+    },
+    server4: {
+        id: 'server4',
+        name: 'Server 4',
+        provider: 'MegaPlay',
+        identifierType: 'MAL',
+        description: 'MegaPlay (MAL ID)',
+    },
+}
+
 export interface ResolveVideoEmbedOptions {
-    server?: 'server1' | 'server2' | 'server3' | string
+    server?: ServerId | string
     tmdbId?: number | string | null
     mediaType?: 'movie' | 'tv' | string | null
     seasonNumber?: number | string | null
@@ -29,7 +75,6 @@ export interface ResolveVideoEmbedOptions {
 
 /**
  * Case-insensitively determines if a media type or anime format string represents a movie.
- * Handles 'MOVIE', 'Movie', 'movie'.
  */
 export function isMovieMediaType(type?: string | null): boolean {
     if (!type) return false
@@ -38,31 +83,50 @@ export function isMovieMediaType(type?: string | null): boolean {
 
 /**
  * Normalizes media type string to 'movie' or 'tv'.
- * Correctly recognizes 'MOVIE', 'Movie', 'movie'.
- * Preserves 'tv' for TV series.
  */
 export function normalizeMediaType(type?: string | null): 'movie' | 'tv' {
     return isMovieMediaType(type) ? 'movie' : 'tv'
 }
 
 /**
- * Resolve direct video embed URL for 7anime player.
+ * Returns provider type for the given server ID.
+ */
+export function getServerProvider(server?: string): 'AnimeTVPlus' | 'MegaPlay' | null {
+    if (server === 'server1' || server === 'server2') return 'AnimeTVPlus'
+    if (server === 'server3' || server === 'server4') return 'MegaPlay'
+    return null
+}
+
+/**
+ * Validates whether an ID is a valid positive integer.
+ */
+export function isValidPositiveIntegerId(value: unknown): value is number {
+    if (typeof value === 'number') {
+        return Number.isInteger(value) && value > 0 && !isNaN(value) && isFinite(value)
+    }
+    if (typeof value === 'string' && value.trim()) {
+        const num = Number(value.trim())
+        return Number.isInteger(num) && num > 0 && !isNaN(num) && isFinite(num)
+    }
+    return false
+}
+
+/**
+ * Resolve direct video embed URL for 7Anime player.
  *
- * Server configuration:
- * - Server 1: 0vidads (Primary / Default) -> TMDB ID only.
- * - Server 2: MegaPlay -> AniList ID.
- * - Server 3: MegaPlay -> MAL ID.
+ * All four server URLs are generated directly and synchronously:
+ * - Server 1: AnimeTVPlus (MAL ID) -> https://embed.animetvplus.site/home/embed/mal/{malId}/{episodeNumber}
+ * - Server 2: AnimeTVPlus (AniList ID) -> https://embed.animetvplus.site/home/embed/anilist/{anilistId}/{episodeNumber}
+ * - Server 3: MegaPlay (AniList ID) -> https://megaplay.buzz/stream/ani/{anilistId}/{episodeNumber}/{sub|dub}
+ * - Server 4: MegaPlay (MAL ID) -> https://megaplay.buzz/stream/mal/{malId}/{episodeNumber}/{sub|dub}
  *
- * Validation & Safety:
- * - No sandbox attributes or breaking parameters.
- * - Does not silently substitute identifiers across providers.
- * - Preserves existing MegaPlay URL structures and parameters without modification.
+ * Safety & Validation:
+ * - Never returns URLs with undefined, null, or NaN in place of IDs.
+ * - Never assumes MAL ID equals AniList ID.
+ * - Returns empty string ("") if the required ID for the requested server is missing or invalid.
  */
 export function resolveVideoEmbedUrl({
     server = 'server1',
-    tmdbId,
-    mediaType,
-    seasonNumber = 1,
     malId,
     anilistId,
     episodeNumber,
@@ -72,97 +136,81 @@ export function resolveVideoEmbedUrl({
         return ''
     }
 
-    const safeEpisode = Math.max(
-        1,
-        Math.floor(Number(episodeNumber) || 1),
-    )
+    const safeEpisode = Math.max(1, Math.floor(Number(episodeNumber) || 1))
+    const safeLang = language === 'dub' ? 'dub' : 'sub'
 
-    const safeLang =
-        language === 'dub'
-            ? 'dub'
-            : 'sub'
+    const hasValidAniId = isValidPositiveIntegerId(anilistId)
+    const parsedAniId = hasValidAniId ? Math.floor(Number(anilistId)) : null
 
-    const safeAniId =
-        encodeURIComponent(String(anilistId))
-
-    const parsedMalId =
-        typeof malId === 'number'
-            ? malId
-            : Number(malId)
-
-    const hasValidMalId =
-        Number.isInteger(parsedMalId) &&
-        parsedMalId > 0
-
-    const parsedTmdbId =
-        typeof tmdbId === 'number'
-            ? tmdbId
-            : Number(tmdbId)
-
-    const hasValidTmdbId =
-        Number.isInteger(parsedTmdbId) &&
-        parsedTmdbId > 0
-
-    const safeSeason = Math.max(
-        1,
-        Math.floor(Number(seasonNumber) || 1),
-    )
-
-    const normalizedMediaType = normalizeMediaType(mediaType)
+    const hasValidMalId = isValidPositiveIntegerId(malId)
+    const parsedMalId = hasValidMalId ? Math.floor(Number(malId)) : null
 
     /*
      * ---------------------------------------------------------
-     * SERVER 1 (Default)
-     * 0vidads + TMDB ID
-     * - Movies: https://0vidads.top/embed/movie/{TMDB_ID}
-     * - TV:     https://0vidads.top/embed/tv/{TMDB_ID}/{SEASON}/{EPISODE}
+     * SERVER 1: AnimeTVPlus + MAL ID
+     * Fixed URL: https://embed.animetvplus.site/home/embed/mal/{malId}/{episodeNumber}
      * ---------------------------------------------------------
      */
     if (server === 'server1') {
-        if (!hasValidTmdbId) {
+        if (!parsedMalId) {
             return ''
         }
-
-        if (normalizedMediaType === 'movie') {
-            return `https://0vidads.top/embed/movie/${parsedTmdbId}`
-        }
-
-        return `https://0vidads.top/embed/tv/${parsedTmdbId}/${safeSeason}/${safeEpisode}`
+        return `${ANIMETVPLUS_EMBED_BASE}/mal/${parsedMalId}/${safeEpisode}`
     }
 
     /*
      * ---------------------------------------------------------
-     * SERVER 2
-     * megaplay.buzz + AniList ID
+     * SERVER 2: AnimeTVPlus + AniList ID
+     * Fixed URL: https://embed.animetvplus.site/home/embed/anilist/{anilistId}/{episodeNumber}
      * ---------------------------------------------------------
      */
     if (server === 'server2') {
-        if (!safeAniId || safeAniId === 'undefined' || safeAniId === 'null') {
+        if (!parsedAniId) {
             return ''
         }
-        return `https://megaplay.buzz/stream/ani/${safeAniId}/${safeEpisode}/${safeLang}`
+        return `${ANIMETVPLUS_EMBED_BASE}/anilist/${parsedAniId}/${safeEpisode}`
     }
 
     /*
      * ---------------------------------------------------------
-     * SERVER 3 (also supports legacy server4 alias)
-     * megaplay.buzz + MAL ID
+     * SERVER 3: MegaPlay + AniList ID
+     * URL: https://megaplay.buzz/stream/ani/{anilistId}/{episodeNumber}/{sub|dub}
      * ---------------------------------------------------------
      */
-    if (server === 'server3' || server === 'server4') {
-        if (!hasValidMalId) {
+    if (server === 'server3') {
+        if (!parsedAniId) {
             return ''
         }
+        return `${MEGAPLAY_STREAM_BASE}/ani/${parsedAniId}/${safeEpisode}/${safeLang}`
+    }
 
-        return `https://megaplay.buzz/stream/mal/${parsedMalId}/${safeEpisode}/${safeLang}`
+    /*
+     * ---------------------------------------------------------
+     * SERVER 4: MegaPlay + MAL ID
+     * URL: https://megaplay.buzz/stream/mal/{malId}/{episodeNumber}/{sub|dub}
+     * ---------------------------------------------------------
+     */
+    if (server === 'server4') {
+        if (!parsedMalId) {
+            return ''
+        }
+        return `${MEGAPLAY_STREAM_BASE}/mal/${parsedMalId}/${safeEpisode}/${safeLang}`
     }
 
     /*
      * ---------------------------------------------------------
      * UNKNOWN SERVER
      * ---------------------------------------------------------
-     * Return an empty URL rather than silently selecting
-     * another provider or ID type.
      */
     return ''
+}
+
+/**
+ * Asynchronous video embed URL resolver (kept for backward compatibility and uniform API).
+ */
+export async function resolveVideoEmbedUrlAsync(
+    options: ResolveVideoEmbedOptions,
+    _signal?: AbortSignal,
+): Promise<string> {
+    return resolveVideoEmbedUrl(options)
 }

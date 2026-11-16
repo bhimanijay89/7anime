@@ -9,6 +9,7 @@ import {
   Radio,
   Sparkles,
   Star,
+  Users,
 } from 'lucide-react'
 
 import {
@@ -27,7 +28,11 @@ import type {
 import {
   isMovieMediaType,
   resolveVideoEmbedUrl,
+  type ServerId,
 } from '../../services/videoResolver'
+import { resolveMalId } from '../../services/malResolver'
+import { AnimeTVPlusIframe } from './AnimeTVPlusIframe'
+import { MegaPlayIframe } from './MegaPlayIframe'
 
 import {
   fetchAnimeMapping,
@@ -41,6 +46,11 @@ import { CastModal } from './CastModal'
 import { PlayerLoadingOverlay, type PlayerLoadingState } from './PlayerLoadingOverlay'
 import { isDevToolsActive, onDevToolsChange } from '../../utils/security'
 import { DevToolsDecoyView } from '../security/DevToolsDecoyView'
+import { usePartyPlay } from '../../context/PartyContext'
+import { PartyBar } from '../party/PartyBar'
+import { PartyReactionOverlay } from '../party/PartyReactionOverlay'
+import { PartyDrawer } from '../party/PartyDrawer'
+import type { PartyAudioType, PartyServerId, PartyPlaybackState } from '../../types/party'
 
 import './player.css'
 
@@ -55,6 +65,7 @@ export function FullPlayerView({
   onToggleSave,
   onProgressUpdate,
   onBack,
+  currentUserId,
 }: {
   anime: Anime
   initialEpisode?: Episode
@@ -68,6 +79,7 @@ export function FullPlayerView({
     completed?: boolean,
   ) => void
   onBack: () => void
+  currentUserId?: string
 }) {
   /* =======================================================
      EPISODES
@@ -118,7 +130,7 @@ export function FullPlayerView({
     server,
     setServer,
   ] = useState<
-    'server1' | 'server2' | 'server3' | string
+    ServerId | string
   >('server1')
 
   const [tmdbData, setTmdbData] = useState<{
@@ -137,6 +149,11 @@ export function FullPlayerView({
   const [iframeTimedOut, setIframeTimedOut] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
 
+  // Resolved MAL ID fallback state (when anime.malId or currentEpisode.malId is missing)
+  const [resolvedMalId, setResolvedMalId] = useState<number | null>(null)
+  const [malResolving, setMalResolving] = useState<boolean>(false)
+
+  // Background TMDB mapping fetch (preserves TMDB/IMDb metadata for upcoming Hindi features)
   useEffect(() => {
     if (anime.tmdbId) {
       setTmdbData({
@@ -163,33 +180,11 @@ export function FullPlayerView({
             season: data.season || 1,
           })
           setMappingError(null)
-        } else {
-          setMappingError(
-            'Server 1 (0vidads) mapping is not available for this title. Please switch to Server 2 or Server 3.',
-          )
         }
       })
       .catch(err => {
         if (!isMounted) return
-        console.warn('[FullPlayerView] Failed to fetch TMDB mapping:', err)
-        const errMsg = err instanceof Error ? err.message : String(err)
-        if (errMsg.includes('404')) {
-          setMappingError(
-            'Stream mapping route was not found on the server. Please switch to Server 2 or Server 3.',
-          )
-        } else if (errMsg.includes('500') || errMsg.includes('502')) {
-          setMappingError(
-            'Stream mapping service encountered an error. Please switch to Server 2 or Server 3.',
-          )
-        } else if (errMsg.includes('JSON')) {
-          setMappingError(
-            'Received an invalid response from stream resolver. Please switch to Server 2 or Server 3.',
-          )
-        } else {
-          setMappingError(
-            'Streaming resolver is currently unreachable. Please switch to Server 2 or Server 3.',
-          )
-        }
+        console.warn('[FullPlayerView] Background TMDB mapping not found or unavailable:', err)
       })
       .finally(() => {
         if (isMounted) {
@@ -201,6 +196,38 @@ export function FullPlayerView({
       isMounted = false
     }
   }, [anime.id, anime.tmdbId, anime.mediaType, anime.seasonNumber, anime.type])
+
+  // Fallback: If Server 1 (AnimeTVPlus MAL) or Server 4 (MegaPlay MAL) is selected and MAL ID is missing, attempt backend resolution
+  useEffect(() => {
+    const activeMal = currentEpisode?.malId ?? anime.malId ?? resolvedMalId
+    if (activeMal || (server !== 'server1' && server !== 'server4')) {
+      return
+    }
+
+    let isMounted = true
+    setMalResolving(true)
+
+    resolveMalId({
+      anilistId: anime.id,
+      currentMalId: anime.malId,
+      title: anime.title,
+    })
+      .then(id => {
+        if (!isMounted) return
+        if (id) {
+          setResolvedMalId(id)
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setMalResolving(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [server, anime.id, anime.malId, anime.title, currentEpisode?.malId, resolvedMalId, retryKey])
 
   const [
     autoNext,
@@ -223,6 +250,88 @@ export function FullPlayerView({
 
   const [isDescExpanded, setIsDescExpanded] = useState(false)
   const [isCastModalOpen, setIsCastModalOpen] = useState(false)
+
+  // Party Play Integration
+  const {
+    room,
+    isHost,
+    openCreateModal,
+    toggleDrawer,
+    unreadMessages,
+    syncPlayback,
+    closeRoom,
+    setOnPlaybackChangeCallback,
+  } = usePartyPlay()
+
+  const handleSelectEpisode = useCallback((ep: Episode) => {
+    setCurrentEpisode(ep)
+    if (room) {
+      syncPlayback({
+        anilistId: Number(anime.id),
+        episodeNumber: ep.number,
+        audioType: language as PartyAudioType,
+        serverId: (server as PartyServerId) || 'server1',
+      })
+    }
+  }, [anime.id, language, room, server, syncPlayback])
+
+  const handleSelectServer = useCallback((newServer: string) => {
+    setServer(newServer)
+    if (room && (newServer === 'server1' || newServer === 'server2' || newServer === 'server3' || newServer === 'server4')) {
+      syncPlayback({
+        anilistId: Number(anime.id),
+        episodeNumber: currentEpisode?.number || 1,
+        audioType: language as PartyAudioType,
+        serverId: newServer as PartyServerId,
+      })
+    }
+  }, [anime.id, currentEpisode?.number, language, room, syncPlayback])
+
+  const handleSelectLanguage = useCallback((newLang: 'sub' | 'dub') => {
+    setLanguage(newLang)
+    if (room) {
+      syncPlayback({
+        anilistId: Number(anime.id),
+        episodeNumber: currentEpisode?.number || 1,
+        audioType: newLang,
+        serverId: (server as PartyServerId) || 'server1',
+      })
+    }
+  }, [anime.id, currentEpisode?.number, room, server, syncPlayback])
+
+  useEffect(() => {
+    setOnPlaybackChangeCallback((state: PartyPlaybackState) => {
+      if (String(state.anilistId) === String(anime.id)) {
+        if (currentEpisode && currentEpisode.number !== state.episodeNumber) {
+          const targetEp = episodes.find((e) => e.number === state.episodeNumber)
+          if (targetEp) {
+            setCurrentEpisode(targetEp)
+          }
+        }
+        if (state.audioType !== language) {
+          setLanguage(state.audioType)
+        }
+        if (state.serverId !== server) {
+          setServer(state.serverId)
+        }
+      }
+    })
+
+    return () => {
+      setOnPlaybackChangeCallback(undefined)
+    }
+  }, [anime.id, currentEpisode, language, server, episodes, setOnPlaybackChangeCallback])
+
+  const handleBackWithPartyCheck = useCallback(() => {
+    if (room && isHost) {
+      if (window.confirm('Leaving the video player as host will close the watch party for all participants. Are you sure you want to exit?')) {
+        closeRoom()
+        onBack()
+      }
+    } else {
+      onBack()
+    }
+  }, [room, isHost, closeRoom, onBack])
 
   const [isDecoyActive, setIsDecoyActive] = useState(() => isDevToolsActive())
 
@@ -760,8 +869,10 @@ export function FullPlayerView({
     ])
 
   /* =======================================================
-     STREAM URL
+     STREAM URL (FOUR-SERVER ARCHITECTURE)
   ======================================================== */
+
+  const activeMalId = currentEpisode?.malId ?? anime.malId ?? resolvedMalId
 
   const embedUrl = useMemo(() => {
     if (isDecoyActive || isDevToolsActive() || !currentEpisode) {
@@ -776,7 +887,7 @@ export function FullPlayerView({
       tmdbId: tmdbData.tmdbId,
       mediaType: tmdbData.mediaType,
       seasonNumber: tmdbData.season,
-      malId: currentEpisode.malId ?? anime.malId,
+      malId: activeMalId,
       anilistId: anime.id,
       episodeNumber: currentEpisode.number,
       language,
@@ -785,12 +896,12 @@ export function FullPlayerView({
     isDecoyActive,
     currentEpisode,
     server,
+    activeMalId,
+    anime.id,
+    language,
     tmdbData.tmdbId,
     tmdbData.mediaType,
     tmdbData.season,
-    anime.malId,
-    anime.id,
-    language,
   ])
 
   /* =======================================================
@@ -817,11 +928,8 @@ export function FullPlayerView({
   }, [embedUrl, retryKey])
 
   const playerLoaderState: PlayerLoadingState = useMemo(() => {
-    if (server === 'server1' && mappingLoading) {
+    if ((server === 'server1' || server === 'server4') && malResolving && !activeMalId) {
       return 'resolving_metadata'
-    }
-    if (server === 'server1' && mappingError) {
-      return 'error'
     }
     if (iframeTimedOut && !isIframeLoaded) {
       return 'error'
@@ -833,51 +941,26 @@ export function FullPlayerView({
       return 'loading_stream'
     }
     return 'ready'
-  }, [server, mappingLoading, mappingError, iframeTimedOut, isIframeLoaded, embedUrl])
+  }, [server, malResolving, activeMalId, iframeTimedOut, isIframeLoaded, embedUrl])
 
   const playerErrorMessage = useMemo(() => {
-    if (server === 'server1' && mappingError) {
-      return mappingError
-    }
     if (iframeTimedOut && !isIframeLoaded) {
       return 'Streaming connection timed out while loading the player. Please try again or switch to an alternate server.'
     }
     if (!embedUrl) {
-      return `Stream route unavailable on ${server === 'server1' ? 'Server 1' : server === 'server2' ? 'Server 2' : 'Server 3'}. Please switch to another server.`
+      if ((server === 'server1' || server === 'server4') && !activeMalId) {
+        return `MyAnimeList ID is unavailable for this anime on ${server === 'server1' ? 'Server 1 (AnimeTVPlus MAL)' : 'Server 4 (MegaPlay MAL)'}. Please switch to Server 2 or Server 3 (AniList).`
+      }
+      return `Stream route unavailable on ${server}. Please switch to another server.`
     }
     return null
-  }, [server, mappingError, iframeTimedOut, isIframeLoaded, embedUrl])
+  }, [server, activeMalId, iframeTimedOut, isIframeLoaded, embedUrl])
 
   const handleRetryStream = useCallback(() => {
     setIsIframeLoaded(false)
     setIframeTimedOut(false)
     setRetryKey(k => k + 1)
-    if (server === 'server1' && mappingError) {
-      setMappingLoading(true)
-      setMappingError(null)
-      fetchAnimeMapping(anime.id)
-        .then(data => {
-          if (data.tmdbId) {
-            setTmdbData({
-              tmdbId: data.tmdbId,
-              mediaType: data.mediaType || (isMovieMediaType(anime.type) ? 'movie' : 'tv'),
-              season: data.season || 1,
-            })
-            setMappingError(null)
-          } else {
-            setMappingError(
-              'Server 1 (0vidads) mapping is not available for this title. Please switch to Server 2 or Server 3.',
-            )
-          }
-        })
-        .catch(() => {
-          setMappingError('Failed to reconnect to stream resolver. Please switch to Server 2 or Server 3.')
-        })
-        .finally(() => {
-          setMappingLoading(false)
-        })
-    }
-  }, [server, mappingError, anime.id, anime.type])
+  }, [])
 
   /* =======================================================
      PREVIOUS EPISODE
@@ -1081,7 +1164,7 @@ export function FullPlayerView({
           <button
             type="button"
             className="cinema-player__back-btn"
-            onClick={onBack}
+            onClick={handleBackWithPartyCheck}
             aria-label="Back to Anime Details"
           >
             <ArrowLeft
@@ -1112,6 +1195,49 @@ export function FullPlayerView({
         </div>
 
         <div className="cinema-player__topbar-actions">
+          {/* Watch Party Action */}
+          {room ? (
+            <button
+              type="button"
+              className="party-bar__btn"
+              onClick={toggleDrawer}
+              title="Open Watch Party Drawer"
+            >
+              <div className="party-bar__live-pill" style={{ margin: 0 }}>
+                <span className="party-bar__live-dot" />
+                <span>Party</span>
+              </div>
+              <Users size={14} />
+              <span>
+                {
+                  room.participants.filter(
+                    (p) => p.status === 'ACTIVE' || p.status === 'DISCONNECTED'
+                  ).length
+                }
+              </span>
+              {unreadMessages > 0 && (
+                <span className="party-bar__badge">{unreadMessages}</span>
+              )}
+            </button>
+          ) : (
+            <Button
+              variant="glass"
+              onClick={() =>
+                openCreateModal({
+                  anilistId: Number(anime.id),
+                  mediaType: isMovieMediaType(anime.type) ? 'movie' : 'tv',
+                  episodeNumber: currentEpisode?.number || 1,
+                  audioType: language as PartyAudioType,
+                  serverId: (server as PartyServerId) || 'server1',
+                })
+              }
+              title="Start a Watch Party with friends"
+            >
+              <Users size={14} />
+              <span>Watch Party</span>
+            </Button>
+          )}
+
           <Button
             variant={
               inList
@@ -1173,31 +1299,46 @@ export function FullPlayerView({
 
       <div className="cinema-player__layout">
         <div className="cinema-player__stage-container">
+          {/* Active Party Bar & Disconnect Alert */}
+          <PartyBar />
 
           {/* ===============================================
               VIDEO PLAYER STAGE
           ============================================== */}
 
           <div className="cinema-player__stage">
+            <PartyReactionOverlay />
             <div
               className="cinema-player__ambient"
               aria-hidden="true"
             />
 
             {embedUrl && (
-              <iframe
-                key={`${embedUrl}-${retryKey}`}
-                ref={iframeRef}
-                src={embedUrl}
-                title={`${anime.title} Episode ${currentEpisode?.number ?? 1}`}
-                className="cinema-player__iframe"
-                allowFullScreen
-                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-                onLoad={() => {
-                  setIsIframeLoaded(true)
-                  setIframeTimedOut(false)
-                }}
-              />
+              (server === 'server1' || server === 'server2') ? (
+                <AnimeTVPlusIframe
+                  key={`animetvplus-${server}-${embedUrl}-${retryKey}`}
+                  ref={iframeRef}
+                  embedUrl={embedUrl}
+                  title={`${anime.title} Episode ${currentEpisode?.number ?? 1}`}
+                  className="cinema-player__iframe"
+                  onLoad={() => {
+                    setIsIframeLoaded(true)
+                    setIframeTimedOut(false)
+                  }}
+                />
+              ) : (
+                <MegaPlayIframe
+                  key={`megaplay-${server}-${embedUrl}-${retryKey}`}
+                  ref={iframeRef}
+                  embedUrl={embedUrl}
+                  title={`${anime.title} Episode ${currentEpisode?.number ?? 1}`}
+                  className="cinema-player__iframe"
+                  onLoad={() => {
+                    setIsIframeLoaded(true)
+                    setIframeTimedOut(false)
+                  }}
+                />
+              )
             )}
 
             {/* Premium Cinematic Loading & Error Transition Screen */}
@@ -1286,18 +1427,18 @@ export function FullPlayerView({
                     : ''
                     }`}
                   onClick={() =>
-                    setServer(
+                    handleSelectServer(
                       'server1',
                     )
                   }
-                  title="Server 1 (Default)"
+                  title="Server 1 (AnimeTVPlus - MAL)"
                 >
                   <Sparkles
                     size={13}
                   />
 
                   <span>
-                    Server 1
+                    Server 1 (MAL)
                   </span>
                 </button>
 
@@ -1309,18 +1450,18 @@ export function FullPlayerView({
                     : ''
                     }`}
                   onClick={() =>
-                    setServer(
+                    handleSelectServer(
                       'server2',
                     )
                   }
-                  title="Server 2"
+                  title="Server 2 (AnimeTVPlus - AniList)"
                 >
-                  <Radio
+                  <Sparkles
                     size={13}
                   />
 
                   <span>
-                    Server 2
+                    Server 2 (AniList)
                   </span>
                 </button>
 
@@ -1332,18 +1473,41 @@ export function FullPlayerView({
                     : ''
                     }`}
                   onClick={() =>
-                    setServer(
+                    handleSelectServer(
                       'server3',
                     )
                   }
-                  title="Server 3"
+                  title="Server 3 (MegaPlay - AniList)"
                 >
                   <Radio
                     size={13}
                   />
 
                   <span>
-                    Server 3
+                    Server 3 (AniList)
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-chip ${server ===
+                    'server4'
+                    ? 'active'
+                    : ''
+                    }`}
+                  onClick={() =>
+                    handleSelectServer(
+                      'server4',
+                    )
+                  }
+                  title="Server 4 (MegaPlay - MAL)"
+                >
+                  <Radio
+                    size={13}
+                  />
+
+                  <span>
+                    Server 4 (MAL)
                   </span>
                 </button>
               </div>
@@ -1374,7 +1538,7 @@ export function FullPlayerView({
                       : ''
                       }`}
                     onClick={() =>
-                      setLanguage(
+                      handleSelectLanguage(
                         'sub',
                       )
                     }
@@ -1390,7 +1554,7 @@ export function FullPlayerView({
                       : ''
                       }`}
                     onClick={() =>
-                      setLanguage(
+                      handleSelectLanguage(
                         'dub',
                       )
                     }
@@ -1740,7 +1904,7 @@ export function FullPlayerView({
           }
           onSelectEpisode={
             episode =>
-              setCurrentEpisode(
+              handleSelectEpisode(
                 episode,
               )
           }
@@ -1753,6 +1917,9 @@ export function FullPlayerView({
         animeTitle={anime.title}
         episodeNumber={currentEpisode?.number}
       />
+
+      {/* Live Party Drawer (Chat & Participants) */}
+      <PartyDrawer currentUserId={currentUserId} />
     </section>
   )
 }

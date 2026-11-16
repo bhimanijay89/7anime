@@ -10,6 +10,7 @@ import {
   Menu,
   Search,
   UserRound,
+  Users,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { IconButton } from '../ui/Button'
@@ -69,18 +70,22 @@ export function DesktopNavbar({
   onNavigate,
   onPrefetch,
   onOpenAuthModal,
+  onOpenParty,
   onLogout,
   authUser,
   currentView = 'home',
+  isPartyActive = false,
 }: {
   onMenu?: () => void
   onSearch: () => void
   onNavigate?: (view: ViewMode) => void
   onPrefetch?: (view: ViewMode) => void
   onOpenAuthModal?: () => void
+  onOpenParty?: () => void
   onLogout?: () => void
   authUser?: AuthUser | null
   currentView?: ViewMode
+  isPartyActive?: boolean
 }) {
   const [isScrolledDown, setIsScrolledDown] = useState(false)
   const lastScrollY = useRef(0)
@@ -233,8 +238,32 @@ export function DesktopNavbar({
         </a>
       </nav>
 
-      {/* Right-side Actions: Search, Notifications, Auth */}
+      {/* Right-side Actions: Search, Notifications, Party, Auth */}
       <div className="desktop-nav__actions">
+        {/* Watch Party */}
+        <IconButton
+          label={isPartyActive ? 'Active Watch Party' : 'Watch Party'}
+          onClick={onOpenParty}
+        >
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={18} />
+            {isPartyActive && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: '#ff4b4b',
+                  boxShadow: '0 0 6px #ff4b4b',
+                }}
+              />
+            )}
+          </div>
+        </IconButton>
+
         {/* Search */}
         <IconButton
           label="Search anime (Ctrl+K)"

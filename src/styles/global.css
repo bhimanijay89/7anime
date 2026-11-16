@@ -14,6 +14,7 @@ html {
 
 /* ─── Caret & Selection Control ─── */
 :root {
+  color-scheme: dark;
   caret-color: transparent;
 }
 
@@ -45,8 +46,19 @@ img {
 
 /* ─── Form Resets ─── */
 button,
-input {
+input,
+select,
+option {
   font: inherit;
+}
+
+select {
+  color-scheme: dark;
+}
+
+option {
+  background-color: #0e131f;
+  color: #f5f8ff;
 }
 
 button {

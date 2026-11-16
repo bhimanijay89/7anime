@@ -40,14 +40,15 @@ export function PlayerLoadingOverlay({
   const serverLabel = useMemo(() => {
     switch (server) {
       case 'server1':
-        return 'Server 1 (0vidads)'
+        return 'Server 1 (AnimeTVPlus - MAL)'
       case 'server2':
-        return 'Server 2 (MegaPlay)'
+        return 'Server 2 (AnimeTVPlus - AniList)'
       case 'server3':
+        return 'Server 3 (MegaPlay - AniList)'
       case 'server4':
-        return 'Server 3 (MegaPlay)'
+        return 'Server 4 (MegaPlay - MAL)'
       default:
-        return 'Server 1 (0vidads)'
+        return 'Server 1 (AnimeTVPlus)'
     }
   }, [server])
 
@@ -199,7 +200,7 @@ export function PlayerLoadingOverlay({
                   onClick={() => onSelectServer('server2')}
                   className="player-loader__server-btn"
                 >
-                  <Radio size={13} />
+                  <Sparkles size={13} />
                   Switch to Server 2
                 </Button>
               )}
@@ -211,6 +212,16 @@ export function PlayerLoadingOverlay({
                 >
                   <Radio size={13} />
                   Switch to Server 3
+                </Button>
+              )}
+              {server !== 'server4' && onSelectServer && (
+                <Button
+                  variant="glass"
+                  onClick={() => onSelectServer('server4')}
+                  className="player-loader__server-btn"
+                >
+                  <Radio size={13} />
+                  Switch to Server 4
                 </Button>
               )}
             </div>

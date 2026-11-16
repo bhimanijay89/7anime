@@ -63,6 +63,9 @@ import { isDevToolsActive, onDevToolsChange } from '../utils/security'
 import { DevToolsDecoyView } from '../components/security/DevToolsDecoyView'
 import { BACKEND_URL, fetchAnimeMapping, fetchAnimeLogos, fetchCuratedHeroAnime, prefetchAnimeMovies } from '../services/anilist'
 import { isMovieMediaType } from '../services/videoResolver'
+import { PartyProvider, usePartyPlay } from '../context/PartyContext'
+import { PartyCreateModal, PartyJoinModal, PartyClosedModal } from '../components/party'
+import type { PartyRoomDetails } from '../types/party'
 
 import './preview.css'
 
@@ -147,6 +150,38 @@ function Home() {
 
   const { notify } =
     useToast()
+
+  // Party Play Integration
+  const {
+    room,
+    isHost,
+    setAuthUserId,
+    openCreateModal,
+    closeCreateModal,
+    createModalOpen,
+    openJoinModal,
+    closeJoinModal,
+    joinModalOpen,
+    toggleDrawer,
+  } = usePartyPlay()
+
+  useEffect(() => {
+    setAuthUserId(authUser?.id)
+  }, [authUser?.id, setAuthUserId])
+
+  // Deep linking: Auto-open party modal if URL has ?party=CODE or #party=create/join
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const partyParam = params.get('party') || (window.location.hash.startsWith('#party=') ? window.location.hash.replace('#party=', '') : null)
+    if (partyParam) {
+      if (partyParam === 'create') {
+        openCreateModal()
+      } else {
+        openJoinModal(partyParam)
+      }
+    }
+  }, [openJoinModal, openCreateModal])
 
   /* =========================================================
      AUTH SESSION & USER DATA FETCH
@@ -968,6 +1003,42 @@ function Home() {
     }
   }
 
+  const handlePartyCreated = useCallback(async (newRoom: PartyRoomDetails) => {
+    try {
+      if (!selectedAnime || String(selectedAnime.id) !== String(newRoom.playback.anilistId)) {
+        const animeData = await getAnimeById(newRoom.playback.anilistId)
+        if (animeData) {
+          const fullAnime = await loadCompleteAnime(animeData)
+          setSelectedAnime(fullAnime)
+          const targetEp = fullAnime.episodesList?.find(e => e.number === newRoom.playback.episodeNumber) || fullAnime.episodesList?.[0]
+          setSelectedEpisode(targetEp)
+        }
+      }
+      navigateTo('player')
+    } catch (err) {
+      console.error('Failed to load anime for created party:', err)
+      navigateTo('player')
+    }
+  }, [selectedAnime, loadCompleteAnime, navigateTo])
+
+  const handlePartyJoined = useCallback(async (joinedRoom: PartyRoomDetails) => {
+    try {
+      if (!selectedAnime || String(selectedAnime.id) !== String(joinedRoom.playback.anilistId)) {
+        const animeData = await getAnimeById(joinedRoom.playback.anilistId)
+        if (animeData) {
+          const fullAnime = await loadCompleteAnime(animeData)
+          setSelectedAnime(fullAnime)
+          const targetEp = fullAnime.episodesList?.find(e => e.number === joinedRoom.playback.episodeNumber) || fullAnime.episodesList?.[0]
+          setSelectedEpisode(targetEp)
+        }
+      }
+      navigateTo('player')
+    } catch (err) {
+      console.error('Failed to load anime for joined party:', err)
+      navigateTo('player')
+    }
+  }, [selectedAnime, loadCompleteAnime, navigateTo])
+
 
   /* =========================================================
      SEARCH RESULT
@@ -1177,6 +1248,14 @@ function Home() {
           onLogout={
             handleLogout
           }
+          onOpenParty={() => {
+            if (room) {
+              toggleDrawer()
+            } else {
+              openJoinModal()
+            }
+          }}
+          isPartyActive={Boolean(room)}
           authUser={
             authUser
           }
@@ -1199,6 +1278,27 @@ function Home() {
           currentView={
             currentView
           }
+        />
+
+        <PartyCreateModal
+          open={createModalOpen}
+          onClose={closeCreateModal}
+          currentAnime={null}
+          onPartyCreated={handlePartyCreated}
+        />
+
+        <PartyJoinModal
+          open={joinModalOpen}
+          onClose={closeJoinModal}
+          onPartyJoined={handlePartyJoined}
+          onSwitchToCreate={() => {
+            closeJoinModal()
+            openCreateModal()
+          }}
+        />
+
+        <PartyClosedModal
+          onNavigateHome={() => navigateTo('home')}
         />
       </>
     )
@@ -1223,6 +1323,14 @@ function Home() {
           onLogout={
             handleLogout
           }
+          onOpenParty={() => {
+            if (room) {
+              toggleDrawer()
+            } else {
+              openJoinModal()
+            }
+          }}
+          isPartyActive={Boolean(room)}
           authUser={
             authUser
           }
@@ -1245,6 +1353,27 @@ function Home() {
           currentView={
             currentView
           }
+        />
+
+        <PartyCreateModal
+          open={createModalOpen}
+          onClose={closeCreateModal}
+          currentAnime={null}
+          onPartyCreated={handlePartyCreated}
+        />
+
+        <PartyJoinModal
+          open={joinModalOpen}
+          onClose={closeJoinModal}
+          onPartyJoined={handlePartyJoined}
+          onSwitchToCreate={() => {
+            closeJoinModal()
+            openCreateModal()
+          }}
+        />
+
+        <PartyClosedModal
+          onNavigateHome={() => navigateTo('home')}
         />
       </>
     )
@@ -1295,6 +1424,14 @@ function Home() {
         onOpenAuthModal={() =>
           setAuthModalOpen(true)
         }
+        onOpenParty={() => {
+          if (room) {
+            toggleDrawer()
+          } else {
+            openJoinModal()
+          }
+        }}
+        isPartyActive={Boolean(room)}
         onLogout={
           handleLogout
         }
@@ -1342,6 +1479,9 @@ function Home() {
               navigateTo(
                 'detail',
               )
+            }
+            currentUserId={
+              authUser?.id
             }
           />
 
@@ -2045,6 +2185,41 @@ function Home() {
         onClose={() => setAuthModalOpen(false)}
         onAuthenticated={handleAuthenticated}
       />
+
+      {/* =====================================================
+          PARTY PLAY MODALS
+      ====================================================== */}
+
+      <PartyCreateModal
+        open={createModalOpen}
+        onClose={closeCreateModal}
+        currentAnime={
+          selectedAnime
+            ? {
+                id: Number(selectedAnime.id),
+                title: selectedAnime.title,
+                poster: selectedAnime.poster,
+                isMovie: isMovieMediaType(selectedAnime.type),
+                totalEpisodes: selectedAnime.totalEpisodes,
+              }
+            : null
+        }
+        onPartyCreated={handlePartyCreated}
+      />
+
+      <PartyJoinModal
+        open={joinModalOpen}
+        onClose={closeJoinModal}
+        onPartyJoined={handlePartyJoined}
+        onSwitchToCreate={() => {
+          closeJoinModal()
+          openCreateModal()
+        }}
+      />
+
+      <PartyClosedModal
+        onNavigateHome={() => navigateTo('home')}
+      />
     </>
   )
 }
@@ -2057,7 +2232,9 @@ function Home() {
 export function FoundationPreview() {
   return (
     <ToastProvider>
-      <Home />
+      <PartyProvider>
+        <Home />
+      </PartyProvider>
     </ToastProvider>
   )
 }

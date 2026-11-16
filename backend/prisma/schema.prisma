@@ -6,6 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum PartyRole {
+  HOST
+  MEMBER
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  DISCONNECTED
+  LEFT
+  KICKED
+}
+
+enum PartyRoomStatus {
+  ACTIVE
+}
+
 model User {
   id                 String              @id @default(uuid())
   email              String              @unique
@@ -26,6 +42,12 @@ model User {
   streak             UserStreak?
   dailyActivities    DailyWatchActivity[]
   streakMilestones   StreakMilestone[]
+
+  // Party Play Relations
+  ownedPartyRooms     PartyRoom[]        @relation("RoomOwner")
+  updatedPartyRooms   PartyRoom[]        @relation("RoomLastUpdater")
+  partyParticipations PartyParticipant[]
+  partyMessages       PartyMessage[]
 
   @@map("users")
 }
@@ -229,3 +251,64 @@ model StreakMilestone {
   @@index([userId])
   @@map("streak_milestones")
 }
+
+model PartyRoom {
+  id                 String             @id @default(uuid())
+  code               String             @unique
+  inviteTokenHash    String             @unique
+  ownerId            String
+  mediaType          String             @default("tv") // 'movie' | 'tv' (immutable per room)
+  anilistId          Int
+  episodeNumber      Int                @default(1)
+  audioType          String             @default("sub")
+  serverId           String             @default("server1")
+  stateRevision      Int                @default(1)
+  lastEventId        String             @default(uuid())
+  lastUpdatedById    String?
+  status             PartyRoomStatus    @default(ACTIVE) // strictly ACTIVE; row is permanently deleted upon destruction
+  maxParticipants    Int                @default(10)
+  hostGraceExpiresAt DateTime?                          // persisted 60-second host grace deadline for restart safety
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  expiresAt          DateTime
+
+  owner              User               @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  lastUpdatedBy      User?              @relation("RoomLastUpdater", fields: [lastUpdatedById], references: [id], onDelete: SetNull)
+  participants       PartyParticipant[]
+  messages           PartyMessage[]
+
+  @@index([status, expiresAt, hostGraceExpiresAt])
+  @@map("party_rooms")
+}
+
+model PartyParticipant {
+  id         String            @id @default(uuid())
+  roomId     String
+  userId     String
+  role       PartyRole         @default(MEMBER)
+  status     ParticipantStatus @default(ACTIVE)
+  joinedAt   DateTime          @default(now())
+  lastSeenAt DateTime          @default(now())
+
+  room       PartyRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([roomId, status])
+  @@map("party_participants")
+}
+
+model PartyMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  userId    String
+  content   String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  room      PartyRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, createdAt])
+  @@map("party_messages")
+}
+

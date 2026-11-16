@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { cache } from '../redis/cache.js'
 
 import {
     getAnimeById,
@@ -348,6 +349,92 @@ router.get('/anime/logos', async (req, res) => {
     } catch (error) {
         console.error('[GET /api/anime/logos]', error)
         return sendError(res, 'Failed to resolve anime logos.', ErrorCode.SERVICE_UNAVAILABLE, 502)
+    }
+})
+
+/* GET /api/anime/:anilistId/mal-id */
+router.get('/anime/:anilistId/mal-id', async (req, res) => {
+    try {
+        const anilistId = Number(req.params.anilistId)
+        if (!Number.isInteger(anilistId) || anilistId <= 0) {
+            return sendError(res, 'Invalid AniList anime ID.', ErrorCode.INVALID_ID, 400)
+        }
+
+        const cacheKey = `anime:mal-id:${anilistId}`
+        const cached = await cache.get<{ malId: number; verified: boolean }>(cacheKey)
+        if (cached && typeof cached.malId === 'number' && cached.malId > 0) {
+            return sendSuccess(res, { anilistId, malId: cached.malId, verified: cached.verified, cached: true })
+        }
+
+        // 1. Check AniList metadata first
+        let aniListAnime: AniListAnime | null = null
+        try {
+            aniListAnime = await getAnimeById(anilistId)
+        } catch {}
+
+        if (aniListAnime && typeof aniListAnime.idMal === 'number' && aniListAnime.idMal > 0) {
+            const result = { malId: aniListAnime.idMal, verified: true }
+            await cache.set(cacheKey, result, 86400 * 7)
+            return sendSuccess(res, { anilistId, malId: aniListAnime.idMal, verified: true, source: 'anilist' })
+        }
+
+        // 2. If idMal is missing, search via backend Jikan/MAL API with verification
+        const searchTitle =
+            aniListAnime?.title?.english ||
+            aniListAnime?.title?.romaji ||
+            aniListAnime?.title?.native ||
+            (req.query.title ? String(req.query.title) : null)
+
+        if (!searchTitle) {
+            return sendSuccess(res, { anilistId, malId: null, verified: false, error: 'no_title' })
+        }
+
+        try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 6000)
+            const jikanUrl = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(searchTitle)}&limit=5`
+            const jikanRes = await fetch(jikanUrl, {
+                headers: { Accept: 'application/json' },
+                signal: controller.signal,
+            })
+            clearTimeout(timeout)
+
+            if (jikanRes.ok) {
+                const jikanData = await jikanRes.json()
+                const candidates = Array.isArray(jikanData?.data) ? jikanData.data : []
+                const normalizedSearch = searchTitle.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+                for (const candidate of candidates) {
+                    const cMalId = candidate.mal_id
+                    if (!cMalId || typeof cMalId !== 'number' || cMalId <= 0) continue
+
+                    const titles = [
+                        candidate.title,
+                        candidate.title_english,
+                        candidate.title_japanese,
+                        ...(Array.isArray(candidate.titles) ? candidate.titles.map((t: any) => t.title) : [])
+                    ].filter(Boolean)
+
+                    const isMatch = titles.some((t: any) => {
+                        const norm = String(t).toLowerCase().replace(/[^a-z0-9]/g, '')
+                        return norm === normalizedSearch || norm.includes(normalizedSearch) || normalizedSearch.includes(norm)
+                    })
+
+                    if (isMatch) {
+                        const result = { malId: cMalId, verified: true }
+                        await cache.set(cacheKey, result, 86400 * 7)
+                        return sendSuccess(res, { anilistId, malId: cMalId, verified: true, source: 'jikan_verified' })
+                    }
+                }
+            }
+        } catch (searchErr) {
+            console.warn(`[GET /api/anime/:anilistId/mal-id] Search error for ${anilistId}:`, searchErr)
+        }
+
+        return sendSuccess(res, { anilistId, malId: null, verified: false, error: 'mal_not_found' })
+    } catch (error) {
+        console.error('[GET /api/anime/:anilistId/mal-id]', error)
+        return sendError(res, 'Failed to resolve MAL ID.', ErrorCode.SERVICE_UNAVAILABLE, 502)
     }
 })
 

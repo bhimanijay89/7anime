@@ -37,6 +37,8 @@
     "react": "latest",
     "react-dom": "latest",
     "resend": "^6.24.0",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
     "typescript": "latest",
     "vite": "latest"
   },

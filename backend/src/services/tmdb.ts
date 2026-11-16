@@ -967,8 +967,8 @@ export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogo
     result[item.anilistId] = logo
 
     // Ensure PostgreSQL animeTmdbLogo record is permanently verified with local asset path
-    prisma.animeTmdbLogo
-      .upsert({
+    try {
+      await prisma.animeTmdbLogo.upsert({
         where: { anilistId: item.anilistId },
         create: {
           anilistId: item.anilistId,
@@ -994,7 +994,9 @@ export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogo
           expiresAt: null,
         },
       })
-      .catch(() => {})
+    } catch {
+      // Non-fatal if pooler is busy
+    }
 
     // Populate Redis cache
     void cache.set(

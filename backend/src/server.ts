@@ -17,6 +17,12 @@ import profileRouter from './routes/profile.js'
 import libraryRouter from './routes/library.js'
 import progressRouter from './routes/progress.js'
 import streakRouter from './routes/streak.js'
+import { createPartyRouter } from './routes/party.js'
+import { animetvplusRouter } from './routes/animetvplus.js'
+import { setupPartySockets } from './sockets/partySocket.js'
+import { roomBroadcastQueue } from './services/partyQueue.js'
+import http from 'node:http'
+import { Server as SocketIOServer } from 'socket.io'
 import prisma from './db/client.js'
 import { getRedisStatus } from './redis/client.js'
 import { requestMetaMiddleware } from './middleware/requestMeta.js'
@@ -42,9 +48,7 @@ const PORT = Number(
 )
 
 // Render requires the server to listen on 0.0.0.0.
-const HOST =
-    process.env.HOST ||
-    (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '::')
+const HOST = process.env.HOST || '0.0.0.0'
 
 /*
  * =========================================================
@@ -67,6 +71,17 @@ const allowedOrigins = [
     'http://[::1]:5173',
     ...envOrigins,
 ]
+
+const httpServer = http.createServer(app)
+const io = new SocketIOServer(httpServer, {
+    cors: {
+        origin: allowedOrigins,
+        credentials: true,
+    },
+    pingTimeout: 20000,
+    pingInterval: 25000,
+})
+setupPartySockets(io)
 
 app.use(
     cors({
@@ -352,8 +367,18 @@ app.use(
     streakRouter,
 )
 
+app.use(
+    '/api/party',
+    createPartyRouter(io),
+)
+
+app.use(
+    '/api/animetvplus',
+    animetvplusRouter,
+)
+
 console.log(
-    '[7anime-api] All core API routers (anime, auth, profile, library, progress) mounted at /api',
+    '[7anime-api] All core API routers (anime, auth, profile, library, progress, party, animetvplus) mounted at /api',
 )
 
 /*
@@ -460,7 +485,7 @@ app.use(
  * =========================================================
  */
 
-app.listen(
+httpServer.listen(
     PORT,
     HOST,
     () => {
@@ -471,7 +496,7 @@ app.listen(
         )
 
         console.log(
-            '        7anime Backend API',
+            '        7anime Backend API & Party Play',
         )
 
         console.log(
@@ -484,6 +509,10 @@ app.listen(
 
         console.log(
             `Health: http://${HOST}:${PORT}/api/health`,
+        )
+
+        console.log(
+            `Party:  http://${HOST}:${PORT}/api/party/rooms`,
         )
 
         console.log(
@@ -510,3 +539,16 @@ app.listen(
         console.log('')
     },
 )
+
+// Graceful shutdown handling
+const shutdown = async () => {
+    console.log('[7anime Backend] Graceful shutdown initiated...')
+    await roomBroadcastQueue.drainAndShutdown(5000)
+    httpServer.close(() => {
+        console.log('[7anime Backend] HTTP server closed.')
+        process.exit(0)
+    })
+}
+
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)

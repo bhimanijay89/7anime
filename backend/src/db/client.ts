@@ -23,7 +23,12 @@ const globalForPrisma = globalThis as unknown as {
 
 const connectionString = process.env.DATABASE_URL
 
-const pool = new pg.Pool({ connectionString })
+const pool = new pg.Pool({
+  connectionString,
+  max: 4,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 15000,
+})
 const adapter = new PrismaPg(pool)
 
 export const prisma =
