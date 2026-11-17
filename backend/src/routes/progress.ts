@@ -90,6 +90,114 @@ router.get(
 )
 
 /*
+ * GET /api/progress/:anilistId/:episodeNumber
+ *
+ * Lightweight single-episode watch progress lookup.
+ * Directly utilizes @@unique([userId, anilistId, episodeNumber]) index with zero external hydration.
+ */
+router.get(
+  '/progress/:anilistId/:episodeNumber',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const anilistId = Number(req.params.anilistId)
+      const episodeNumber = Number(req.params.episodeNumber)
+
+      if (
+        !Number.isInteger(anilistId) ||
+        anilistId <= 0 ||
+        !Number.isInteger(episodeNumber) ||
+        episodeNumber <= 0
+      ) {
+        return sendError(
+          res,
+          'Invalid anime or episode ID.',
+          ErrorCode.BAD_REQUEST,
+          400,
+        )
+      }
+
+      const progress = await prisma.watchProgress.findUnique({
+        where: {
+          userId_anilistId_episodeNumber: {
+            userId,
+            anilistId,
+            episodeNumber,
+          },
+        },
+        select: {
+          anilistId: true,
+          episodeNumber: true,
+          progressSeconds: true,
+          durationSeconds: true,
+          completed: true,
+          updatedAt: true,
+        },
+      })
+
+      return sendSuccess(res, { progress })
+    } catch (error) {
+      console.error('[progress] Single episode fetch error:', error)
+      return sendError(
+        res,
+        'Unable to fetch episode progress.',
+        ErrorCode.INTERNAL_ERROR,
+        500,
+      )
+    }
+  },
+)
+
+/*
+ * GET /api/progress/:anilistId
+ *
+ * Returns the most recent watch progress record for a given anime.
+ */
+router.get(
+  '/progress/:anilistId',
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id
+      const anilistId = Number(req.params.anilistId)
+
+      if (!Number.isInteger(anilistId) || anilistId <= 0) {
+        return sendError(
+          res,
+          'Invalid anime ID.',
+          ErrorCode.BAD_REQUEST,
+          400,
+        )
+      }
+
+      const progress = await prisma.watchProgress.findFirst({
+        where: { userId, anilistId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          anilistId: true,
+          episodeNumber: true,
+          progressSeconds: true,
+          durationSeconds: true,
+          completed: true,
+          updatedAt: true,
+        },
+      })
+
+      return sendSuccess(res, { progress })
+    } catch (error) {
+      console.error('[progress] Anime progress fetch error:', error)
+      return sendError(
+        res,
+        'Unable to fetch anime progress.',
+        ErrorCode.INTERNAL_ERROR,
+        500,
+      )
+    }
+  },
+)
+
+/*
  * POST /api/progress
  *
  * Creates or updates one anime episode's progress for the
@@ -155,10 +263,6 @@ router.post(
         safeDuration > 0 ? safeDuration : Math.floor(numericProgress),
       )
 
-      const shouldComplete =
-        isCompleted ||
-        (safeDuration > 0 && safeProgress >= Math.floor(safeDuration * 0.9))
-
       const existingEntry = await prisma.watchProgress.findUnique({
         where: {
           userId_anilistId_episodeNumber: {
@@ -167,11 +271,56 @@ router.post(
             episodeNumber: numericEpisode,
           },
         },
+        select: {
+          id: true,
+          progressSeconds: true,
+          durationSeconds: true,
+          completed: true,
+          updatedAt: true,
+        },
       })
 
+      // Multi-tab / out-of-order write protection:
+      // If the incoming request has a clientTimestamp that is significantly older than the database updatedAt,
+      // and the existing progress is ahead, ignore the stale write (unless marking completed).
+      const clientTimestamp = Number(req.body?.clientTimestamp)
+      if (
+        existingEntry &&
+        Number.isFinite(clientTimestamp) &&
+        clientTimestamp > 0 &&
+        existingEntry.updatedAt.getTime() - clientTimestamp > 2500 &&
+        safeProgress < existingEntry.progressSeconds &&
+        !isCompleted
+      ) {
+        return sendSuccess(res, {
+          progress: existingEntry,
+          staleIgnored: true,
+        })
+      }
+
+      // Preserve completed state: seeking backwards on an already completed episode must not uncomplete it
+      const shouldComplete =
+        isCompleted ||
+        Boolean(existingEntry?.completed) ||
+        (safeDuration > 0 && safeProgress >= Math.floor(safeDuration * 0.9))
+
       const prevProgress = existingEntry ? existingEntry.progressSeconds : 0
-      // Incremental delta watched (max 60s per heartbeat to prevent seeking from inflating time)
-      const deltaSeconds = Math.min(60, Math.max(0, safeProgress - prevProgress))
+      // Incremental delta watched (max 180s to accommodate 75s checkpoints plus network retries, while guarding against massive seeking inflation)
+      const deltaSeconds = Math.min(180, Math.max(0, safeProgress - prevProgress))
+
+      // If duplicate progress with no meaningful delta and same completion state, return existing record
+      if (
+        existingEntry &&
+        deltaSeconds === 0 &&
+        existingEntry.progressSeconds === safeProgress &&
+        existingEntry.completed === shouldComplete &&
+        (safeDuration === 0 || existingEntry.durationSeconds === safeDuration)
+      ) {
+        return sendSuccess(res, {
+          progress: existingEntry,
+          duplicateIgnored: true,
+        })
+      }
 
       const entry = await prisma.watchProgress.upsert({
         where: {
@@ -194,26 +343,39 @@ router.post(
           durationSeconds: safeDuration,
           completed: shouldComplete,
         },
+        select: {
+          id: true,
+          userId: true,
+          anilistId: true,
+          episodeNumber: true,
+          progressSeconds: true,
+          durationSeconds: true,
+          completed: true,
+          updatedAt: true,
+        },
       })
 
-      // Process daily streak activity
-      const clientTz = (req.headers['x-timezone'] as string) || (req.body?.timezone as string) || undefined
-      const animeTitle = (req.body?.animeTitle as string) || (req.body?.title as string) || undefined
-      const streakResult = await processWatchProgressForStreak(userId, {
-        anilistId: numericAnimeId,
-        episodeNumber: numericEpisode,
-        progressSeconds: safeProgress,
-        durationSeconds: safeDuration,
-        completed: shouldComplete,
-        timezone: clientTz,
-        animeTitle,
-      }).catch(err => {
-        console.warn('[progress] Streak processing error:', err)
-        return null
-      })
+      // Decoupled streak & gamification calculation:
+      // Only execute multi-table streak and userStats updates when watch time was actually gained or episode completed.
+      let streakResult = null
+      if (deltaSeconds > 0 || shouldComplete) {
+        const clientTz = (req.headers['x-timezone'] as string) || (req.body?.timezone as string) || undefined
+        const animeTitle = (req.body?.animeTitle as string) || (req.body?.title as string) || undefined
+        streakResult = await processWatchProgressForStreak(userId, {
+          anilistId: numericAnimeId,
+          episodeNumber: numericEpisode,
+          progressSeconds: safeProgress,
+          durationSeconds: safeDuration,
+          completed: shouldComplete,
+          timezone: clientTz,
+          animeTitle,
+        }).catch((err) => {
+          console.warn('[progress] Streak processing error:', err)
+          return null
+        })
 
-      // Record activity to maintain watch streak and verified total watch duration
-      await recordUserActivity(userId, deltaSeconds).catch(() => { })
+        await recordUserActivity(userId, deltaSeconds).catch(() => {})
+      }
 
       return sendSuccess(res, {
         progress: entry,
