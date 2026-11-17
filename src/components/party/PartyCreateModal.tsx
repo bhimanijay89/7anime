@@ -43,10 +43,10 @@ export interface ServerOption {
 }
 
 export const SERVER_OPTIONS: ServerOption[] = [
-  { id: 'server1', label: 'Server 1 (AnimeTVPlus - MAL)', provider: 'AnimeTVPlus (MAL)' },
-  { id: 'server2', label: 'Server 2 (AnimeTVPlus - AniList)', provider: 'AnimeTVPlus (AniList)' },
-  { id: 'server3', label: 'Server 3 (MegaPlay - AniList)', provider: 'MegaPlay (AniList)' },
-  { id: 'server4', label: 'Server 4 (MegaPlay - MAL)', provider: 'MegaPlay (MAL)' },
+  { id: 'server1', label: 'Server 1', provider: 'Multi-Audio' },
+  { id: 'server2', label: 'Server 2', provider: 'Sub & Dub' },
+  { id: 'server3', label: 'Server 3', provider: 'Fast Stream' },
+  { id: 'server4', label: 'Server 4', provider: 'Mirror Stream' },
 ]
 
 export interface AudioOption {

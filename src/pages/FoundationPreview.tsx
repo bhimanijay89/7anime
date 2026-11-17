@@ -540,7 +540,7 @@ function Home() {
         popular.status === 'rejected' &&
         upcoming.status === 'rejected'
       ) {
-        notify('AniList API is temporarily offline.', 'info')
+        notify('Anime catalog is temporarily offline.', 'info')
       }
     } catch (error) {
       console.error('Unexpected error loading home data:', error)

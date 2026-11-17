@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { AlertCircle, RotateCcw, ArrowLeft, Radio, Sparkles } from 'lucide-react'
-import logoImg from '../../../public/logo.png'
 import type { Anime, Episode } from '../../types/domain'
 import { isMovieMediaType } from '../../services/videoResolver'
 import { Button } from '../ui/Button'
@@ -40,32 +39,28 @@ export function PlayerLoadingOverlay({
   const serverLabel = useMemo(() => {
     switch (server) {
       case 'server1':
-        return 'Server 1 (AnimeTVPlus - MAL)'
+        return 'Server 1'
       case 'server2':
-        return 'Server 2 (AnimeTVPlus - AniList)'
+        return 'Server 2'
       case 'server3':
-        return 'Server 3 (MegaPlay - AniList)'
+        return 'Server 3'
       case 'server4':
-        return 'Server 4 (MegaPlay - MAL)'
+        return 'Server 4'
       default:
-        return 'Server 1 (AnimeTVPlus)'
+        return 'Server 1'
     }
   }, [server])
 
   const episodeLabel = useMemo(() => {
     if (!currentEpisode) return null
     const epNum = currentEpisode.number
-    const season = anime.seasonNumber || 1
     const isMovie = isMovieMediaType(anime.type) || isMovieMediaType(anime.mediaType)
 
     if (isMovie) {
-      return 'Movie Presentation'
+      return 'Movie'
     }
-    if (anime.seasonNumber && anime.seasonNumber > 1) {
-      return `Season ${season} • Episode ${epNum}`
-    }
-    return `Episode ${epNum}`
-  }, [currentEpisode, anime.seasonNumber, anime.type, anime.mediaType])
+    return `EP ${epNum}`
+  }, [currentEpisode, anime.type, anime.mediaType])
 
   const backdropImage = useMemo(() => {
     return anime.cover || anime.banner || anime.poster || ''
@@ -76,26 +71,26 @@ export function PlayerLoadingOverlay({
     switch (state) {
       case 'resolving_metadata':
         return {
-          title: 'Resolving Streaming Metadata',
-          subtitle: 'Connecting to provider database to optimize streaming route...',
+          title: 'Resolving Route',
+          subtitle: 'Connecting to database...',
         }
       case 'preparing_url':
         return {
           title: `Connecting to ${serverLabel}`,
-          subtitle: 'Securing video embed stream...',
+          subtitle: 'Securing video stream...',
         }
       case 'error':
         return {
           title: 'Playback Route Unavailable',
           subtitle:
             errorMessage ||
-            'Unable to establish a streaming connection on this server. Please try again or switch to another server.',
+            'Unable to connect to this server. Try another server or retry below.',
         }
       case 'loading_stream':
       default:
         return {
-          title: 'Preparing your episode',
-          subtitle: 'Getting everything ready for your viewing experience...',
+          title: 'Loading Stream',
+          subtitle: 'Buffering video stream...',
         }
     }
   }, [state, serverLabel, errorMessage])
@@ -108,7 +103,7 @@ export function PlayerLoadingOverlay({
       aria-live="polite"
       aria-busy={isVisible && !isError}
     >
-      {/* Cinematic Backdrop Image with Blur and Gradient Overlay */}
+      {/* Subtle atmospheric backdrop with soft blur */}
       {backdropImage && (
         <div
           className="player-loader__backdrop"
@@ -116,58 +111,48 @@ export function PlayerLoadingOverlay({
           aria-hidden="true"
         />
       )}
-      <div className="player-loader__gradient-overlay" aria-hidden="true" />
-      <div className="player-loader__ambient-glow" aria-hidden="true" />
+      <div className="player-loader__scrim" aria-hidden="true" />
 
       {/* Centered Composition */}
       <div className="player-loader__content">
-        {/* 7Anime Branding */}
-        <div className="player-loader__brand">
-          <img src={logoImg} alt="7anime" className="player-loader__logo" />
-        </div>
-
         {/* Animated Loading Indicator or Error Icon */}
         <div className="player-loader__indicator-wrap">
           {isError ? (
             <div className="player-loader__error-icon-box">
-              <AlertCircle size={38} className="player-loader__error-icon" />
+              <AlertCircle size={32} className="player-loader__error-icon" />
             </div>
           ) : (
             <div className="player-loader__spinner" role="status" aria-label="Loading video stream">
-              <div className="player-loader__spinner-ring player-loader__spinner-ring--outer" />
-              <div className="player-loader__spinner-ring player-loader__spinner-ring--inner" />
-              <div className="player-loader__spinner-core" />
+              <div className="player-loader__spinner-track" />
+              <div className="player-loader__spinner-arc" />
+              <div className="player-loader__spinner-dot" />
             </div>
           )}
         </div>
 
-        {/* Status Typography */}
+        {/* Status Message */}
         <div className="player-loader__typography">
           <h2 className="player-loader__title">{statusDetails.title}</h2>
           <p className="player-loader__subtitle">{statusDetails.subtitle}</p>
         </div>
 
-        {/* Anime Title, Episode, and Server Details Pill */}
-        <div className="player-loader__meta-pill glass">
-          <span className="player-loader__anime-name" title={anime.title}>
+        {/* Context Chip */}
+        <div className="player-loader__context-chip">
+          <span className="player-loader__chip-anime" title={anime.title}>
             {anime.title}
           </span>
           {episodeLabel && (
             <>
-              <span className="player-loader__separator" aria-hidden="true">
-                •
-              </span>
-              <span className="player-loader__ep-text">{episodeLabel}</span>
+              <span className="player-loader__chip-dot">•</span>
+              <span className="player-loader__chip-ep">{episodeLabel}</span>
             </>
           )}
-          <span className="player-loader__separator" aria-hidden="true">
-            •
-          </span>
-          <span className="player-loader__server-text">
-            {server === 'server1' ? (
-              <Sparkles size={11} className="player-loader__server-icon" />
+          <span className="player-loader__chip-dot">•</span>
+          <span className="player-loader__chip-server">
+            {server === 'server1' || server === 'server2' ? (
+              <Sparkles size={11} className="player-loader__chip-icon" />
             ) : (
-              <Radio size={11} className="player-loader__server-icon" />
+              <Radio size={11} className="player-loader__chip-icon" />
             )}
             {serverLabel}
           </span>
@@ -177,52 +162,56 @@ export function PlayerLoadingOverlay({
         {isError && (
           <div className="player-loader__actions">
             {onRetry && (
-              <Button variant="primary" onClick={onRetry} className="player-loader__action-btn">
-                <RotateCcw size={15} />
-                Try Again
-              </Button>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="player-loader__retry-btn"
+              >
+                <RotateCcw size={14} />
+                <span>Try Again</span>
+              </button>
             )}
 
             <div className="player-loader__server-switches">
               {server !== 'server1' && onSelectServer && (
-                <Button
-                  variant="glass"
+                <button
+                  type="button"
                   onClick={() => onSelectServer('server1')}
-                  className="player-loader__server-btn"
+                  className="player-loader__switch-pill"
                 >
-                  <Sparkles size={13} />
-                  Switch to Server 1
-                </Button>
+                  <Sparkles size={12} />
+                  <span>Server 1</span>
+                </button>
               )}
               {server !== 'server2' && onSelectServer && (
-                <Button
-                  variant="glass"
+                <button
+                  type="button"
                   onClick={() => onSelectServer('server2')}
-                  className="player-loader__server-btn"
+                  className="player-loader__switch-pill"
                 >
-                  <Sparkles size={13} />
-                  Switch to Server 2
-                </Button>
+                  <Sparkles size={12} />
+                  <span>Server 2</span>
+                </button>
               )}
               {server !== 'server3' && onSelectServer && (
-                <Button
-                  variant="glass"
+                <button
+                  type="button"
                   onClick={() => onSelectServer('server3')}
-                  className="player-loader__server-btn"
+                  className="player-loader__switch-pill"
                 >
-                  <Radio size={13} />
-                  Switch to Server 3
-                </Button>
+                  <Radio size={12} />
+                  <span>Server 3</span>
+                </button>
               )}
               {server !== 'server4' && onSelectServer && (
-                <Button
-                  variant="glass"
+                <button
+                  type="button"
                   onClick={() => onSelectServer('server4')}
-                  className="player-loader__server-btn"
+                  className="player-loader__switch-pill"
                 >
-                  <Radio size={13} />
-                  Switch to Server 4
-                </Button>
+                  <Radio size={12} />
+                  <span>Server 4</span>
+                </button>
               )}
             </div>
 
@@ -232,8 +221,8 @@ export function PlayerLoadingOverlay({
                 className="player-loader__back-btn"
                 onClick={onBack}
               >
-                <ArrowLeft size={14} />
-                Back to Details
+                <ArrowLeft size={13} />
+                <span>Back to Details</span>
               </button>
             )}
           </div>

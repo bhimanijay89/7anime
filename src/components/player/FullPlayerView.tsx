@@ -3,13 +3,16 @@ import {
   Bookmark,
   Cast,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  LogIn,
   Maximize,
   Radio,
   Sparkles,
   Star,
   Users,
+  Volume2,
 } from 'lucide-react'
 
 import {
@@ -256,6 +259,7 @@ export function FullPlayerView({
     room,
     isHost,
     openCreateModal,
+    openJoinModal,
     toggleDrawer,
     unreadMessages,
     syncPlayback,
@@ -959,10 +963,11 @@ export function FullPlayerView({
       return 'Streaming connection timed out while loading the player. Please try again or switch to an alternate server.'
     }
     if (!embedUrl) {
+      const serverNum = server === 'server1' ? 'Server 1' : server === 'server2' ? 'Server 2' : server === 'server3' ? 'Server 3' : 'Server 4'
       if ((server === 'server1' || server === 'server4') && !activeMalId) {
-        return `MyAnimeList ID is unavailable for this anime on ${server === 'server1' ? 'Server 1 (AnimeTVPlus MAL)' : 'Server 4 (MegaPlay MAL)'}. Please switch to Server 2 or Server 3 (AniList).`
+        return `Stream is currently unavailable on ${serverNum}. Please switch to Server 2 or Server 3.`
       }
-      return `Stream route unavailable on ${server}. Please switch to another server.`
+      return `Stream route unavailable on ${serverNum}. Please switch to another server.`
     }
     return null
   }, [server, activeMalId, iframeTimedOut, isIframeLoaded, embedUrl])
@@ -1167,35 +1172,30 @@ export function FullPlayerView({
         />
       )}
       {/* =================================================
-          TOP NAVIGATION BAR
+          COMPACT ANIME HEADER
       ================================================== */}
 
-      <header className="cinema-player__topbar glass">
-        <div className="cinema-player__title-group">
+      <header className="cinema-player__header cinema-player__topbar glass">
+        <div className="cinema-player__header-left cinema-player__title-group">
           <button
             type="button"
             className="cinema-player__back-btn"
             onClick={handleBackWithPartyCheck}
             aria-label="Back to Anime Details"
+            title="Back to Details"
           >
-            <ArrowLeft
-              size={16}
-            />
-
-            <span>
-              Back
-            </span>
+            <ArrowLeft size={16} />
+            <span className="cinema-player__back-label">Back</span>
           </button>
 
           <div className="cinema-player__title-meta">
-            <h2>
+            <h2 className="cinema-player__anime-title" title={anime.title}>
               {anime.title}
             </h2>
 
             <div className="cinema-player__ep-badge">
               <span className="cinema-player__ep-tag">
-                EP{" "}
-                {currentEpisode.number}
+                EP {currentEpisode.number}
               </span>
 
               <span className="cinema-player__ep-title">
@@ -1210,7 +1210,7 @@ export function FullPlayerView({
           {room ? (
             <button
               type="button"
-              className="party-bar__btn"
+              className="party-bar__btn cinema-player__party-btn"
               onClick={toggleDrawer}
               title="Open Watch Party Drawer"
             >
@@ -1231,74 +1231,57 @@ export function FullPlayerView({
               )}
             </button>
           ) : (
-            <Button
-              variant="glass"
-              onClick={() =>
-                openCreateModal({
-                  anilistId: Number(anime.id),
-                  mediaType: isMovieMediaType(anime.type) ? 'movie' : 'tv',
-                  episodeNumber: currentEpisode?.number || 1,
-                  audioType: language as PartyAudioType,
-                  serverId: (server as PartyServerId) || 'server1',
-                })
-              }
-              title="Start a Watch Party with friends"
-            >
-              <Users size={14} />
-              <span>Watch Party</span>
-            </Button>
+            <>
+              <Button
+                variant="glass"
+                className="cinema-player__party-btn"
+                onClick={() =>
+                  openCreateModal({
+                    anilistId: Number(anime.id),
+                    mediaType: isMovieMediaType(anime.type) ? 'movie' : 'tv',
+                    episodeNumber: currentEpisode?.number || 1,
+                    audioType: language as PartyAudioType,
+                    serverId: (server as PartyServerId) || 'server1',
+                  })
+                }
+                title="Start a Watch Party with friends"
+              >
+                <Users size={14} />
+                <span>Party</span>
+              </Button>
+
+              <Button
+                variant="glass"
+                className="cinema-player__action-btn--join"
+                onClick={() => openJoinModal()}
+                title="Join a Watch Party with a room code or link"
+              >
+                <LogIn size={14} />
+                <span>Join</span>
+              </Button>
+            </>
           )}
 
           <Button
-            variant={
-              inList
-                ? 'success'
-                : 'glass'
-            }
+            variant={inList ? 'success' : 'glass'}
             onClick={() => {
-              setInList(
-                value => !value,
-              )
-
-              onToggleSave?.(
-                anime,
-              )
+              setInList(value => !value)
+              onToggleSave?.(anime)
             }}
-            aria-label={
-              inList
-                ? 'In Watchlist'
-                : 'Add to Watchlist'
-            }
+            aria-label={inList ? 'In Watchlist' : 'Add to Watchlist'}
           >
-            {inList ? (
-              <Check
-                size={14}
-              />
-            ) : (
-              <Bookmark
-                size={14}
-              />
-            )}
-
-            <span>
-              {inList
-                ? 'In List'
-                : 'Add to List'}
-            </span>
+            {inList ? <Check size={14} /> : <Bookmark size={14} />}
+            <span>{inList ? 'In List' : 'Add to List'}</span>
           </Button>
 
           <ShareButton
             data={{
               title: `${anime.title} - EP ${currentEpisode.number}`,
-
               url:
-                typeof window !==
-                  'undefined'
+                typeof window !== 'undefined'
                   ? window.location.href
                   : 'https://7anime.app',
-
-              description:
-                `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`,
+              description: `Watching ${anime.title} Episode ${currentEpisode.number} on 7anime`,
             }}
           />
         </div>
@@ -1366,403 +1349,335 @@ export function FullPlayerView({
           </div>
 
           {/* ===============================================
-              SERVERS & AUDIO SELECTOR (BELOW PLAYER)
+              PRIMARY CONTROL DECK (DIRECTLY UNDER PLAYER)
           ============================================== */}
 
-          <div className="cinema-player__servers glass">
-            {/* Mobile-only unified playback actions (Top Utility Row) */}
-            <div className="cinema-player__mobile-actions">
-              <label
-                className="cinema-player__autonext"
-                title="Automatically start next episode"
-              >
-                <input
-                  type="checkbox"
-                  checked={autoNext}
-                  onChange={event =>
-                    setAutoNext(
-                      event.target.checked,
-                    )
-                  }
-                />
-                <span>Auto Next</span>
-              </label>
-
-              <div className="cinema-player__mobile-utility-btns">
-                <button
-                  type="button"
-                  className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
-                  onClick={() => {
-                    setInList(value => !value)
-                    onToggleSave?.(anime)
-                  }}
-                  aria-label={inList ? 'Remove from List' : 'Add to List'}
-                  title={inList ? 'In My List' : 'Add to List'}
-                >
-                  {inList ? <Check size={16} /> : <Bookmark size={16} />}
-                </button>
-
-                <button
-                  type="button"
-                  className="cinema-player__control-btn icon-only"
-                  onClick={() => setIsCastModalOpen(true)}
-                  aria-label="Cast to Android TV / Chromecast"
-                  title="Cast to TV"
-                >
-                  <Cast size={16} />
-                </button>
-
-                <button
-                  type="button"
-                  className="cinema-player__control-btn icon-only"
-                  onClick={requestFullscreen}
-                  aria-label="Fullscreen player"
-                  title="Fullscreen"
-                >
-                  <Maximize size={16} />
-                </button>
-              </div>
-            </div>
-
-            <div className="cinema-player__server-group">
-              <span className="cinema-player__server-label">
-                SERVER
-              </span>
-
-              <div className="cinema-player__server-grid">
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                    'server1'
-                    ? 'active'
-                    : ''
-                    }`}
-                  onClick={() =>
-                    handleSelectServer(
-                      'server1',
-                    )
-                  }
-                  title="Server 1 (AnimeTVPlus - MAL)"
-                >
-                  <Sparkles
-                    size={13}
-                  />
-
-                  <span>
-                    Server 1 (MAL)
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                    'server2'
-                    ? 'active'
-                    : ''
-                    }`}
-                  onClick={() =>
-                    handleSelectServer(
-                      'server2',
-                    )
-                  }
-                  title="Server 2 (AnimeTVPlus - AniList)"
-                >
-                  <Sparkles
-                    size={13}
-                  />
-
-                  <span>
-                    Server 2 (AniList)
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                    'server3'
-                    ? 'active'
-                    : ''
-                    }`}
-                  onClick={() =>
-                    handleSelectServer(
-                      'server3',
-                    )
-                  }
-                  title="Server 3 (MegaPlay - AniList)"
-                >
-                  <Radio
-                    size={13}
-                  />
-
-                  <span>
-                    Server 3 (AniList)
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`cinema-player__server-chip ${server ===
-                    'server4'
-                    ? 'active'
-                    : ''
-                    }`}
-                  onClick={() =>
-                    handleSelectServer(
-                      'server4',
-                    )
-                  }
-                  title="Server 4 (MegaPlay - MAL)"
-                >
-                  <Radio
-                    size={13}
-                  />
-
-                  <span>
-                    Server 4 (MAL)
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* =============================================
-                AUDIO SELECTOR
-            ============================================== */}
-
-            <div className="cinema-player__audio-group">
-              <span className="cinema-player__server-label">
-                AUDIO
-              </span>
-
-              {server === 'server1' ? (
-                <div className="cinema-player__audio-grid">
-                  <span className="cinema-player__lang-chip active" style={{ cursor: 'default' }}>
-                    Multi-Audio (In-Player)
-                  </span>
-                </div>
-              ) : (
-                <div className="cinema-player__audio-grid">
-                  <button
-                    type="button"
-                    className={`cinema-player__lang-chip ${language ===
-                      'sub'
-                      ? 'active'
-                      : ''
-                      }`}
-                    onClick={() =>
-                      handleSelectLanguage(
-                        'sub',
-                      )
-                    }
-                  >
-                    SUB
-                  </button>
-
-                  <button
-                    type="button"
-                    className={`cinema-player__lang-chip ${language ===
-                      'dub'
-                      ? 'active'
-                      : ''
-                      }`}
-                    onClick={() =>
-                      handleSelectLanguage(
-                        'dub',
-                      )
-                    }
-                  >
-                    DUB
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ===============================================
-              PLAYER TOOLBAR
-          ============================================== */}
-
-          <div className="cinema-player__toolbar glass">
-            <div className="cinema-player__toolbar-left">
-
+          <div className="cinema-player__deck glass">
+            {/* Row 1: Quick Episode Navigation */}
+            <div className="cinema-player__nav-row">
               <button
                 type="button"
-                className="cinema-player__control-btn"
-                onClick={
-                  goPrevious
-                }
-                disabled={
-                  currentIndex <=
-                  0
-                }
+                className="cinema-player__nav-btn cinema-player__nav-btn--prev cinema-player__control-btn"
+                onClick={goPrevious}
+                disabled={currentIndex <= 0}
                 aria-label="Previous episode"
                 title="Previous Episode (←)"
               >
-                <ChevronLeft
-                  size={16}
-                />
-
-                <span>
-                  Prev
-                </span>
+                <ChevronLeft size={16} />
+                <span>Prev</span>
               </button>
 
-              <div className="cinema-player__ep-select-wrap">
+              <div className="cinema-player__ep-dropdown-wrap">
+                <span className="cinema-player__ep-dropdown-text">
+                  Episode {currentEpisode.number} of {episodes.length}
+                </span>
+                <ChevronDown size={14} className="cinema-player__dropdown-icon" />
                 <select
-                  value={
-                    currentEpisode.id
-                  }
+                  value={currentEpisode.id}
                   onChange={event => {
-                    const episode =
-                      episodes.find(
-                        item =>
-                          item.id ===
-                          event.target
-                            .value,
-                      )
-
+                    const episode = episodes.find(
+                      item => item.id === event.target.value
+                    )
                     if (episode) {
-                      setCurrentEpisode(
-                        episode,
-                      )
+                      setCurrentEpisode(episode)
                     }
                   }}
                   className="cinema-player__select"
                   aria-label="Jump to Episode"
                 >
-                  {episodes.map(
-                    episode => (
-                      <option
-                        key={
-                          episode.id
-                        }
-                        value={
-                          episode.id
-                        }
-                      >
-                        EP{" "}
-                        {
-                          episode.number
-                        }
-                        :{" "}
-                        {
-                          episode.title
-                        }
-                      </option>
-                    ),
-                  )}
+                  {episodes.map(episode => (
+                    <option key={episode.id} value={episode.id}>
+                      EP {episode.number}: {episode.title}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <button
                 type="button"
-                className="cinema-player__control-btn"
-                onClick={
-                  goNext
-                }
-                disabled={
-                  currentIndex <
-                  0 ||
-                  currentIndex >=
-                  episodes.length -
-                  1
-                }
+                className="cinema-player__nav-btn cinema-player__nav-btn--next cinema-player__control-btn"
+                onClick={goNext}
+                disabled={currentIndex < 0 || currentIndex >= episodes.length - 1}
                 aria-label="Next episode"
                 title="Next Episode (→)"
               >
-                <span>
-                  Next
-                </span>
-
-                <ChevronRight
-                  size={16}
-                />
+                <span>Next</span>
+                <ChevronRight size={16} />
               </button>
             </div>
 
-            <div className="cinema-player__toolbar-right">
-
-              <label
-                className="cinema-player__autonext"
-                title="Automatically start next episode"
-              >
-                <input
-                  type="checkbox"
-                  checked={
-                    autoNext
-                  }
-                  onChange={event =>
-                    setAutoNext(
-                      event.target
-                        .checked,
-                    )
-                  }
-                />
-
-                <span>
-                  Auto Next
-                </span>
-              </label>
-
-              <button
-                type="button"
-                className={`cinema-player__control-btn icon-only ${inList
-                  ? 'active'
-                  : ''
-                  }`}
-                onClick={() => {
-                  setInList(
-                    value => !value,
-                  )
-
-                  onToggleSave?.(
-                    anime,
-                  )
-                }}
-                aria-label={
-                  inList
-                    ? 'Remove from List'
-                    : 'Add to List'
-                }
-                title={
-                  inList
-                    ? 'In My List'
-                    : 'Add to List'
-                }
-              >
-                {inList ? (
-                  <Check
-                    size={16}
+            {/* Row 2: Playback Toolbar & Party Group */}
+            <div className="cinema-player__toolbar cinema-player__mobile-actions">
+              <div className="cinema-player__toolbar-left">
+                <label
+                  className="cinema-player__autonext"
+                  title="Automatically start next episode"
+                >
+                  <input
+                    type="checkbox"
+                    checked={autoNext}
+                    onChange={event => setAutoNext(event.target.checked)}
                   />
+                  <span className="cinema-player__switch-track">
+                    <span className="cinema-player__switch-thumb" />
+                  </span>
+                  <span className="cinema-player__switch-label">Auto Next</span>
+                </label>
+              </div>
+
+              <div className="cinema-player__toolbar-right cinema-player__mobile-utility-btns">
+                {/* Watch Party Action Cluster */}
+                {room ? (
+                  <button
+                    type="button"
+                    className="cinema-player__party-pill cinema-player__mobile-party-btn cinema-player__room-pill active"
+                    onClick={toggleDrawer}
+                    title="Open Watch Party Drawer"
+                  >
+                    <span className="party-bar__live-dot" />
+                    <Users size={14} />
+                    <span>
+                      {
+                        room.participants.filter(
+                          (p) => p.status === 'ACTIVE' || p.status === 'DISCONNECTED'
+                        ).length
+                      }
+                    </span>
+                    {unreadMessages > 0 && (
+                      <span className="party-bar__badge">{unreadMessages}</span>
+                    )}
+                  </button>
                 ) : (
-                  <Bookmark
-                    size={16}
-                  />
+                  <>
+                    <button
+                      type="button"
+                      className="cinema-player__party-pill cinema-player__mobile-party-btn"
+                      onClick={() =>
+                        openCreateModal({
+                          anilistId: Number(anime.id),
+                          mediaType: isMovieMediaType(anime.type) ? 'movie' : 'tv',
+                          episodeNumber: currentEpisode?.number || 1,
+                          audioType: language as PartyAudioType,
+                          serverId: (server as PartyServerId) || 'server1',
+                        })
+                      }
+                      title="Start Watch Party"
+                    >
+                      <Users size={14} />
+                      <span>Party</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="cinema-player__party-pill cinema-player__party-pill--join cinema-player__mobile-party-btn cinema-player__mobile-party-btn--join"
+                      onClick={() => openJoinModal()}
+                      title="Join Watch Party with code"
+                    >
+                      <LogIn size={14} />
+                      <span>Join</span>
+                    </button>
+                  </>
                 )}
-              </button>
 
-              <button
-                type="button"
-                className="cinema-player__control-btn icon-only"
-                onClick={() => setIsCastModalOpen(true)}
-                aria-label="Cast to Android TV / Chromecast"
-                title="Cast to TV"
-              >
-                <Cast size={16} />
-              </button>
+                {/* Quick Action Cluster */}
+                <div className="cinema-player__quick-actions">
+                  <button
+                    type="button"
+                    className={`cinema-player__control-btn icon-only ${inList ? 'active' : ''}`}
+                    onClick={() => {
+                      setInList(value => !value)
+                      onToggleSave?.(anime)
+                    }}
+                    aria-label={inList ? 'Remove from List' : 'Add to List'}
+                    title={inList ? 'In My List' : 'Add to List'}
+                  >
+                    {inList ? <Check size={16} /> : <Bookmark size={16} />}
+                  </button>
 
-              <button
-                type="button"
-                className="cinema-player__control-btn icon-only"
-                onClick={
-                  requestFullscreen
-                }
-                aria-label="Fullscreen player"
-                title="Fullscreen"
-              >
-                <Maximize
-                  size={16}
-                />
-              </button>
+                  <button
+                    type="button"
+                    className="cinema-player__control-btn icon-only"
+                    onClick={() => setIsCastModalOpen(true)}
+                    aria-label="Cast to Android TV / Chromecast"
+                    title="Cast to TV"
+                  >
+                    <Cast size={16} />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="cinema-player__control-btn icon-only"
+                    onClick={requestFullscreen}
+                    aria-label="Fullscreen player"
+                    title="Fullscreen"
+                  >
+                    <Maximize size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ===============================================
+              STREAMING SERVERS & AUDIO CONFIGURATION PANEL
+          ============================================== */}
+
+          <div className="cinema-player__config-panel cinema-player__servers glass">
+            {/* 2x2 Streaming Servers Grid */}
+            <div className="cinema-player__server-group">
+              <div className="cinema-player__section-header">
+                <div className="cinema-player__section-title-wrap">
+                  <Radio size={13} className="cinema-player__section-icon" />
+                  <span className="cinema-player__server-label">
+                    STREAMING SERVERS
+                  </span>
+                </div>
+                <span className="cinema-player__section-subnote">
+                  Switch server if stream buffers or fails
+                </span>
+              </div>
+
+              <div className="cinema-player__server-grid">
+                <button
+                  type="button"
+                  className={`cinema-player__server-card cinema-player__server-chip ${
+                    server === 'server1' ? 'active' : ''
+                  }`}
+                  onClick={() => handleSelectServer('server1')}
+                  title="Server 1"
+                >
+                  <div className="cinema-player__server-card-top">
+                    <span className="cinema-player__server-name">
+                      <Sparkles size={13} className="cinema-player__server-icon" />
+                      Server 1
+                    </span>
+                    <div className="cinema-player__server-badges">
+                      <span className="server-badge server-badge--hd">HD</span>
+                    </div>
+                  </div>
+                  <div className="cinema-player__server-card-sub">
+                    <span>Multi-Audio</span>
+                    {server === 'server1' && <Check size={13} className="cinema-player__server-check" />}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-card cinema-player__server-chip ${
+                    server === 'server2' ? 'active' : ''
+                  }`}
+                  onClick={() => handleSelectServer('server2')}
+                  title="Server 2"
+                >
+                  <div className="cinema-player__server-card-top">
+                    <span className="cinema-player__server-name">
+                      <Sparkles size={13} className="cinema-player__server-icon" />
+                      Server 2
+                    </span>
+                    <div className="cinema-player__server-badges">
+                      <span className="server-badge server-badge--fast">Fast</span>
+                    </div>
+                  </div>
+                  <div className="cinema-player__server-card-sub">
+                    <span>Sub & Dub</span>
+                    {server === 'server2' && <Check size={13} className="cinema-player__server-check" />}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-card cinema-player__server-chip ${
+                    server === 'server3' ? 'active' : ''
+                  }`}
+                  onClick={() => handleSelectServer('server3')}
+                  title="Server 3"
+                >
+                  <div className="cinema-player__server-card-top">
+                    <span className="cinema-player__server-name">
+                      <Radio size={13} className="cinema-player__server-icon" />
+                      Server 3
+                    </span>
+                    <div className="cinema-player__server-badges">
+                      <span className="server-badge server-badge--backup">Backup</span>
+                    </div>
+                  </div>
+                  <div className="cinema-player__server-card-sub">
+                    <span>Fast Stream</span>
+                    {server === 'server3' && <Check size={13} className="cinema-player__server-check" />}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`cinema-player__server-card cinema-player__server-chip ${
+                    server === 'server4' ? 'active' : ''
+                  }`}
+                  onClick={() => handleSelectServer('server4')}
+                  title="Server 4"
+                >
+                  <div className="cinema-player__server-card-top">
+                    <span className="cinema-player__server-name">
+                      <Radio size={13} className="cinema-player__server-icon" />
+                      Server 4
+                    </span>
+                    <div className="cinema-player__server-badges">
+                      <span className="server-badge server-badge--mirror">Mirror</span>
+                    </div>
+                  </div>
+                  <div className="cinema-player__server-card-sub">
+                    <span>Mirror Stream</span>
+                    {server === 'server4' && <Check size={13} className="cinema-player__server-check" />}
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Audio Track Selector */}
+            <div className="cinema-player__audio-group">
+              <div className="cinema-player__section-header">
+                <div className="cinema-player__section-title-wrap">
+                  <Volume2 size={13} className="cinema-player__section-icon" />
+                  <span className="cinema-player__server-label">
+                    AUDIO TRACK
+                  </span>
+                </div>
+              </div>
+
+              {server === 'server1' ? (
+                <div className="cinema-player__audio-multi-card">
+                  <div className="cinema-player__audio-multi-badge cinema-player__lang-chip active">
+                    <Volume2 size={13} />
+                    <span>Multi-Audio (In-Player)</span>
+                  </div>
+                  <p className="cinema-player__audio-multi-desc">
+                    Multiple audio languages (Japanese, English, Spanish, etc.) can be switched directly inside the video player controls.
+                  </p>
+                </div>
+              ) : (
+                <div className="cinema-player__audio-segmented cinema-player__audio-grid">
+                  <button
+                    type="button"
+                    className={`cinema-player__audio-pill cinema-player__lang-chip ${
+                      language === 'sub' ? 'active' : ''
+                    }`}
+                    onClick={() => handleSelectLanguage('sub')}
+                  >
+                    <span className="cinema-player__audio-pill-title">SUB</span>
+                    <span className="cinema-player__audio-pill-sub">Original Audio</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`cinema-player__audio-pill cinema-player__lang-chip ${
+                      language === 'dub' ? 'active' : ''
+                    }`}
+                    onClick={() => handleSelectLanguage('dub')}
+                  >
+                    <span className="cinema-player__audio-pill-title">DUB</span>
+                    <span className="cinema-player__audio-pill-sub">English Dub</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

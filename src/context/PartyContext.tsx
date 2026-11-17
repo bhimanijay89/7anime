@@ -17,6 +17,7 @@ import type {
   PartyPlaybackState,
   PartyMessage,
   PartyParticipant,
+  PartyParticipantUser,
   CreatePartyRoomInput,
   PartyClosedPayload,
   PartyAudioType,
@@ -40,7 +41,7 @@ export interface PartyContextType {
   isHost: boolean
   myParticipant: PartyParticipant | null
   isDrawerOpen: boolean
-  activeTab: 'chat' | 'participants'
+  activeTab: 'chat' | 'participants' | 'reactions' | 'room'
   unreadMessages: number
   reactions: ActiveReaction[]
   hostGraceCountdown: number | null
@@ -54,7 +55,7 @@ export interface PartyContextType {
   closeJoinModal: () => void
   toggleDrawer: () => void
   setDrawerOpen: (open: boolean) => void
-  setActiveTab: (tab: 'chat' | 'participants') => void
+  setActiveTab: (tab: 'chat' | 'participants' | 'reactions' | 'room') => void
   createRoom: (input: CreatePartyRoomInput) => Promise<PartyRoomDetails>
   joinRoom: (tokenOrCode: string) => Promise<PartyRoomDetails>
   leaveRoom: () => Promise<void>
@@ -98,7 +99,7 @@ export function PartyProvider({
   }, [])
   const [room, setRoom] = useState<PartyRoomDetails | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'participants' | 'reactions' | 'room'>('chat')
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [reactions, setReactions] = useState<ActiveReaction[]>([])
   const [hostGraceCountdown, setHostGraceCountdown] = useState<number | null>(null)
@@ -198,16 +199,33 @@ export function PartyProvider({
       onParticipantJoined: ({ participant }) => {
         setRoom((prev) => {
           if (!prev) return null
+          const rawUser: any = participant.user || participant
+          const normalizedUser: PartyParticipantUser = {
+            id: rawUser?.id || rawUser?.userId || participant.userId,
+            username: rawUser?.username || 'Member',
+            displayName: rawUser?.displayName || null,
+            avatar: rawUser?.avatar || null,
+          }
+          const normalized: PartyParticipant = {
+            id: participant.id || `p-${participant.userId}`,
+            roomId: participant.roomId || prev.id,
+            userId: participant.userId,
+            role: participant.role || (prev.ownerId === participant.userId ? 'HOST' : 'MEMBER'),
+            status: participant.status || 'ACTIVE',
+            joinedAt: participant.joinedAt || new Date().toISOString(),
+            lastSeenAt: participant.lastSeenAt || new Date().toISOString(),
+            user: normalizedUser,
+          }
           const existingIdx = prev.participants.findIndex((p) => p.userId === participant.userId)
           let updatedList = [...prev.participants]
           if (existingIdx >= 0) {
-            updatedList[existingIdx] = participant
+            updatedList[existingIdx] = normalized
           } else {
-            updatedList.push(participant)
+            updatedList.push(normalized)
           }
           return { ...prev, participants: updatedList }
         })
-        const name = participant.user.displayName || participant.user.username
+        const name = participant.user?.displayName || participant.user?.username || (participant as any).displayName || (participant as any).username || 'A member'
         notify(`${name} joined the watch party!`, 'info')
       },
 
@@ -344,6 +362,7 @@ export function PartyProvider({
   const createRoom = useCallback(async (input: CreatePartyRoomInput) => {
     const newRoom = await partyService.createRoom(input)
     setRoom(newRoom)
+    setIsDrawerOpen(true)
     setCreateModalOpen(false)
     notify(`Watch Party created! Room Code: ${newRoom.code}`, 'info')
     return newRoom
@@ -352,6 +371,7 @@ export function PartyProvider({
   const joinRoom = useCallback(async (tokenOrCode: string) => {
     const joinedRoom = await partyService.joinRoom(tokenOrCode)
     setRoom(joinedRoom)
+    setIsDrawerOpen(true)
     setJoinModalOpen(false)
     notify(`Joined Watch Party! (${joinedRoom.code})`, 'info')
     return joinedRoom

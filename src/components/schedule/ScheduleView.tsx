@@ -144,8 +144,8 @@ export function ScheduleView({
             const entries = await getAiringSchedule(startSec, endSec, 1, 50)
             setScheduleItems(entries)
         } catch (err) {
-            console.error('Failed to load AniList schedule:', err)
-            setError(err instanceof Error ? err.message : 'Unable to fetch airing schedule from AniList.')
+            console.error('Failed to load schedule:', err)
+            setError(err instanceof Error ? err.message : 'Unable to fetch airing schedule. Please try again.')
             setScheduleItems([])
         } finally {
             setLoading(false)
@@ -223,7 +223,7 @@ export function ScheduleView({
                     </div>
 
                     <p className="schedule-description">
-                        Track real-time upcoming anime episode releases, airing times, and broadcast calendars powered by AniList.
+                        Track real-time upcoming anime episode releases, airing times, and broadcast calendars.
                     </p>
                 </div>
             </header>

@@ -159,7 +159,7 @@ export function SearchOverlay({
                     setResults([])
 
                     setError(
-                        'Unable to search AniList right now. Please try again.',
+                        'Unable to search catalog right now. Please try again.',
                     )
                 } finally {
                     if (!cancelled) {
@@ -213,7 +213,7 @@ export function SearchOverlay({
                         </h2>
 
                         <p>
-                            Search the AniList catalog
+                            Search the anime catalog
                             for titles, genres and more.
                         </p>
                     </div>
@@ -313,7 +313,7 @@ export function SearchOverlay({
 
                             <span>
                                 Start typing to search
-                                the AniList catalog
+                                titles, genres and more
                             </span>
                         </div>
                     </div>

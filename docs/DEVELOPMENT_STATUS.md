@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 4.7 — Supabase Egress Optimization Implementation
+Phase 4.11 — Complete Video Provider Identity & Branding Removal from Frontend
 
 ## Overall Status
 
-Completed high-impact Supabase egress reduction optimizations across all 6 phases: eliminated repeated achievement seeding from profile and progress handlers (replacing sequential upserts with an idempotent startup bulk insert via `createMany({ skipDuplicates: true })`); throttled video progress update frequency from 5s to 15s in `FullPlayerView.tsx` and eliminated the dual `fetchUserProfile` + `fetchUserProgress` network refetch loop during playback in `FoundationPreview.tsx` (reducing streaming queries by ~96.7%); cached curated hero logos in-memory in `tmdb.ts` to eliminate 10 sequential upserts on every home visit; optimized profile fetching with SQL database grouping (`groupBy({ by: ['status'] })`) and column projections; implemented Upstash Redis session caching (180s TTL) with active invalidation on logout and profile edits; and enforced bounded pagination and selective projections on library and progress endpoints. Verified with 30/30 passing end-to-end assertions, production build, backend health checks, and browser playback verification.
+Completed removal of all external video provider names and branding (`AnimeTVPlus`, `MegaPlay`, `MAL`, `AniList`) from the user-facing frontend. Standardized streaming servers to generic labels (`Server 1`, `Server 2`, `Server 3`, `Server 4`) paired with clean feature badges (`HD`, `Fast`, `Backup`, `Mirror`) and descriptive subtitles (`Multi-Audio`, `Sub & Dub`, `Fast Stream`, `Mirror Stream`). Sanitized dynamic loading overlays, error alerts, quick server switches, Watch Party creation modals, Party room drawers, search hints, airing schedule descriptions, and system notifications. All internal resolvers, streaming URLs, iframe sandboxing, and API contracts remain strictly preserved. Verified across all mobile and desktop viewports with 100% type safety and zero provider leakage.
 
 ## Completed Phases
 
@@ -55,16 +55,20 @@ Completed high-impact Supabase egress reduction optimizations across all 6 phase
 - [x] Phase 4.5 (Video & Party Play) — Four-Server Architecture & Dedicated Iframe Integration
 - [x] Phase 4.6 (UI & Navigation) — Desktop & Mobile Navbar Refinement
 - [x] Phase 4.7 (Performance & Infra) — Supabase Egress Optimization Implementation
+- [x] Phase 4.8 (Performance & Infra) — Supabase Egress Spike Root-Cause Investigation & Production Verification
+- [x] Phase 4.9 (Mobile & Video UI) — Mobile Playback Fix & UI Rebuild
+- [x] Phase 4.10 (Mobile & Video UI) — Premium Mobile Player UI Redesign
+- [x] Phase 4.11 (Presentation & Branding) — Complete Video Provider Identity & Branding Removal
 
 ## Current Phase Details
 
-- [x] Phase 1 (Seeding): Idempotent startup bulk seeding via `createMany({ skipDuplicates: true })`; removed repeated seeding from request handlers.
-- [x] Phase 2 (Video Progress): Throttled player update frequency from 5s to 15s; removed dual profile/progress network refetches during streaming.
-- [x] Phase 3 (Hero Logos): In-memory synchronous caching for curated hero logos; 0 database queries on `/api/anime/curated-hero`.
-- [x] Phase 4 (Profile Queries): Database-level grouping (`groupBy({ by: ['status'] })`) for library stats; column projection on watchProgress, streaks, achievements.
-- [x] Phase 5 (Session Caching): Upstash Redis session caching (180s TTL) with invalidation on logout and profile updates.
-- [x] Phase 6 (Pagination & Projections): Bounded pagination and selective column projection on library and progress endpoints.
-- [x] End-to-End Verification: 30 / 30 assertions passing (100% pass rate).
+- [x] Task 1: Sanitize Server 1–4 cards, feature badges (`HD`, `Fast`, `Backup`, `Mirror`), subtitles (`Multi-Audio`, `Sub & Dub`, `Fast Stream`, `Mirror Stream`), and tooltips in `FullPlayerView.tsx` and `player.css`
+- [x] Task 2: Sanitize `PlayerLoadingOverlay.tsx` and error notices (`Connecting to database...`, generic `Server X` quick switch buttons)
+- [x] Task 3: Sanitize Watch Party components (`PartyCreateModal.tsx`, `PartyDrawer.tsx`) to display generic server options and subtitles
+- [x] Task 4: Sanitize catalog search hints and schedule view descriptions (`SearchOverlay.tsx`, `ScheduleView.tsx`, `FoundationPreview.tsx`)
+- [x] Task 5: Zero-leakage regex scan across all `src/` user-facing components
+- [x] Task 6: Programmatic verification (`tsc`, `vite build`, Puppeteer across 320px, 390px, 768px, 1440px)
+- [ ] Task 7: Git Commit & Push (Awaiting User Authorization)
 
 ## Current Blockers
 
@@ -76,8 +80,8 @@ Completed high-impact Supabase egress reduction optimizations across all 6 phase
 
 ## Last Updated
 
-17-11-2026
+2026-11-17
 
 ## Next Exact Action
 
-Awaiting user review and approval before creating a git commit.
+Obtain user approval to execute Git commit and push Phase 4.11 to `origin/main`.

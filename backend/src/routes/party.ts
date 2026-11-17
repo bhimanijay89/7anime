@@ -317,15 +317,24 @@ export function createPartyRouter(io?: Server): Router {
         })
 
         // Notify room via socket if io available
-        if (io) {
+        const joinedParticipant = fullRoom?.participants.find((p) => p.userId === user.id)
+        if (io && joinedParticipant) {
           io.to(`party:${roomResult.id}`).emit('participant:joined', {
             roomId: roomResult.id,
             participant: {
+              id: joinedParticipant.id,
+              roomId: roomResult.id,
               userId: user.id,
-              username: user.username,
-              displayName: user.displayName,
-              avatar: user.avatar,
-              role: roomResult.ownerId === user.id ? 'HOST' : 'MEMBER',
+              role: joinedParticipant.role,
+              status: joinedParticipant.status,
+              joinedAt: joinedParticipant.joinedAt instanceof Date ? joinedParticipant.joinedAt.toISOString() : joinedParticipant.joinedAt,
+              lastSeenAt: joinedParticipant.lastSeenAt instanceof Date ? joinedParticipant.lastSeenAt.toISOString() : joinedParticipant.lastSeenAt,
+              user: {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatar: user.avatar,
+              },
             },
           })
         }
