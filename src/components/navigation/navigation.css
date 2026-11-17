@@ -361,6 +361,11 @@
    RESPONSIVE
    ============================================================ */
 
+/* Desktop default: Hide mobile-only elements */
+.mobile-only {
+  display: none !important;
+}
+
 @media (max-width: 900px) {
 
   /* Hide desktop navigation links */
@@ -383,11 +388,35 @@
     margin: 0;
 
     border-radius: 999px;
+    padding: 0.25rem 0.65rem 0.25rem 0.95rem;
   }
 
+  /* On mobile top bar, hide all desktop action buttons and desktop sign-in button */
+  .desktop-only,
   .desktop-nav__actions .icon-button,
+  .auth-nav-btn {
+    display: none !important;
+  }
+
+  /* Show mobile-only elements (e.g. mobile profile chip) */
+  .mobile-only {
+    display: flex !important;
+  }
+
+  /* Clean spacing for actions container on mobile */
+  .desktop-nav__actions {
+    border-left: none;
+    padding-left: 0;
+    margin-left: auto;
+    gap: 0;
+  }
+
+  /* Display circular profile chip cleanly on mobile top bar */
   .profile-chip {
-    display: none;
+    display: flex !important;
+    width: 2.35rem;
+    height: 2.35rem;
+    flex-shrink: 0;
   }
 
 
@@ -413,11 +442,11 @@
      * Compact floating capsule.
      */
     width: min(calc(100% - 1.5rem),
-        24rem);
+        26rem);
 
-    height: 4.35rem;
+    height: 4.25rem;
 
-    padding: 0.45rem;
+    padding: 0.35rem 0.45rem;
 
     align-items: center;
     justify-content: space-around;
@@ -457,17 +486,19 @@
 
     text-decoration: none;
 
-    font-size: 0.68rem;
+    font-size: 0.65rem;
 
     font-weight: var(--font-weight-medium);
 
     /*
-     * 44px+ touch target
+     * 44px+ touch target & 5 equal items
      */
-    min-width: 3.2rem;
+    flex: 1;
+    min-width: 0;
+    max-width: 4.8rem;
     min-height: 2.85rem;
 
-    padding: 0.25rem 0.35rem;
+    padding: 0.25rem 0.15rem;
 
     display: flex;
 
@@ -491,6 +522,14 @@
       background var(--duration-fast) var(--ease-out),
       border-color var(--duration-fast) var(--ease-out),
       transform var(--duration-fast) var(--ease-out);
+  }
+
+  .mobile-nav a span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    letter-spacing: -0.01em;
   }
 
 
@@ -536,14 +575,16 @@
 
     height: 4.15rem;
 
-    padding: 0.35rem;
+    padding: 0.35rem 0.25rem;
   }
 
   .mobile-nav a {
-    min-width: 2.8rem;
+    min-width: 0;
+    max-width: none;
 
-    padding-left: 0.2rem;
-    padding-right: 0.2rem;
+    padding-left: 0.1rem;
+    padding-right: 0.1rem;
+    font-size: 0.62rem;
   }
 }
 

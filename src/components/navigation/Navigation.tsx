@@ -10,7 +10,6 @@ import {
   Menu,
   Search,
   UserRound,
-  Users,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { IconButton } from '../ui/Button'
@@ -62,6 +61,7 @@ export function Brand({
 /* ─────────────────────────────────────────
    Desktop Horizontal Capsule Navbar
    Positioned top-center floating pill
+   (Also serves as the top navbar on mobile)
    ───────────────────────────────────────── */
 
 export function DesktopNavbar({
@@ -88,7 +88,13 @@ export function DesktopNavbar({
   isPartyActive?: boolean
 }) {
   const [isScrolledDown, setIsScrolledDown] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
   const lastScrollY = useRef(0)
+
+  // Reset avatar image error if user avatar changes
+  useEffect(() => {
+    setAvatarError(false)
+  }, [authUser?.avatar])
 
   // Auto-hide capsule navbar on scroll down to keep reading viewport 100% unobstructed; reveal on scroll up
   useEffect(() => {
@@ -149,10 +155,10 @@ export function DesktopNavbar({
       className={`desktop-nav glass-elevated ${isScrolledDown ? 'desktop-nav--scrolled-down' : ''}`}
       aria-label="Main Navigation"
     >
-      {/* 7Anime Logo Brand */}
+      {/* 7Anime Logo Brand (Left) */}
       <Brand onClick={() => onNavigate?.('home')} />
 
-      {/* Primary Navigation Links */}
+      {/* Primary Navigation Links (Center - Desktop only) */}
       <nav aria-label="Main navigation">
         {/* Home */}
         <a
@@ -238,33 +244,9 @@ export function DesktopNavbar({
         </a>
       </nav>
 
-      {/* Right-side Actions: Search, Notifications, Party, Auth */}
+      {/* Right-side Actions: Search, Notifications, Auth/Profile */}
       <div className="desktop-nav__actions">
-        {/* Watch Party */}
-        <IconButton
-          label={isPartyActive ? 'Active Watch Party' : 'Watch Party'}
-          onClick={onOpenParty}
-        >
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={18} />
-            {isPartyActive && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -2,
-                  right: -2,
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: '#ff4b4b',
-                  boxShadow: '0 0 6px #ff4b4b',
-                }}
-              />
-            )}
-          </div>
-        </IconButton>
-
-        {/* Search */}
+        {/* Search (Desktop only) */}
         <IconButton
           label="Search anime (Ctrl+K)"
           onClick={onSearch}
@@ -272,7 +254,7 @@ export function DesktopNavbar({
           <Search size={18} />
         </IconButton>
 
-        {/* Notifications */}
+        {/* Notifications (Desktop only) */}
         <IconButton
           label="Notifications"
           onClick={() => {}}
@@ -301,28 +283,51 @@ export function DesktopNavbar({
               aria-label="View user profile"
             >
               <span className="profile-chip__avatar" aria-hidden="true">
-                {authUser.avatar ? (
+                {authUser.avatar && !avatarError ? (
                   <img
                     src={authUser.avatar}
-                    alt={authUser.displayName || authUser.username}
+                    alt={authUser.displayName || authUser.username || 'User profile'}
                     className="profile-chip__avatar-img"
+                    onError={() => setAvatarError(true)}
                   />
-                ) : (
+                ) : authUser.username ? (
                   authUser.username.slice(0, 1).toUpperCase()
+                ) : (
+                  <UserRound size={18} />
                 )}
               </span>
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            className="auth-nav-btn"
-            onClick={onOpenAuthModal}
-            aria-label="Sign in"
-          >
-            <LogIn size={15} />
-            <span>Sign In</span>
-          </button>
+          <>
+            {/* Desktop: Sign In Button */}
+            <button
+              type="button"
+              className="auth-nav-btn desktop-only"
+              onClick={onOpenAuthModal}
+              aria-label="Sign in"
+            >
+              <LogIn size={15} />
+              <span>Sign In</span>
+            </button>
+
+            {/* Mobile: Default Profile Avatar (👤) */}
+            <button
+              type="button"
+              className={`profile-chip mobile-only ${
+                currentView === 'profile' ? 'profile-chip--active' : ''
+              }`}
+              onClick={() =>
+                onNavigate ? onNavigate('profile') : onOpenAuthModal?.()
+              }
+              title="View user profile"
+              aria-label="View user profile"
+            >
+              <span className="profile-chip__avatar" aria-hidden="true">
+                <UserRound size={18} />
+              </span>
+            </button>
+          </>
         )}
       </div>
     </header>
@@ -332,12 +337,12 @@ export function DesktopNavbar({
 /* ─────────────────────────────────────────
    Mobile Navigation
    Bottom capsule for smaller viewports
+   (Home, Discover, Movies, Schedule, My List)
    ───────────────────────────────────────── */
 
 export function MobileNavigation({
   onNavigate,
   onPrefetch,
-  onSearch,
   currentView = 'home',
 }: {
   onNavigate?: (view: ViewMode) => void
@@ -348,40 +353,84 @@ export function MobileNavigation({
   if (currentView === 'player') return null
 
   const items = [
-    ['Home', House, 'home'],
-    ['Search', Search, 'search'],
-    ['Schedule', CalendarDays, 'schedule'],
-    ['My List', Library, 'library'],
-    ['Profile', UserRound, 'profile'],
+    { name: 'Home', Icon: House, targetView: 'home' as const },
+    { name: 'Discover', Icon: Compass, targetView: 'discover' as const },
+    { name: 'Movies', Icon: Film, targetView: 'movies' as const },
+    { name: 'Schedule', Icon: CalendarDays, targetView: 'schedule' as const },
+    { name: 'My List', Icon: Library, targetView: 'library' as const },
   ] as const
+
+  const [isDiscoverActive, setIsDiscoverActive] = useState(false)
+
+  // Listen to hash to handle active state between Home and Discover
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#', '')
+      setIsDiscoverActive(hash === 'discover')
+    }
+    handleHash()
+    window.addEventListener('hashchange', handleHash)
+    window.addEventListener('popstate', handleHash)
+    return () => {
+      window.removeEventListener('hashchange', handleHash)
+      window.removeEventListener('popstate', handleHash)
+    }
+  }, [])
 
   return (
     <nav
       className="mobile-nav glass"
       aria-label="Mobile navigation"
     >
-      {items.map(([name, Icon, targetView]) => {
+      {items.map(({ name, Icon, targetView }) => {
         const isActive =
-          targetView !== 'search' && currentView === targetView
+          targetView === 'discover'
+            ? currentView === 'home' && isDiscoverActive
+            : targetView === 'home'
+            ? currentView === 'home' && !isDiscoverActive
+            : currentView === targetView
 
         return (
           <a
             className={isActive ? 'active' : ''}
-            href={targetView === 'search' ? '#search' : `#${targetView}`}
+            href={`#${targetView}`}
             key={name}
             aria-current={isActive ? 'page' : undefined}
             onMouseEnter={() => {
-              if (targetView !== 'search') onPrefetch?.(targetView as ViewMode)
+              if (targetView !== 'discover') {
+                onPrefetch?.(targetView as ViewMode)
+              }
             }}
             onTouchStart={() => {
-              if (targetView !== 'search') onPrefetch?.(targetView as ViewMode)
+              if (targetView !== 'discover') {
+                onPrefetch?.(targetView as ViewMode)
+              }
             }}
             onClick={e => {
               e.preventDefault()
-              if (targetView === 'search') {
-                onSearch?.()
+              if (targetView === 'discover') {
+                setIsDiscoverActive(true)
+                if (currentView !== 'home') {
+                  onNavigate?.('home')
+                  setTimeout(() => {
+                    document.getElementById('discovery-catalog')?.scrollIntoView({ behavior: 'smooth' })
+                    window.location.hash = 'discover'
+                  }, 120)
+                } else {
+                  document.getElementById('discovery-catalog')?.scrollIntoView({ behavior: 'smooth' })
+                  window.location.hash = 'discover'
+                }
                 return
               }
+
+              setIsDiscoverActive(false)
+              if (targetView === 'home') {
+                onNavigate?.('home')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+                window.location.hash = 'home'
+                return
+              }
+
               onNavigate?.(targetView as ViewMode)
             }}
           >
