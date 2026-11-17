@@ -483,17 +483,17 @@ export function FullPlayerView({
           lastSavedRef.current
 
         /*
-         * Avoid sending too many requests.
-         * Normal progress:
-         * minimum 5 seconds between meaningful saves.
+         * Supabase Egress Optimization:
+         * Throttle background progress heartbeats to 15 seconds.
+         * Force saves (pause, ended, episode switch, unmount) bypass this check immediately.
          */
         if (
           !force &&
-          now - last.savedAt < 5000 &&
+          now - last.savedAt < 15000 &&
           Math.abs(
             clampedProgress -
             last.progressSeconds,
-          ) < 5 &&
+          ) < 15 &&
           safeDuration ===
           last.durationSeconds &&
           shouldComplete ===
@@ -673,6 +673,14 @@ export function FullPlayerView({
                 'ended' ||
                 candidate.type ===
                 'ended',
+
+              isPaused:
+                candidate.paused ===
+                true ||
+                candidate.event ===
+                'pause' ||
+                candidate.type ===
+                'pause',
             }
           }
         }
@@ -776,6 +784,8 @@ export function FullPlayerView({
           progress.durationSeconds
       }
 
+      const shouldForce = progress.completed || progress.isPaused === true
+
       saveProgress(
         progressRef.current
           .episodeNumber,
@@ -787,6 +797,7 @@ export function FullPlayerView({
           .durationSeconds,
 
         progress.completed,
+        shouldForce,
       )
     }
 

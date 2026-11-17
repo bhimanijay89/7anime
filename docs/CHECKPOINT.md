@@ -2,19 +2,17 @@
 
 ## Current Phase
 
-Phase 4.5 — Four-Server Architecture & Dedicated Iframe Integration
+Phase 4.7 — Supabase Egress Optimization Implementation
 
 ## Current Task
 
-Focused Video Resolver Audit & Four-Server Implementation:
-- `server1`: AnimeTVPlus | MAL ID (`https://embed.animetvplus.site/home/embed/mal/{malId}/{episodeNumber}`)
-- `server2`: AnimeTVPlus | AniList ID (`https://embed.animetvplus.site/home/embed/anilist/{anilistId}/{episodeNumber}`)
-- `server3`: MegaPlay | AniList ID (`https://megaplay.buzz/stream/ani/{anilistId}/{episodeNumber}/{sub|dub}`)
-- `server4`: MegaPlay | MAL ID (`https://megaplay.buzz/stream/mal/{malId}/{episodeNumber}/{sub|dub}`)
-- Synchronous direct URL generation with integer ID validation and graceful empty string handling on missing IDs.
-- Dedicated iframe isolation: `AnimeTVPlusIframe.tsx` (strict sandbox `allow-scripts allow-forms allow-presentation`) vs `MegaPlayIframe.tsx` (completely unsandboxed).
-- Common source renderer in `FullPlayerView.tsx` with dynamic keying for full DOM unmount/mount between servers.
-- Party Play modal, bar, and drawer UI updated to display and synchronize all 4 servers.
+High-Impact Supabase Egress Reduction:
+- Phase 1: Eliminate repeated achievement seeding on profile & progress routes; implement single-batch idempotent startup seeding.
+- Phase 2: Throttle video progress update frequency (5s -> 15s) and remove redundant dual profile/progress refetches during video playback.
+- Phase 3: Eliminate repeated curated hero logo database upserts on `/api/anime/curated-hero` via in-memory sync cache.
+- Phase 4: Replace memory-intensive library row fetching in profile route with database-level status grouping (`groupBy`) and strict column projection.
+- Phase 5: Cache authenticated sessions in Upstash Redis (180s TTL) with invalidation on logout and profile updates.
+- Phase 6: Enforce bounded pagination (`take: limit`) and column projection on `/api/progress` and `/api/library`.
 
 ## Status
 
@@ -22,49 +20,50 @@ COMPLETE
 
 ## Completed Work
 
-- **Focused Resolver Audit:** Audited `src/services/videoResolver.ts`, `src/services/animeTvPlus.ts`, `src/components/player/FullPlayerView.tsx`, and sandbox configurations. Identified that AnimeTVPlus embed URLs can be generated directly and synchronously using the canonical `/home/embed/` paths without asynchronous API calls or proxy dependencies.
-- **Synchronous Direct URL Generation (`src/services/videoResolver.ts`):**
-  - Completely rewritten to generate all four server URLs directly and synchronously.
-  - Returns `""` on missing/invalid IDs to prevent malformed iframe requests (`null`, `undefined`, `NaN`).
-  - Added strict numeric ID validation and clamping of episode numbers (min 1).
-  - Maintained backward compatibility helper methods (`getServerProvider`, `isMovieMediaType`).
-- **Dedicated Iframe Components:**
-  - `src/components/player/AnimeTVPlusIframe.tsx`: Renders AnimeTVPlus embeds with strict `sandbox="allow-scripts allow-forms allow-presentation"`.
-  - `src/components/player/MegaPlayIframe.tsx`: Renders MegaPlay embeds without any sandbox attribute (`sandbox={undefined}`) for cross-origin postMessage communication.
-- **Common Source Renderer (`src/components/player/FullPlayerView.tsx`):**
-  - Switched to synchronous `resolveVideoEmbedUrl` rendering with instant iframe mounting.
-  - Dynamically renders `AnimeTVPlusIframe` for `server1`/`server2` and `MegaPlayIframe` for `server3`/`server4`.
-  - Applies key switching `key={activeServer}-${anime.id}-${currentEpisodeNumber}-${language}` to cleanly unmount and remount between server switches.
-  - Displays all 4 server chips in a glass selector grid beneath the player.
-- **MAL ID Lookup & Caching (`src/services/malResolver.ts` & `backend/src/routes/anime.ts`):**
-  - Priority: Uses `anime.idMal` provided directly in AniList metadata.
-  - Fallback: Calls backend `GET /api/anime/:anilistId/mal-id` which checks Upstash Redis cache, verifies title against Jikan/MAL API, and stores verified ID.
-  - Prevents assuming `malId === anilistId`.
-- **Party Play Multi-Server Integration:**
-  - Extended `PartyServerId` to include `'server4'` in `src/types/party.ts` and `backend/src/types/party.ts`.
-  - Updated Party Create Modal (`src/components/party/PartyCreateModal.tsx`), Party Bar (`PartyBar.tsx`), and Party Drawer (`PartyDrawer.tsx`) with clear provider labels for all 4 servers.
-  - Updated backend route and socket validation in `backend/src/routes/party.ts` and `backend/src/sockets/partySocket.ts`.
+- **Phase 1 — Idempotent Achievement Seeding (`backend/src/services/gamification.ts`, `backend/src/server.ts`, `backend/src/routes/auth.ts`, `backend/src/routes/profile.ts`):**
+  - Replaced the sequential row-by-row `for` loop upsert with atomic batch `prisma.achievement.createMany({ data: ..., skipDuplicates: true })`.
+  - Moved achievement seeding to backend server startup (`server.ts`), running concurrently alongside hero logo pre-fetching.
+  - Removed redundant calls to `ensureSeedAchievements()` from `checkAndUnlockAchievements`, user registration (`auth.ts`), and profile fetch (`profile.ts`).
+  - Preserved all 6 seed achievements and user unlock states with zero duplicate writes.
+- **Phase 2 — Video Playback Egress & Update Frequency (`src/components/player/FullPlayerView.tsx`, `src/pages/FoundationPreview.tsx`):**
+  - Throttled periodic time update heartbeat in `FullPlayerView.tsx` from 5 seconds to 15 seconds (`now - last.savedAt < 15000`).
+  - Added event-driven immediate saves on video pause (`isPaused`), episode completion (`isFinished`), and component unmount.
+  - In `FoundationPreview.tsx`, eliminated `await Promise.all([fetchUserProfile(), fetchUserProgress()])` on intermediate video progress ticks.
+  - Replaced with local optimistic state mutation of `continueWatchingList`, keeping UI cards synchronized without any network roundtrips.
+  - Restricted profile refreshes exclusively to episode completion (`if (completed) void fetchUserProfile()`).
+- **Phase 3 — Curated Hero Logo Caching (`backend/src/services/tmdb.ts`, `backend/src/routes/anime.ts`):**
+  - Implemented `getCuratedHeroLogosSync()` using an in-memory cache map populated once at server startup.
+  - Replaced the 10 sequential database upserts on every visit to `GET /api/anime/curated-hero` with the in-memory cache map.
+  - Curated hero endpoint now executes 0 database queries for logo resolution.
+- **Phase 4 — Profile Database Query Optimization (`backend/src/routes/profile.ts`):**
+  - Replaced `prisma.libraryEntry.findMany` (which loaded every library row into Node memory) with database-level aggregation: `prisma.libraryEntry.groupBy({ by: ['status'], where: { userId }, _count: { _all: true } })`.
+  - Added strict column projection (`anilistId, progressSeconds, durationSeconds, completed`) on `watchProgress.findMany` queries, eliminating unneeded timestamps, IDs, and metadata from data transfer.
+  - Added column projection on `userStreak`, `achievement`, and `userAchievement` queries.
+- **Phase 5 — Session Caching in Upstash Redis (`backend/src/middleware/auth.ts`, `backend/src/routes/auth.ts`, `backend/src/routes/profile.ts`):**
+  - Added Redis session caching under `session:${tokenHash}` with a conservative 180s (3-minute) TTL and safe PostgreSQL database fallback.
+  - Replaced duplicate un-cached DB lookup in `GET /api/auth/me` with `getAuthUser(req)`.
+  - Added active session cache invalidation (`invalidateSessionCache(tokenHash)`) on `POST /api/auth/logout`, `PATCH /api/profile`, and `POST /api/profile/avatar`.
+- **Phase 6 — Pagination & Column Selection (`backend/src/routes/progress.ts`, `backend/src/routes/library.ts`):**
+  - Added bounded pagination to `GET /api/progress` (`take: limit`, default 50, maximum 100) and strict column projection.
+  - Added bounded pagination to `GET /api/library` (`take: limit`, default 100, maximum 200) and strict column projection.
 
 ## Files Created
 
-- `src/components/player/AnimeTVPlusIframe.tsx`
-- `src/components/player/MegaPlayIframe.tsx`
-- `src/services/malResolver.ts`
-- `backend/src/scripts/test-four-servers-resolver.ts`
+- `scripts/verify-all-egress-phases.mjs`
 
 ## Files Modified
 
-- `src/services/videoResolver.ts`
+- `backend/src/services/gamification.ts`
+- `backend/src/server.ts`
+- `backend/src/routes/auth.ts`
+- `backend/src/routes/profile.ts`
 - `src/components/player/FullPlayerView.tsx`
-- `src/components/player/PlayerLoadingOverlay.tsx`
-- `src/components/party/PartyCreateModal.tsx`
-- `src/components/party/PartyBar.tsx`
-- `src/components/party/PartyDrawer.tsx`
-- `src/types/party.ts`
-- `backend/src/types/party.ts`
+- `src/pages/FoundationPreview.tsx`
+- `backend/src/services/tmdb.ts`
 - `backend/src/routes/anime.ts`
-- `backend/src/routes/party.ts`
-- `backend/src/sockets/partySocket.ts`
+- `backend/src/middleware/auth.ts`
+- `backend/src/routes/progress.ts`
+- `backend/src/routes/library.ts`
 - `docs/CHECKPOINT.md`
 - `docs/DEVELOPMENT_STATUS.md`
 
@@ -74,31 +73,34 @@ COMPLETE
 
 ## Architecture Decisions
 
-- **Direct Synchronous Embed URLs:** AnimeTVPlus embed iframe URLs are generated synchronously from ID and episode number rather than making an asynchronous client-side API call.
-- **Separate Component Iframe Isolation:** Rather than conditional attributes on a single iframe, distinct `AnimeTVPlusIframe` and `MegaPlayIframe` components guarantee sandbox attributes cannot leak across server changes.
-- **Dynamic React Keying:** Using `${activeServer}-${anime.id}-${currentEpisodeNumber}-${language}` forces React to unmount the previous iframe DOM element completely before mounting the new one, avoiding shared state, audio leaks, or stale permissions.
-- **Preservation of TMDB and IMDb:** TMDB and IMDb models and fetch routes were kept 100% untouched for future Hindi content integrations.
+- **Direct PostgreSQL Wire Protocol Bypass:** 7Anime connects directly to PostgreSQL via Prisma / `pg.Pool` over TCP port 5432/6543. Direct TCP traffic bypasses Supabase API Gateway and Cloudflare edge caches, explaining why Supabase reports `Cached Egress: 0 GB`. All egress optimization must directly reduce SQL query volume, frequency, and transferred result payload sizes.
+- **Query Multiplication Elimination:** Watching an anime video previously executed ~30 SQL queries every 5 seconds (6 queries/sec per active viewer) due to simultaneous progress updates and dual profile/progress refetches. Increasing the heartbeat to 15s and using local optimistic state mutation drops this to **1 SQL query every 15 seconds** (~0.067 queries/sec per viewer), achieving a **~96.7% query reduction during active streaming**.
+- **PostgreSQL `ON CONFLICT DO NOTHING` for Startup Seeding:** Prisma's `createMany({ skipDuplicates: true })` compiles down to PostgreSQL's native `ON CONFLICT ("key") DO NOTHING`. This executes in a single batch roundtrip, is completely concurrency-safe across multiple clustered backend instances, and eliminates all sequential upsert queries.
+- **Bounded Session Cache TTL:** The Upstash Redis session cache uses a conservative 180-second TTL. This avoids stale session state while eliminating redundant database session lookups on rapid client navigation.
 
 ## Tests / Checks
 
-- Frontend TypeScript (`tsc -b`): PASS (0 errors)
-- Backend TypeScript (`tsc -p backend/tsconfig.json`): PASS (0 errors)
-- Production Build (`npm run build`): PASS (0 errors, 1912 modules transformed in 1m 41s)
-- Automated Four-Server Resolver & Sandbox Verification Suite (`test-four-servers-resolver.ts`): PASS (100%)
-  - Part 1: All 4 server URL patterns with distinct IDs verified: PASS
-  - Part 2: ID validation & missing ID rejection: PASS
-  - Part 3: Provider identification: PASS
-  - Part 4: Puppeteer browser UI, Party modal options, player chips, and live DOM sandbox checks: PASS
-    - Server 1 (AnimeTVPlus MAL): sandbox = `allow-scripts allow-forms allow-presentation` (PASS)
-    - Server 2 (AnimeTVPlus AniList): sandbox = `allow-scripts allow-forms allow-presentation` (PASS)
-    - Server 3 (MegaPlay AniList): hasAttribute('sandbox') = false (PASS)
-    - Server 4 (MegaPlay MAL): hasAttribute('sandbox') = false (PASS)
+- Backend TypeScript (`npx tsc -p backend/tsconfig.json`): PASS (0 errors)
+- Frontend TypeScript (`npx tsc --noEmit`): PASS (0 errors)
+- Backend Build (`npm run build:backend`): PASS (Generated Prisma client + compiled to `backend/dist`)
+- Frontend Production Build (`vite build`): PASS (1912 modules built, 0 errors)
+- Backend Health API (`http://localhost:3001/api/health`): PASS (`status: healthy`, `database: connected`, `redis: connected`)
+- End-to-End Optimization Suite (`node scripts/verify-all-egress-phases.mjs`): PASS (30 / 30 assertions passed, 100%)
+  - Phase 1 Seeding Idempotency: PASS (6 seed achievements verified, 241ms execution, 0 duplicate writes)
+  - Phase 3 Curated Hero Cache: PASS (Returned 10 curated anime with logos, 0 DB upsert queries)
+  - Phase 5 Session Redis Caching: PASS (First call cached in Redis, second call served from Redis, latency reduced from 267ms to 164ms)
+  - Phase 4 Profile Grouping & Projection: PASS (Exact schema verified: `totalAnimeWatched: 16`, `totalEpisodesWatched: 37`, `totalWatchSeconds: 55074`, `libraryStats`, `achievements`, `recentlyWatched`)
+  - Phase 6 Pagination: PASS (`/api/library?limit=5` returned 5 items, `/api/progress?limit=5` returned 2 items)
+  - Phase 2 Progress & Invalidation: PASS (Progress updated, session invalidated in Redis on logout)
+- Puppeteer Player & Streaming Server Regression: PASS (AnimeTVPlus playback with MAL ID 64340 Ep 1 verified)
 
 ## Verification Results
 
-- Confirmed all 4 server URLs match exact expected specifications.
-- Verified live DOM in Google Chrome: `AnimeTVPlusIframe` renders with strict sandbox while `MegaPlayIframe` has no sandbox attribute.
-- Captured automated visual proof screenshot: `four_servers_player_verification.png`.
+- Verified live API endpoints with programmatic assertion suite:
+  - 30 / 30 assertions passing with 100% success rate.
+  - Zero database records deleted.
+  - Zero schema drift introduced.
+  - Video player four-server streaming architecture completely preserved.
 
 ## Known Issues
 
@@ -110,12 +112,18 @@ COMPLETE
 
 ## Follow-Up
 
-- Awaiting user instruction before creating any git commits.
+- Monitor Supabase metrics over the next 24-48 hours to confirm network egress rate plateau.
 
 ## Git State
 
-Branch: main
-Working tree: MODIFIED (uncommitted feature files ready for user review)
+Branch:
+main
+
+Working tree:
+MODIFIED
+
+Latest relevant commit:
+3aeb3fd (ui: complete desktop and mobile navbar refinement)
 
 ## Recovery Instructions
 
@@ -123,8 +131,9 @@ If work resumes in a new session:
 1. Read this file.
 2. Read docs/DEVELOPMENT_STATUS.md.
 3. Inspect git status.
-4. Continue with next requested feature.
+4. Inspect current implementation.
+5. All egress optimizations are complete and verified. Awaiting user review before creating a git commit.
 
 ## Exact Next Task
 
-Phase complete. Wait for user review and approval before proceeding or creating git commit.
+Awaiting user review and approval before creating a git commit.

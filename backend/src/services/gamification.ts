@@ -59,18 +59,23 @@ export const SEED_ACHIEVEMENTS = [
   },
 ]
 
-export async function ensureSeedAchievements() {
-  for (const item of SEED_ACHIEVEMENTS) {
-    await prisma.achievement.upsert({
-      where: { key: item.key },
-      update: {
+export async function ensureSeedAchievements(): Promise<void> {
+  try {
+    // Database-level bulk insertion with native duplicate protection (ON CONFLICT DO NOTHING).
+    // Concurrency-safe across multiple backend instances and executed in a single batch roundtrip.
+    await prisma.achievement.createMany({
+      data: SEED_ACHIEVEMENTS.map(item => ({
+        key: item.key,
         title: item.title,
         description: item.description,
         xpReward: item.xpReward,
         coinReward: item.coinReward,
-      },
-      create: item,
+      })),
+      skipDuplicates: true,
     })
+    console.log('[gamification] Seed achievements verified in database.')
+  } catch (err) {
+    console.warn('[gamification] ensureSeedAchievements error:', err instanceof Error ? err.message : err)
   }
 }
 
@@ -230,7 +235,6 @@ export async function awardXpAndCoins(
 }
 
 export async function checkAndUnlockAchievements(userId: string) {
-  await ensureSeedAchievements()
   const stats = await getOrCreateUserStats(userId)
 
   const completedEpisodesCount = await prisma.watchProgress.count({
@@ -247,7 +251,14 @@ export async function checkAndUnlockAchievements(userId: string) {
   })
 
   const unlockedKeys = new Set(existingUnlocked.map((a: { achievement: { key: string } }) => a.achievement.key))
-  const allAchievements = await prisma.achievement.findMany()
+  const allAchievements = await prisma.achievement.findMany({
+    select: {
+      id: true,
+      key: true,
+      xpReward: true,
+      coinReward: true,
+    },
+  })
 
   for (const ach of allAchievements) {
     if (unlockedKeys.has(ach.key)) continue

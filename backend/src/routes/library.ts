@@ -32,6 +32,9 @@ router.get(
   ) => {
     try {
       const userId = req.user!.id
+      const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100))
+      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1)
+      const skip = (page - 1) * limit
 
       const entries =
         await prisma.libraryEntry.findMany({
@@ -40,6 +43,16 @@ router.get(
           },
           orderBy: {
             updatedAt: 'desc',
+          },
+          take: limit,
+          skip,
+          select: {
+            id: true,
+            userId: true,
+            anilistId: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
           },
         })
 

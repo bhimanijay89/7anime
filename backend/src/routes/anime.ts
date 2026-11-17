@@ -15,6 +15,7 @@ import {
     resolveTmdbLogo,
     CURATED_HERO_ANIME,
     ensureCuratedHeroLogos,
+    getCuratedHeroLogosSync,
 } from '../services/tmdb.js'
 
 import type {
@@ -245,7 +246,7 @@ router.get('/anime/search', async (req, res) => {
 /* GET /api/anime/curated-hero */
 router.get('/anime/curated-hero', async (_req, res) => {
     try {
-        const logosMap = await ensureCuratedHeroLogos()
+        const logosMap = getCuratedHeroLogosSync()
         const animeList: UnifiedAnime[] = []
 
         for (const item of CURATED_HERO_ANIME) {

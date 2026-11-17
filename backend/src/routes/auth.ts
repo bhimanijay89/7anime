@@ -10,6 +10,7 @@ import {
     sendSuccess,
 } from '../utils/response.js'
 import { createRateLimiter } from '../middleware/rateLimit.js'
+import { invalidateSessionCache, getAuthUser } from '../middleware/auth.js'
 
 const router = Router()
 const authLimiter = createRateLimiter(60 * 1000, 15)
@@ -222,13 +223,8 @@ router.post(
 
             const {
                 getOrCreateUserStats,
-                ensureSeedAchievements,
             } = await import(
                 '../services/gamification.js'
-            )
-
-            await ensureSeedAchievements().catch(
-                () => { },
             )
 
             await getOrCreateUserStats(
@@ -427,10 +423,8 @@ router.get(
     '/auth/me',
     async (req: Request, res: Response) => {
         try {
-            const token =
-                getSessionToken(req)
-
-            if (!token) {
+            const user = await getAuthUser(req)
+            if (!user) {
                 return sendError(
                     res,
                     'Not authenticated.',
@@ -439,47 +433,10 @@ router.get(
                 )
             }
 
-            const tokenHash =
-                hashToken(token)
-
-            const session =
-                await prisma.session.findUnique({
-                    where: {
-                        tokenHash,
-                    },
-                    include: {
-                        user: true,
-                    },
-                })
-
-            if (
-                !session ||
-                session.expiresAt <=
-                new Date()
-            ) {
-                if (session) {
-                    await prisma.session.delete({
-                        where: {
-                            id: session.id,
-                        },
-                    })
-                }
-
-                return sendError(
-                    res,
-                    'Session expired or invalid.',
-                    ErrorCode.UNAUTHORIZED,
-                    401,
-                )
-            }
-
             return sendSuccess(
                 res,
                 {
-                    user:
-                        sanitizeUser(
-                            session.user,
-                        ),
+                    user: sanitizeUser(user),
                 },
             )
         } catch (error) {
@@ -515,11 +472,14 @@ router.post(
                 const tokenHash =
                     hashToken(token)
 
-                await prisma.session.deleteMany({
-                    where: {
-                        tokenHash,
-                    },
-                })
+                await Promise.all([
+                    prisma.session.deleteMany({
+                        where: {
+                            tokenHash,
+                        },
+                    }),
+                    invalidateSessionCache(tokenHash),
+                ])
             }
 
             res.setHeader(

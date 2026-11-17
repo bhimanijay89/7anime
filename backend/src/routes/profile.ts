@@ -3,11 +3,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { LibraryEntry, WatchProgress } from '@prisma/client'
 import prisma from '../db/client.js'
-import { getAuthUser } from '../middleware/auth.js'
+import { getAuthUser, getSessionToken, hashToken, invalidateSessionCache } from '../middleware/auth.js'
 import {
   calculateLevelInfo,
   getOrCreateUserStats,
-  ensureSeedAchievements,
 } from '../services/gamification.js'
 import { getAnimeById } from '../services/anilist.js'
 import { ErrorCode, sendError, sendSuccess } from '../utils/response.js'
@@ -32,17 +31,22 @@ router.get('/profile', async (req: Request, res: Response) => {
       )
     }
 
-    await ensureSeedAchievements().catch(() => {})
     const stats = await getOrCreateUserStats(user.id)
 
-    // Retrieve all genuine watch progress records for the user
+    // Retrieve watch progress with precise column selection to minimize wire transfer
     const allProgressRecords = await prisma.watchProgress.findMany({
       where: { userId: user.id },
+      select: {
+        anilistId: true,
+        progressSeconds: true,
+        durationSeconds: true,
+        completed: true,
+      },
     })
 
     // Strict verified counting rule:
     // Only count episodes where user completed at least 80% or completed flag is true
-    const verifiedCompletedEpisodes = allProgressRecords.filter((p: WatchProgress) => {
+    const verifiedCompletedEpisodes = allProgressRecords.filter((p) => {
       if (p.completed) return true
       if (p.durationSeconds > 0 && p.progressSeconds >= Math.floor(p.durationSeconds * 0.8)) {
         return true
@@ -55,13 +59,17 @@ router.get('/profile', async (req: Request, res: Response) => {
     // Genuine accumulated playback time:
     // Sum of actual verified progressSeconds across episodes (each progressSeconds is already capped at duration)
     const totalWatchSeconds = allProgressRecords.reduce(
-      (sum: number, p: WatchProgress) => sum + Math.max(0, p.progressSeconds),
+      (sum: number, p) => sum + Math.max(0, p.progressSeconds),
       0,
     )
 
-    // Synchronize user streak record
+    // Synchronize user streak record with precise column selection
     const userStreak = await prisma.userStreak.findUnique({
       where: { userId: user.id },
+      select: {
+        currentStreak: true,
+        longestStreak: true,
+      },
     })
 
     const currentStreak = userStreak ? userStreak.currentStreak : stats.currentStreak
@@ -87,20 +95,32 @@ router.get('/profile', async (req: Request, res: Response) => {
 
     const levelInfo = calculateLevelInfo(stats.xp)
 
-    // User achievements
+    // User achievements with column projection
     const allAchievements = await prisma.achievement.findMany({
       orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        description: true,
+        xpReward: true,
+        coinReward: true,
+      },
     })
 
     const userAchievements = await prisma.userAchievement.findMany({
       where: { userId: user.id },
+      select: {
+        achievementId: true,
+        unlockedAt: true,
+      },
     })
 
     const unlockedMap = new Map<string, Date>(
-      userAchievements.map((ua: { achievementId: string; unlockedAt: Date }) => [ua.achievementId, ua.unlockedAt]),
+      userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt]),
     )
 
-    const achievementsFormatted = allAchievements.map((ach: { id: string; key: string; title: string; description: string; xpReward: number; coinReward: number }) => ({
+    const achievementsFormatted = allAchievements.map((ach) => ({
       id: ach.id,
       key: ach.key,
       title: ach.title,
@@ -113,28 +133,49 @@ router.get('/profile', async (req: Request, res: Response) => {
         : null,
     }))
 
-    // Library Statistics
-    const libraryEntries = await prisma.libraryEntry.findMany({
+    // Database-level grouping for library statistics (replaces fetching all rows into Node memory)
+    const libraryGrouped = await prisma.libraryEntry.groupBy({
+      by: ['status'],
       where: { userId: user.id },
+      _count: { _all: true },
     })
 
-    const libraryStats = {
-      watching: libraryEntries.filter((e: LibraryEntry) => e.status === 'WATCHING').length,
-      completed: libraryEntries.filter((e: LibraryEntry) => e.status === 'COMPLETED').length,
-      planning: libraryEntries.filter((e: LibraryEntry) => e.status === 'PLANNING').length,
-      dropped: libraryEntries.filter((e: LibraryEntry) => e.status === 'DROPPED').length,
-      total: libraryEntries.length,
+    let watching = 0, completed = 0, planning = 0, dropped = 0, total = 0
+    for (const g of libraryGrouped) {
+      const count = g._count._all
+      total += count
+      if (g.status === 'WATCHING') watching = count
+      else if (g.status === 'COMPLETED') completed = count
+      else if (g.status === 'PLANNING') planning = count
+      else if (g.status === 'DROPPED') dropped = count
     }
 
-    // Recently Watched - hydrated with metadata for profile Continue Watching
+    const libraryStats = {
+      watching,
+      completed,
+      planning,
+      dropped,
+      total,
+    }
+
+    // Recently Watched with column projection
     const recentProgress = await prisma.watchProgress.findMany({
       where: { userId: user.id },
       orderBy: { updatedAt: 'desc' },
       take: 6,
+      select: {
+        id: true,
+        anilistId: true,
+        episodeNumber: true,
+        progressSeconds: true,
+        durationSeconds: true,
+        completed: true,
+        updatedAt: true,
+      },
     })
 
     const hydratedRecent = await Promise.all(
-      recentProgress.map(async (p: WatchProgress) => {
+      recentProgress.map(async (p) => {
         try {
           const ani = await getAnimeById(p.anilistId)
           const title = ani?.title?.english || ani?.title?.romaji || `Anime #${p.anilistId}`
@@ -194,10 +235,10 @@ router.get('/profile', async (req: Request, res: Response) => {
       coins: stats.coins,
       currentStreak,
       longestStreak,
-      totalAnimeWatched: new Set(allProgressRecords.map((p: WatchProgress) => p.anilistId)).size,
+      totalAnimeWatched: new Set(allProgressRecords.map((p) => p.anilistId)).size,
       totalEpisodesWatched: completedEpisodesCount,
       totalWatchSeconds,
-      topGenre: libraryEntries.length > 0 ? 'Action' : 'Discovery',
+      topGenre: libraryStats.total > 0 ? 'Action' : 'Discovery',
       communityRank: levelInfo.level >= 25 ? 'Master Otaku' : levelInfo.level >= 10 ? 'Senior Otaku' : 'Anime Enthusiast',
       achievements: achievementsFormatted,
       recentlyWatched: hydratedRecent,
@@ -250,6 +291,11 @@ router.patch('/profile', async (req: Request, res: Response) => {
       where: { id: user.id },
       data: updateData,
     })
+
+    const token = getSessionToken(req)
+    if (token) {
+      void invalidateSessionCache(hashToken(token))
+    }
 
     return sendSuccess(res, {
       user: {
@@ -331,6 +377,11 @@ router.post('/profile/avatar', async (req: Request, res: Response) => {
       where: { id: user.id },
       data: { avatar: finalAvatar },
     })
+
+    const token = getSessionToken(req)
+    if (token) {
+      void invalidateSessionCache(hashToken(token))
+    }
 
     return sendSuccess(res, {
       user: {

@@ -395,13 +395,38 @@ function Home() {
               completed: Boolean(completed),
             }),
           })
-          await Promise.all([fetchUserProfile(), fetchUserProgress()])
+
+          // Supabase Egress Optimization:
+          // Update local continueWatchingList state directly without hitting the database
+          setContinueWatchingList((prev) => {
+            const idx = prev.findIndex((item) => Number(item.id) === parsedId)
+            const duration = durationSeconds > 0 ? durationSeconds : 1440
+            const pct = Math.min(100, Math.round((progressSeconds / duration) * 100))
+            if (idx >= 0) {
+              const updated = [...prev]
+              updated[idx] = {
+                ...updated[idx],
+                episode: `EP ${episodeNumber}`,
+                progress: pct,
+                lastWatchedEpisodeNumber: episodeNumber,
+                lastWatchedProgressSeconds: progressSeconds,
+                lastWatchedDurationSeconds: durationSeconds,
+              }
+              return updated
+            }
+            return prev
+          })
+
+          // Refresh profile statistics only upon episode completion
+          if (completed) {
+            void fetchUserProfile()
+          }
         } catch (err) {
           console.error('Failed to save progress to backend:', err)
         }
       }
     },
-    [authUser, fetchUserProfile, fetchUserProgress],
+    [authUser, fetchUserProfile, isDecoyActive],
   )
 
   const checkAuthSession = useCallback(async () => {

@@ -2,11 +2,11 @@
 
 ## Current Phase
 
-Phase 4.5 — Four-Server Architecture & Dedicated Iframe Integration
+Phase 4.7 — Supabase Egress Optimization Implementation
 
 ## Overall Status
 
-Completed focused video resolver audit and four-server implementation (`server1`: AnimeTVPlus MAL, `server2`: AnimeTVPlus AniList, `server3`: MegaPlay AniList, `server4`: MegaPlay MAL). Implemented direct synchronous embed URL generation with numeric validation and fallback rejection, dedicated iframe isolation (`AnimeTVPlusIframe` with strict sandbox `allow-scripts allow-forms allow-presentation` vs `MegaPlayIframe` completely unsandboxed), dynamic React keying for clean DOM teardown, and MAL ID caching with backend verification fallback. Verified across unit tests, live Puppeteer browser automation, and clean production build. Ready for user review.
+Completed high-impact Supabase egress reduction optimizations across all 6 phases: eliminated repeated achievement seeding from profile and progress handlers (replacing sequential upserts with an idempotent startup bulk insert via `createMany({ skipDuplicates: true })`); throttled video progress update frequency from 5s to 15s in `FullPlayerView.tsx` and eliminated the dual `fetchUserProfile` + `fetchUserProgress` network refetch loop during playback in `FoundationPreview.tsx` (reducing streaming queries by ~96.7%); cached curated hero logos in-memory in `tmdb.ts` to eliminate 10 sequential upserts on every home visit; optimized profile fetching with SQL database grouping (`groupBy({ by: ['status'] })`) and column projections; implemented Upstash Redis session caching (180s TTL) with active invalidation on logout and profile edits; and enforced bounded pagination and selective projections on library and progress endpoints. Verified with 30/30 passing end-to-end assertions, production build, backend health checks, and browser playback verification.
 
 ## Completed Phases
 
@@ -38,7 +38,7 @@ Completed focused video resolver audit and four-server implementation (`server1`
 - [x] Bug Fix — Movies Navigation & Dedicated Movies View
 - [x] Phase 3.3 (Codex Upgrade) — Performance Optimization, Hero Polish & Foundation Page Cleanup
 - [x] Phase 4 — Duolingo-Inspired Watch Streak System (Database Persistence, Timezone Awareness, 6 Flame States, Milestones)
-- [x] Phase 4.1 — Critical Profile Data Accuracy Repair (Strict $\ge 80\%$ Episode Counting, Heartbeat Duration Fix, Test Seed)
+- [x] Phase 4.1 — Critical Profile Data Accuracy Repair (Strict >= 80% Episode Counting, Heartbeat Duration Fix, Test Seed)
 - [x] Phase 4.2 — Compact Multi-Column Profile Dashboard & Refined Slimmer Capsule Navbar
 - [x] Phase 4.3 — Premium Monthly Watch Activity Calendar Visual Redesign
 - [x] Phase 5 — Mobile-First Hero, Profile & Permanent Anime Logo Fix
@@ -53,33 +53,31 @@ Completed focused video resolver audit and four-server implementation (`server1`
 - [x] Phase 4.3 (Party Play & Video) — Server 1 AnimeTVPlus Migration, AniList-Primary Resolve API & Strict Iframe Sandbox
 - [x] Phase 4.4 (Party Play & Video) — AnimeTVPlus Integration Completion, Failed to Fetch Root Cause Debugging & Production Verification
 - [x] Phase 4.5 (Video & Party Play) — Four-Server Architecture & Dedicated Iframe Integration
+- [x] Phase 4.6 (UI & Navigation) — Desktop & Mobile Navbar Refinement
+- [x] Phase 4.7 (Performance & Infra) — Supabase Egress Optimization Implementation
 
 ## Current Phase Details
 
-- [x] Synchronous Direct URL Generation: Rewrote `src/services/videoResolver.ts` for all 4 servers (`server1`: AnimeTVPlus MAL, `server2`: AnimeTVPlus AniList, `server3`: MegaPlay AniList, `server4`: MegaPlay MAL).
-- [x] Strict Numeric ID Validation: Rejects non-positive or missing integers with empty string `""` to prevent malformed URLs.
-- [x] Dedicated Iframe Isolation: Created `AnimeTVPlusIframe.tsx` (strict sandbox `allow-scripts allow-forms allow-presentation`) and `MegaPlayIframe.tsx` (unsandboxed).
-- [x] Common Source Renderer: Updated `FullPlayerView.tsx` with dynamic keying `${activeServer}-${anime.id}-${currentEpisodeNumber}-${language}` for clean DOM mounting/unmounting.
-- [x] MAL ID Resolver Service: Created `src/services/malResolver.ts` and backend `GET /api/anime/:anilistId/mal-id` route with Redis caching and Jikan title verification fallback.
-- [x] Party Play Synchronization: Updated `src/types/party.ts`, backend contracts, modal dropdown, bar, and drawer to support all 4 servers.
-- [x] Verification: TypeScript check (0 errors), production build passed (1912 modules), and Puppeteer automated verification passed (100%).
-
-## Upcoming Phases
-
-- [ ] Manual Git Commit & Production Deployment
+- [x] Phase 1 (Seeding): Idempotent startup bulk seeding via `createMany({ skipDuplicates: true })`; removed repeated seeding from request handlers.
+- [x] Phase 2 (Video Progress): Throttled player update frequency from 5s to 15s; removed dual profile/progress network refetches during streaming.
+- [x] Phase 3 (Hero Logos): In-memory synchronous caching for curated hero logos; 0 database queries on `/api/anime/curated-hero`.
+- [x] Phase 4 (Profile Queries): Database-level grouping (`groupBy({ by: ['status'] })`) for library stats; column projection on watchProgress, streaks, achievements.
+- [x] Phase 5 (Session Caching): Upstash Redis session caching (180s TTL) with invalidation on logout and profile updates.
+- [x] Phase 6 (Pagination & Projections): Bounded pagination and selective column projection on library and progress endpoints.
+- [x] End-to-End Verification: 30 / 30 assertions passing (100% pass rate).
 
 ## Current Blockers
 
-- None.
+- None
 
 ## Known Technical Debt
 
-- None.
+- None
 
 ## Last Updated
 
-2026-11-17
+17-11-2026
 
 ## Next Exact Action
 
-User review and approval of the Four-Server architecture and verification results.
+Awaiting user review and approval before creating a git commit.

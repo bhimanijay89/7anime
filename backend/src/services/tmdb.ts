@@ -947,16 +947,19 @@ export async function resolveTmdbLogo(
   return resolutionPromise
 }
 
-/**
- * Phase 3.2: Verifies and persists all 10 curated Hero anime logos permanently
- * into PostgreSQL.
- */
-export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogoResult>> {
-  const result: Record<number, AnimeLogoResult> = {}
-  console.log('[TMDB Curated Hero] Ensuring permanent local backend assets for 10 curated anime...')
+let memoryCuratedHeroLogos: Record<number, AnimeLogoResult> | null = null
 
+/**
+ * Fast in-memory synchronous lookup for curated hero anime logos.
+ * Prevents repetitive database upserts on every home page visit.
+ */
+export function getCuratedHeroLogosSync(): Record<number, AnimeLogoResult> {
+  if (memoryCuratedHeroLogos) {
+    return memoryCuratedHeroLogos
+  }
+  const result: Record<number, AnimeLogoResult> = {}
   for (const item of CURATED_HERO_ANIME) {
-    const logo: AnimeLogoResult = {
+    result[item.anilistId] = {
       logoUrl: item.assetPath,
       aspectRatio: item.aspectRatio,
       width: item.width,
@@ -964,7 +967,21 @@ export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogo
       language: 'en',
       filePath: item.assetPath,
     }
-    result[item.anilistId] = logo
+  }
+  memoryCuratedHeroLogos = result
+  return result
+}
+
+/**
+ * Phase 3.2: Verifies and persists all 10 curated Hero anime logos permanently
+ * into PostgreSQL.
+ */
+export async function ensureCuratedHeroLogos(): Promise<Record<number, AnimeLogoResult>> {
+  const result = getCuratedHeroLogosSync()
+  console.log('[TMDB Curated Hero] Ensuring permanent local backend assets for 10 curated anime...')
+
+  for (const item of CURATED_HERO_ANIME) {
+    const logo = result[item.anilistId]
 
     // Ensure PostgreSQL animeTmdbLogo record is permanently verified with local asset path
     try {

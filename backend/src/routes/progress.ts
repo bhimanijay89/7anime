@@ -24,17 +24,32 @@ router.get(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user!.id
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50))
+      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1)
+      const skip = (page - 1) * limit
 
       const allProgress = await prisma.watchProgress.findMany({
         where: { userId },
         orderBy: { updatedAt: 'desc' },
+        take: limit,
+        skip,
+        select: {
+          id: true,
+          userId: true,
+          anilistId: true,
+          episodeNumber: true,
+          progressSeconds: true,
+          durationSeconds: true,
+          completed: true,
+          updatedAt: true,
+        },
       })
 
       // Deduplicate: keep only the latest episode per anime (anilistId).
       // Records are already sorted by updatedAt desc, so the first
       // occurrence of each anilistId is the most recent.
       const seen = new Set<number>()
-      const progress = allProgress.filter((entry: WatchProgress) => {
+      const progress = allProgress.filter((entry) => {
         if (seen.has(entry.anilistId)) return false
         seen.add(entry.anilistId)
         return true
@@ -43,7 +58,7 @@ router.get(
       // Hydrate each progress entry with anime details to eliminate client N+1 queries.
       // Handled in parallel with safe try-catch so progress records never fail if upstream is down.
       const hydratedProgress = await Promise.all(
-        progress.map(async (entry: WatchProgress) => {
+        progress.map(async (entry) => {
           try {
             const aniListAnime = await getAnimeById(entry.anilistId)
             const anime = mapAniListToUnified(aniListAnime)

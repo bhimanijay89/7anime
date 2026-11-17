@@ -1,6 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express'
 import crypto from 'node:crypto'
 import prisma from '../db/client.js'
+import { cache } from '../redis/cache.js'
 import { ErrorCode, sendError } from '../utils/response.js'
 import type { User } from '@prisma/client'
 
@@ -8,8 +9,23 @@ export interface AuthenticatedRequest extends Request {
   user?: User
 }
 
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
+}
+
+/** Session cache TTL in seconds (3 minutes) */
+const SESSION_CACHE_TTL = 180
+
+export function getSessionCacheKey(tokenHash: string): string {
+  return `session:${tokenHash}`
+}
+
+export async function invalidateSessionCache(tokenHash: string): Promise<void> {
+  try {
+    await cache.delete(getSessionCacheKey(tokenHash))
+  } catch {
+    // Non-fatal if Redis is unavailable
+  }
 }
 
 export function getSessionToken(req: Request): string | null {
@@ -38,17 +54,44 @@ export async function getAuthUser(req: Request): Promise<User | null> {
   if (!token) return null
 
   const tokenHash = hashToken(token)
+  const cacheKey = getSessionCacheKey(tokenHash)
+
+  // Tier 1: Check Redis cache (conservative 3-minute TTL to reduce database query volume)
+  try {
+    const cachedUser = await cache.get<User>(cacheKey)
+    if (cachedUser) {
+      return cachedUser
+    }
+  } catch {
+    // Safe fallback to database on Redis error
+  }
+
+  // Tier 2: Query database with column selection
   const session = await prisma.session.findUnique({
     where: { tokenHash },
-    include: { user: true },
+    select: {
+      id: true,
+      expiresAt: true,
+      user: true,
+    },
   })
 
   if (!session || session.expiresAt <= new Date()) {
     if (session) {
       await prisma.session.delete({ where: { id: session.id } }).catch(() => {})
     }
+    await invalidateSessionCache(tokenHash)
     return null
   }
+
+  // Populate Redis session cache with conservative short TTL
+  const remainingSeconds = Math.max(
+    1,
+    Math.floor((session.expiresAt.getTime() - Date.now()) / 1000),
+  )
+  const ttl = Math.min(SESSION_CACHE_TTL, remainingSeconds)
+
+  void cache.set(cacheKey, session.user, ttl)
 
   return session.user
 }

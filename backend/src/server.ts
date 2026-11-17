@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { startCacheWarmer, getCacheHealthDiagnostics } from './services/warmer.js'
 import { ensureCuratedHeroLogos } from './services/tmdb.js'
+import { ensureSeedAchievements } from './services/gamification.js'
 
 import cors from 'cors'
 import express, {
@@ -528,6 +529,9 @@ httpServer.listen(
         )
 
         startCacheWarmer()
+        void ensureSeedAchievements().catch(err => {
+            console.warn('[7anime Backend] Seed achievements startup error:', err)
+        })
         void ensureCuratedHeroLogos().catch(err => {
             console.warn('[7anime Backend] Curated hero logos startup resolution error:', err)
         })
