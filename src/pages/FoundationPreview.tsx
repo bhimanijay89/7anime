@@ -346,8 +346,6 @@ function Home() {
                   episode: `EP ${rec.episodeNumber}`,
                   progress: pct,
                   lastWatchedEpisodeNumber: rec.episodeNumber,
-                  lastWatchedProgressSeconds: rec.progressSeconds,
-                  lastWatchedDurationSeconds: rec.durationSeconds,
                 }
               } catch (err) {
                 console.warn('[continue-watching] Item format error:', err)
@@ -409,8 +407,6 @@ function Home() {
                 episode: `EP ${episodeNumber}`,
                 progress: pct,
                 lastWatchedEpisodeNumber: episodeNumber,
-                lastWatchedProgressSeconds: progressSeconds,
-                lastWatchedDurationSeconds: durationSeconds,
               }
               return updated
             }
